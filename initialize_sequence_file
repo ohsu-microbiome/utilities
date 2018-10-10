@@ -1,0 +1,10 @@
+#!/bin/bash
+
+run_name=$1
+
+mkdir -p "$run_name"/{fastq,QC,processed}
+touch "$run_name"/README.md
+touch "$run_name"/processed/params.yml
+touch "$run_name"/processed/README.md
+
+
