@@ -29,7 +29,7 @@ while getopts ":m:c:n:t:e:Edvh" opt; do
             echo "\
             usage:
             ------
-            sinteract [ -h ] [ -c CUPS ] [ -m MEMORY ] [ -t TIME ] [ -n NODE ] [ -e CONDAENV ] 
+            qsbatch [ -h ] [ -c CUPS ] [ -m MEMORY ] [ -t TIME ] [ -n NODE ] [ -e CONDAENV ] 
                       [ -E ] [ -d ] [ -v ]
             
             description:
