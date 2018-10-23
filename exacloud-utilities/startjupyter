@@ -108,7 +108,7 @@ echo "starting jupyter with port $port on host $ip"
 
 
 ### Create and execute command
-cmd="jupyter notebook --port=$port --ip=$ip --no-browser"
+cmd="jupyter lab --port=$port --ip=$ip --no-browser"
 $cmd
 
 exit 0
