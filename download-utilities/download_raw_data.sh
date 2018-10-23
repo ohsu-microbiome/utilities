@@ -32,7 +32,7 @@ do
                         QaDIR="$2"
                         shift;;
 		-h)
-			printf "\USAGE: download_raw_data.sh -i [input directory] -f [fastq files url] -q [quality files url] \n"
+			printf "USAGE: download_raw_data.sh -i [input directory] -f [fastq files url] -q [quality files url] \n"
 			exit;;
 		*)
 			printf "\nERROR: Invalid script usage.\n"
