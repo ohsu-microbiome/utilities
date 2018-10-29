@@ -2,10 +2,6 @@
 
 ### https://raw.githubusercontent.com/abalter/microbiome-16s/master/create-dada2_conda_env.sh
 
-if [[ $DEFAULT_CONDA_ENV == "" ]]; then
-    conda activate
-fi
-
 env_name=$1
 env_name=${env_name:=dada2}
 
