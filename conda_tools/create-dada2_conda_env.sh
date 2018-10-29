@@ -2,9 +2,14 @@
 
 ### https://raw.githubusercontent.com/abalter/microbiome-16s/master/create-dada2_conda_env.sh
 
-env_name=$1
+if [[ $DEFAULT_CONDA_ENV == "" ]]; then
+    conda activate
+fi
 
+env_name=$1
 env_name=${env_name:=dada2}
+
+private_r_lib=$2
 
 conda_home=$(which conda | sed 's/\/bin.*$//')
 echo "conda home: $conda_home"
@@ -112,10 +117,10 @@ $cmd
 
 echo "Installing items needed that are not in conda"
 
-cmd="Rscript -e \"install.packages('ggnetwork', lib='~/R', repos='http://cran.us.r-project.org');\""
+cmd="Rscript -e \"install.packages('ggnetwork', lib='$private_r_lib', repos='http://cran.us.r-project.org');\""
 echo "executing $cmd"
 $cmd
-cmd="Rscript -e \"install.packages('intergraph', lib='~/R', repos='http://cran.us.r-project.org');\""
+cmd="Rscript -e \"install.packages('intergraph', lib='$private_r_lib', repos='http://cran.us.r-project.org');\""
 echo "executing $cmd"
 $cmd
 cmd="Rscript -e \"source('https://raw.githubusercontent.com/cran/phyloseqGraphTest/master/R/graphtest-functions.R')\""
