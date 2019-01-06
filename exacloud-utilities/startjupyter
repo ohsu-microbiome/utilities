@@ -94,7 +94,7 @@ host=$(hostname)
 ip=$(host $host | cut -d" " -f4)
 
 
-tunnel_command="ssh -L $port:$ip:$sport exacloud"
+tunnel_command="ssh -L $port:`hostname`:$sport exacloud"
 echo "tunnel command:"
 echo $tunnal_command
 
