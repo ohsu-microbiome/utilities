@@ -89,7 +89,9 @@ runDeseq = function(
     return_obj='df' # Whether to return dataframe (default 'df') or 'raw' deseq results object
 )
 {
-  
+  ### Run deseq on aggregated taxa rank counts. Input has counts for glommed taxa names (aggregated
+  ### over those taxa) for each sample.
+   
   sampleIDs = as.vector(metadata[['SampleID']])
   
   counts =
@@ -151,6 +153,9 @@ getSignificantTaxaCounts = function(
 )
 {
   
+  ### Simple wrapper to filter deseq results based on an expression. Expression can 
+  ### be anything, but the intention is that it will filter pvalue or qvalue. Joining
+  ### with the aggregated counts returns the counts for only the significant taxa.
   print(head(deseq_results_df))
   print(cutoff_expr)
   
@@ -179,6 +184,10 @@ getSignificantTaxaCounts = function(
 
 plotTaxaCounts = function(counts, formula)
 {
+  ### Creates a faceted set of bar plots of the taxa abundance in each sample.
+  ### Accepts a formula to use for faceting. Right now, the LHS has to be Taxa,
+  ### and only one feature on the RHS.
+  
   # print('head counts')
   # print(head(counts))
   
@@ -217,6 +226,14 @@ plotDeseqLogFoldChangeBarplot = function(
   topN=20
 )
 {
+  ### Makes a horizontal bar chart of log2 fold-changes returned from deseq analysis.
+  ### Accepts filtering criteria for pvalue, qvalue (adjusted p value), and how many
+  ### of the most significant taxa to plot. Additionally accepts a fill variable for
+  ### coloring the bars.
+  ###
+  ### Hypothetically, you could add columns to the input df for additional coloring
+  ### options. This has not been tested.
+  
   print(pvalue_cutoff)
   print(padj_cutoff)
   top_N_logfold = 
