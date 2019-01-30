@@ -145,15 +145,25 @@ runDeseq = function(
 
 
 getSignificantTaxaCounts = function(
-    results_df,
+    deseq_results_df,
     aggregated_counts,
     cutoff_expr
 )
 {
+  
+  print(head(deseq_results_df))
+  print(cutoff_expr)
+  
   significant = 
-    results_df %>% 
+    deseq_results_df %>% 
     filter_(cutoff_expr) %>% 
     select(glommed_taxa, Phylum)
+
+  print(head(significant))
+  
+  glommed_taxa = significant[['glommed_taxa']]
+  print("glommed_taxa")
+  print(glommed_taxa)
   
   significant_counts_gathered_taxa = 
     inner_join(significant, aggregated_counts) %>%
@@ -222,6 +232,12 @@ plotDeseqLogFoldChangeBarplot = function(
   if (dim(top_N_logfold)[1] < topN)
   {
     topN = dim(top_N_logfold)[1]
+    message = sprintf(
+      "Only %i taxa meet the conditions: p<=%0.2f and q<=%0.2f",
+      topN,
+      pvalue_cutoff,
+      padj_cutoff
+    )
   }
   
   title = sprintf(
