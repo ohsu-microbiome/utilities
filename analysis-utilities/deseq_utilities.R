@@ -171,7 +171,7 @@ getSignificantTaxaCounts = function(
   print(glommed_taxa)
   
   significant_counts_gathered_taxa = 
-    inner_join(significant, aggregated_counts) %>%
+    inner_join(significant, aggregated_counts,  by=c("glommed_taxa", "Phylum")) %>%
     select(one_of(sampleIDs), glommed_taxa) %>%
     tibble::column_to_rownames('glommed_taxa') %>% 
     t() %>%
@@ -205,7 +205,7 @@ plotTaxaCounts = function(counts, formula)
   gathered_data =  
     counts %>%
     select(glommed_taxa, one_of(kept_columns)) %>%
-    gather(key='Taxa', value='Counts', -kept_columns) 
+    gather(key='Taxa', value='Counts', -kept_columns, factor_key=T) 
   
   # print(colnames(gathered_data))
   # print(head(gathered_data))
