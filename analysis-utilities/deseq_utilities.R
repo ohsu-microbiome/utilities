@@ -86,6 +86,7 @@ getMasterTable = function(
 runDeseq = function(
     aggregated_counts, # table with columns for taxa names, agglommerated taxa names, and counts for each sample.
     metadata, # sample metadata
+    design,  # design formulat or matrix
     return_obj='df' # Whether to return dataframe (default 'df') or 'raw' deseq results object
 )
 {
@@ -110,7 +111,7 @@ runDeseq = function(
   dds <- DESeqDataSetFromMatrix(
     countData=counts,
     colData=metadata,
-    design= ~Case
+    design= design
   )
   
   deseq_obj = DESeq(
@@ -162,7 +163,7 @@ getSignificantTaxaCounts = function(
   significant = 
     deseq_results_df %>% 
     filter_(cutoff_expr) %>% 
-    select(glommed_taxa, Phylum)
+    select(glommed_taxa)
 
   print(head(significant))
   
@@ -171,7 +172,7 @@ getSignificantTaxaCounts = function(
   print(glommed_taxa)
   
   significant_counts_gathered_taxa = 
-    inner_join(significant, aggregated_counts,  by=c("glommed_taxa", "Phylum")) %>%
+    inner_join(significant, aggregated_counts,  by=c("glommed_taxa")) %>%
     select(one_of(sampleIDs), glommed_taxa) %>%
     tibble::column_to_rownames('glommed_taxa') %>% 
     t() %>%
@@ -182,35 +183,46 @@ getSignificantTaxaCounts = function(
   return(significant_counts_gathered_taxa)
 }
 
-plotTaxaCounts = function(counts, formula)
+plotTaxaCounts = function(counts, glommed_taxa, formula)
 {
   ### Creates a faceted set of bar plots of the taxa abundance in each sample.
   ### Accepts a formula to use for faceting. Right now, the LHS has to be Taxa,
   ### and only one feature on the RHS.
   
-  # print('head counts')
-  # print(head(counts))
-  
-  # print("splitting formula")
+  print('head counts')
+  print(head(counts))
+
+  print("splitting formula")
   split_formula = as.character(formula)
   lhs = split_formula[2] %>% trimws()
   rhs = split_formula[3]
   rhs_pieces = strsplit(rhs, '+', fixed=T)[[1]] %>% trimws()
-  # cat('lhs:', lhs, 'rhs pices:', rhs_pieces, '\n')
+  cat('lhs:', lhs, 'rhs pices:', rhs_pieces, '\n')
   
   kept_columns = c('SampleID', rhs_pieces)
-  # print("kept columns")
-  # print(kept_columns)
+  print("kept columns")
+  print(kept_columns)
+  
+  # gathered_data =  
+  #   counts %>%
+  #   select(glommed_taxa, one_of(kept_columns)) %>%
+    # gather(key='Taxa', value='Counts', -kept_columns, factor_key=T) 
   
   gathered_data =  
     counts %>%
-    select(glommed_taxa, one_of(kept_columns)) %>%
+    select(one_of(glommed_taxa, kept_columns)) %>%
     gather(key='Taxa', value='Counts', -kept_columns, factor_key=T) 
   
-  # print(colnames(gathered_data))
-  # print(head(gathered_data))
+  # gathered_data = 
+  #   counts %>%
+  #   select(SampleID, one_of(glommed_taxa), CaseString) %>%
+  #   gather(key='Taxa', value='Counts', -kept_columns) %>%
+  #   arrange(SampleID, Counts)
   
-  plot_obj = ggplot(mgc, aes(x=SampleID, y=Counts)) + 
+  print(colnames(gathered_data))
+  print(head(gathered_data))
+  
+  plot_obj = ggplot(gathered_data, aes(x=SampleID, y=Counts)) + 
     geom_bar(stat='identity') + 
     facet_grid(formula, scale='free_y') +
     theme(strip.text.y=element_text(angle=0, hjust=1))
