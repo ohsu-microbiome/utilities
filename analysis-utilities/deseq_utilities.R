@@ -42,7 +42,7 @@ getAggregatedTaxaRankCounts = function(
     ### Convert to dataframe (instead of tibble)
     data.frame()
   
-  print(dim(tax_abundance_table))
+  # print(dim(tax_abundance_table))
   
   return(tax_abundance_table)
 }
@@ -105,8 +105,8 @@ runDeseq = function(
     select(one_of(sampleIDs)) %>%
     data.frame()
   
-  cat('dim counts:', dim(counts))
-  cat('dim metadata:', dim(metadata))
+  # cat('dim counts:', dim(counts))
+  # cat('dim metadata:', dim(metadata))
   
   dds <- DESeqDataSetFromMatrix(
     countData=counts,
@@ -157,19 +157,19 @@ getSignificantTaxaCounts = function(
   ### Simple wrapper to filter deseq results based on an expression. Expression can 
   ### be anything, but the intention is that it will filter pvalue or qvalue. Joining
   ### with the aggregated counts returns the counts for only the significant taxa.
-  print(head(deseq_results_df))
-  print(cutoff_expr)
+  # print(head(deseq_results_df))
+  # print(cutoff_expr)
   
   significant = 
     deseq_results_df %>% 
     filter_(cutoff_expr) %>% 
     select(glommed_taxa)
 
-  print(head(significant))
+  # print(head(significant))
   
   glommed_taxa = significant[['glommed_taxa']]
-  print("glommed_taxa")
-  print(glommed_taxa)
+  # print("glommed_taxa")
+  # print(glommed_taxa)
   
   significant_counts_gathered_taxa = 
     inner_join(significant, aggregated_counts,  by=c("glommed_taxa")) %>%
@@ -189,19 +189,19 @@ plotTaxaCounts = function(counts, glommed_taxa, formula)
   ### Accepts a formula to use for faceting. Right now, the LHS has to be Taxa,
   ### and only one feature on the RHS.
   
-  print('head counts')
-  print(head(counts))
+  # print('head counts')
+  # print(head(counts))
 
-  print("splitting formula")
+  # print("splitting formula")
   split_formula = as.character(formula)
   lhs = split_formula[2] %>% trimws()
   rhs = split_formula[3]
   rhs_pieces = strsplit(rhs, '+', fixed=T)[[1]] %>% trimws()
-  cat('lhs:', lhs, 'rhs pices:', rhs_pieces, '\n')
+  # cat('lhs:', lhs, 'rhs pices:', rhs_pieces, '\n')
   
   kept_columns = c('SampleID', rhs_pieces)
-  print("kept columns")
-  print(kept_columns)
+  # print("kept columns")
+  # print(kept_columns)
   
   # gathered_data =  
   #   counts %>%
@@ -219,8 +219,8 @@ plotTaxaCounts = function(counts, glommed_taxa, formula)
   #   gather(key='Taxa', value='Counts', -kept_columns) %>%
   #   arrange(SampleID, Counts)
   
-  print(colnames(gathered_data))
-  print(head(gathered_data))
+  # print(colnames(gathered_data))
+  # print(head(gathered_data))
   
   plot_obj = ggplot(gathered_data, aes(x=SampleID, y=Counts)) + 
     geom_bar(stat='identity') + 
@@ -246,8 +246,8 @@ plotDeseqLogFoldChangeBarplot = function(
   ### Hypothetically, you could add columns to the input df for additional coloring
   ### options. This has not been tested.
   
-  print(pvalue_cutoff)
-  print(padj_cutoff)
+  # print(pvalue_cutoff)
+  # print(padj_cutoff)
   top_N_logfold = 
     deseq_results_df %>%
     ### Apply p-value cutoffs
