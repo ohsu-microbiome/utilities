@@ -283,7 +283,21 @@ plotDeseqLogFoldChangeBarplot = function(
     ggtitle(title)
 }
 
-
+printFancyKableTable = function(
+    data,
+    caption
+  )
+{
+  kable(
+    data, 
+    caption=caption
+  )  %>%
+    kable_styling(font_size=9) %>%
+    scroll_box(
+      width = "100%", 
+      height = "300px"
+    )
+}
 
 
 
