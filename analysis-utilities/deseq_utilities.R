@@ -269,8 +269,9 @@ plotDeseqLogFoldChangeBarplot = function(
     arrange(log2FoldChange) %>%
     ### Make glommed taxa a factor and set levels to current order
     ### Otherwise, the bars will plot in alphabetical order
-    mutate(short_glommed_taxa = factor(glommed_taxa, levels=glommed_taxa))
-
+    mutate(short_glommed_taxa = make.unique(short_glommed_taxa)) %>%
+    mutate(short_glommed_taxa = factor(short_glommed_taxa, levels=short_glommed_taxa))
+  
   if (dim(top_N_logfold)[1] < topN)
   {
     topN = dim(top_N_logfold)[1]
@@ -284,7 +285,7 @@ plotDeseqLogFoldChangeBarplot = function(
 
   ### Create dynamic title
   title = sprintf(
-    "%i largest Absolute Log2 Fold-Change for p<=%0.2f and q<=%0.2f",
+    "%i largest Absolute Log2 Abundance AMD/Control (p<=%0.2f and q<=%0.2f)",
     topN,
     pvalue_cutoff,
     padj_cutoff
@@ -295,7 +296,10 @@ plotDeseqLogFoldChangeBarplot = function(
     geom_bar(stat='identity') +
     coord_flip() +
     ggtitle(title) +
-    theme(strip.text.y=element_text(size=8))
+    theme(
+      strip.text.y=element_text(size=8),
+      plot.title = element_text(hjust=1.0, size=12)
+      )
 }
 
 printFancyKableTable = function(
