@@ -14,20 +14,21 @@ getAggregatedTaxaRankCounts = function(
   ### for each sample.
   
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
-  print(lowest_rank)
+  # print(lowest_rank)
   lowest_rank_index = match(lowest_rank, all_ranks)
   ranks_to_glom = all_ranks[1:lowest_rank_index]
-  print("ranks_to_glom")
-  print(ranks_to_glom)
+  # print("ranks_to_glom")
+  # print(ranks_to_glom)
   
-  print("creating tax abundance table")
+  # print("creating tax abundance table")
   tax_abundance_table = 
     ### Join asv_table and taxonomy_table on ASVs to get sample abundances and rank names
     asv_table %>% 
     inner_join(taxonomy_table, by='ASVs') %>% 
     ### Drop everything but the sampleIDs and requested taxa
     select(one_of(sampleIDs, ranks_to_glom))  %>%
-    ### Sum all the counts grouping by the glommed_taxa (effectively genus)
+    filter_(sprintf("!is.na(%s)", lowest_rank)) %>%
+    ### Sum all the counts grouping by the axa (effectively genus)
     group_by(.dots=ranks_to_glom) %>%
     summarize_all(sum) %>%
     ### Glom taxa ranks together for additinoal column
@@ -129,8 +130,8 @@ runDeseq = function(
     inner_join(aggregated_counts, by='glommed_taxa') %>%
     select(-one_of(sampleIDs))
   
-  print(dim(deseq_results_df))
-  print(colnames(deseq_results_df))
+  # print(dim(deseq_results_df))
+  # print(colnames(deseq_results_df))
   
   if (return_obj=='raw')
   {
@@ -165,11 +166,11 @@ getSignificantTaxaCounts = function(
     filter_(cutoff_expr) %>% 
     select(glommed_taxa)
   
-  print(head(significant))
+  # print(head(significant))
   
   glommed_taxa = significant[['glommed_taxa']]
-  print("glommed_taxa")
-  print(glommed_taxa)
+  # print("glommed_taxa")
+  # print(glommed_taxa)
 
   significant_counts_gathered_taxa = 
     inner_join(significant, aggregated_counts,  by=c("glommed_taxa")) %>%
@@ -233,6 +234,7 @@ plotTaxaCounts = function(
   return(plot_obj)
 }
 
+
 plotDeseqLogFoldChangeBarplot = function(
   deseq_results_df,
   pvalue_cutoff=1.0,
@@ -248,19 +250,27 @@ plotDeseqLogFoldChangeBarplot = function(
   ###
   ### Hypothetically, you could add columns to the input df for additional coloring
   ### options. This has not been tested.
-  
+
   # print(pvalue_cutoff)
   # print(padj_cutoff)
-  top_N_logfold = 
+    
+  top_N_logfold =
     deseq_results_df %>%
     ### Apply p-value cutoffs
-    filter(pvalue<=pvalue_cutoff, padj<=padj_cutoff) %>%
-    mutate(glommed_taxa = factor(glommed_taxa, levels=glommed_taxa)) %>%
+    filter(
+      pvalue<=pvalue_cutoff, 
+      padj<=padj_cutoff
+      ) %>%
+    ### Sort by biggest fold change magnitudes + OR -
     arrange(abs(log2FoldChange)) %>%
+    ### Scrape the top N
     top_n(n=-topN) %>%
+    ### Now order by actual fold change + to -
     arrange(log2FoldChange) %>%
-    mutate(glommed_taxa = factor(glommed_taxa, levels=glommed_taxa))
-  
+    ### Make glommed taxa a factor and set levels to current order
+    ### Otherwise, the bars will plot in alphabetical order
+    mutate(short_glommed_taxa = factor(glommed_taxa, levels=glommed_taxa))
+
   if (dim(top_N_logfold)[1] < topN)
   {
     topN = dim(top_N_logfold)[1]
@@ -271,7 +281,7 @@ plotDeseqLogFoldChangeBarplot = function(
       padj_cutoff
     )
   }
-  
+
   ### Create dynamic title
   title = sprintf(
     "%i largest Absolute Log2 Fold-Change for p<=%0.2f and q<=%0.2f",
@@ -279,12 +289,13 @@ plotDeseqLogFoldChangeBarplot = function(
     pvalue_cutoff,
     padj_cutoff
   )
-  
+
   # ggplot(data=top_N_logfold, aes(x=glommed_taxa, y=log2FoldChange, fill=padj)) +
-  ggplot(data=top_N_logfold, aes_string(x='glommed_taxa', y='log2FoldChange', fill=fill)) +
+  ggplot(data=top_N_logfold, aes_string(x='short_glommed_taxa', y='log2FoldChange', fill=fill)) +
     geom_bar(stat='identity') +
-    coord_flip() + 
-    ggtitle(title)
+    coord_flip() +
+    ggtitle(title) +
+    theme(strip.text.y=element_text(size=8))
 }
 
 printFancyKableTable = function(
@@ -304,11 +315,9 @@ printFancyKableTable = function(
 }
 
 
-
 shortenTaxaName = function(name)
 {
   # print("shortenTaxaName")
-  # print(name)
   name = as.character(name)
   split_name = strsplit(name, "_") %>% unlist
   if (length(split_name)==1)
@@ -323,4 +332,28 @@ shortenTaxaName = function(name)
   return(short_name)
 }
 
+
+shortenTaxaNames = function(name, use_names=T)
+{
+  # print("shortenTaxaName")
+  result = sapply(name, function(temp_name)
+  {
+    temp_name = as.character(temp_name)
+    split_name = strsplit(temp_name, "_") %>% unlist
+    if (length(split_name)==1)
+    {
+      short_name = split_name
+    } else
+    {
+      first = split_name[1]
+      last = tail(split_name, n=1)
+      short_name = paste0(first,'_',last)
+    }
+    return(short_name) 
+  },
+  USE.NAMES=use_names
+  )
+  
+  return(result)
+}
 
