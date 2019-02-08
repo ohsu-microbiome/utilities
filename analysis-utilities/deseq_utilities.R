@@ -323,9 +323,15 @@ plotDeseqLogFoldChangeBarplot = function(
     )
   }
   
+  most_minus = top_N_logfold$log2FoldChange[1]
+  print(most_minus)
+  most_plus = top_N_logfold$log2FoldChange[topN]
+  print(most_plus)
+  print(topN)
+  
   ### Create dynamic title
   title = sprintf(
-    "%s %i largest Absolute Log2 Abundance AMD/Control (p<=%0.2f and q<=%0.2f)",
+    "%s:  %i largest Absolute Log2 Abundance AMD/Control (p<=%0.2f and q<=%0.2f)",
     lowest_rank,
     topN,
     pvalue_cutoff,
@@ -337,10 +343,17 @@ plotDeseqLogFoldChangeBarplot = function(
     geom_bar(stat='identity') +
     coord_flip() +
     ggtitle(title) +
+    ylab("Log2 AMD/Control") +
+    xlab("Significant Taxa") + 
     theme(
-      strip.text.y=element_text(size=8),
-      plot.title = element_text(hjust=1.0, size=10)
-    )
+      axis.text.x = element_text(size=7),
+      axis.text.y = element_text(size=7),
+      plot.title = element_text(hjust=1.5, size=8)
+    ) + 
+    annotate("text", x=topN, y=1.1*most_minus/2, label = "Reduced in AMD", size=3, fontface=2) + 
+    annotate("text", x=1, y=1.1*most_plus/2, label = "Increased in AMD", size=3, fontface=2)
+  
+  print(sprintf('annotate("text", x=%i, y=%0.2f, label = "Reduced in AMD", size=6)', topN, most_minus/2))
   
   return(plot_obj)
 }
