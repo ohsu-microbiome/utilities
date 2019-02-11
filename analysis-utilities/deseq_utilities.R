@@ -331,13 +331,12 @@ plotDeseqLogFoldChangeBarplot = function(
   
   ### Create dynamic title
   title = sprintf(
-    "%s:  %i largest Absolute Log2 Abundance AMD/Control (p<=%0.2f and q<=%0.2f)",
+    "%s Level Log2(AMD/Control) Abundance (p<=%0.2f and q<=%0.2f)",
     lowest_rank,
-    topN,
     pvalue_cutoff,
     padj_cutoff
   )
-  
+
   # ggplot(data=top_N_logfold, aes(x=glommed_taxa, y=log2FoldChange, fill=padj)) +
   plot_obj = ggplot(data=top_N_logfold, aes_string(x='short_glommed_taxa', y='log2FoldChange', fill=fill)) +
     geom_bar(stat='identity') +
@@ -348,7 +347,7 @@ plotDeseqLogFoldChangeBarplot = function(
     theme(
       axis.text.x = element_text(size=7),
       axis.text.y = element_text(size=7),
-      plot.title = element_text(hjust=1.5, size=8)
+      plot.title = element_text(hjust=0, size=8)
     ) + 
     annotate("text", x=topN, y=1.1*most_minus/2, label = "Reduced in AMD", size=3, fontface=2) + 
     annotate("text", x=1, y=1.1*most_plus/2, label = "Increased in AMD", size=3, fontface=2)
