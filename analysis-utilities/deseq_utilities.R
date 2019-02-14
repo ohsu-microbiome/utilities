@@ -416,3 +416,15 @@ shortenTaxaNames = function(name, use_names=T)
   return(result)
 }
 
+running_var = function(df, variable)
+{
+  df = 
+    df %>% 
+    mutate(
+      N=row_number(), 
+      running_var=cumsum(A^2)/(N-1) -2*cumsum(A)*cummean(A)/(N-1) + N*cummean(A)^2/(N-1)
+      ) %>%
+    select(-N)
+  
+  return(df)
+}
