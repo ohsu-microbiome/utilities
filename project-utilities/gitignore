@@ -1,0 +1,51 @@
+# Universal .gitignore template for microbiome data analysis
+
+# General data formats
+*.csv
+*.tsv
+
+# R specific data formats
+# https://cran.r-project.org/doc/manuals/r-release/R-data.html
+*.RData
+*.rds
+*.Rda
+*.dat
+
+# Spreadsheet files
+*.xlsx
+*.xls
+
+# Microbiome biom table format
+*.biom
+
+# Raw sequencing data, compressed and uncompressed
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.fasta
+*.fasta.gz
+*.fa.gz
+*.gz
+
+# QIIME2 data files
+*.qza
+*.qzv
+
+# Phylogenetic tree data
+*.nw # Newick
+*.nex # Nexus alignment
+*.nxs
+*.phy
+*.tre # Tree input file
+*.tree
+*.boot
+*.bs
+*.new
+*.phylip
+
+# Sequencing alignment files
+*.bam
+*.sam
+*.gtf
+*.aln
