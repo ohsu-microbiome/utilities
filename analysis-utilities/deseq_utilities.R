@@ -41,7 +41,9 @@ getAggregatedTaxaRankCounts = function(
     ### Could glom earlier and then group by ranks and glommed_taxa
     select(one_of('glommed_taxa', sampleIDs, ranks_to_glom))  %>%
     ### Convert to dataframe (instead of tibble)
-    data.frame()
+    data.frame() %>%
+    mutate_(short_glommed_taxa = sprintf('paste0(Phylum, "_", %s)',lowest_rank)) %>%
+    mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
   
   if (clean)
   {
@@ -102,10 +104,12 @@ runDeseq = function(
   ### Run deseq on aggregated taxa rank counts. Input has counts for glommed taxa names (aggregated
   ### over those taxa) for each sample.
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  print("design")
+  print(design)
   
   sampleIDs = as.vector(metadata[['SampleID']])
   
-  counts =
+  taxa_counts =
     aggregated_counts %>%
     ### Remove zeros so log does not cause errors
     replace(.==0, 1) %>%
@@ -119,9 +123,9 @@ runDeseq = function(
   # cat('dim metadata:', dim(metadata))
   
   dds <- DESeqDataSetFromMatrix(
-    countData=counts,
+    countData=taxa_counts,
     colData=metadata,
-    design= design
+    design=design
   )
   
   deseq_obj = DESeq(
@@ -130,9 +134,9 @@ runDeseq = function(
     fitType='mean'
   )
   
+  print(resultsNames(deseq_obj))
   deseq_results = results(deseq_obj)
   deseq_results_column_descriptions = deseq_results@elementMetadata$description
-  
 
   deseq_results_df = 
     ### Collect a structure with the deseq_results
@@ -166,13 +170,17 @@ runDeseq = function(
       mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
   }
 
-
   # print(dim(deseq_results_df))
   # print(colnames(deseq_results_df))
   
-  if (return_obj=='raw')
+  if (return_obj=='all')
   {
-    return(deseq_results)
+    deseq_data = list(
+      deseq_results_df=deseq_results_df,
+      deseq_obj=deseq_obj,
+      taxa_counts=taxa_counts
+    )
+    return(deseq_data)
   } else if(return_obj=='df')
   {
     return(deseq_results_df)
@@ -222,7 +230,7 @@ getSignificantTaxaCounts = function(
 }
 
 plotTaxaCounts = function(
-  counts, 
+  significant_taxa_counts, 
   significant_taxa, 
   taxa_rank,
   formula,
@@ -238,7 +246,8 @@ plotTaxaCounts = function(
   
   if (normalize)
   {
-    counts = counts %>% mutate_at(vars(significant_taxa), funs(./sum(.)))
+    significant_taxa_counts = significant_taxa_counts %>% 
+      mutate_at(vars(significant_taxa), funs(./sum(.)))
   }
   
   # print("splitting formula")
@@ -258,7 +267,7 @@ plotTaxaCounts = function(
   # gather(key='Taxa', value='Counts', -kept_columns, factor_key=T) 
   
   gathered_data =  
-    counts %>%
+    significant_taxa_counts %>%
     select(one_of(significant_taxa, kept_columns)) %>%
     gather(key='Taxa', value='Counts', -kept_columns, factor_key=T)
   
@@ -347,10 +356,12 @@ plotDeseqLogFoldChangeBarplot = function(
     theme(
       axis.text.x = element_text(size=7),
       axis.text.y = element_text(size=7),
-      plot.title = element_text(hjust=0, size=8)
+      plot.title = element_text(hjust=0, size=10, margin=margin(unit = "in"))
     ) + 
     annotate("text", x=topN, y=1.1*most_minus/2, label = "Reduced in AMD", size=3, fontface=2) + 
     annotate("text", x=1, y=1.1*most_plus/2, label = "Increased in AMD", size=3, fontface=2)
+    
+    # https://stackoverflow.com/a/22000100/188963
   
   print(sprintf('annotate("text", x=%i, y=%0.2f, label = "Reduced in AMD", size=6)', topN, most_minus/2))
   
@@ -427,4 +438,110 @@ running_var = function(df, variable)
     select(-N)
   
   return(df)
+}
+
+clearMem = function(current_file="")
+{
+  # unlink(current_file', recursive = TRUE)
+  for (i in 1:10){print(gc(full=T))}
+}
+
+collectDeseqData = function(
+  lowest_rank='Phylum',
+  pvalue_cutoff=1,
+  padj_cutoff=1,
+  design
+)
+{
+  
+  # lowest_rank = 'Phylum'
+  # pvalue_cutoff=1
+  # padj_cutoff=1
+  
+  print(lowest_rank)
+  print(pvalue_cutoff)
+  print(padj_cutoff)
+  
+  ### Collect counts aggregated at a specific taxonomic rank
+  aggregated_counts = getAggregatedTaxaRankCounts(
+    taxonomy_table=taxonomy_table, 
+    asv_table=asv_table, 
+    lowest_rank=lowest_rank,
+    clean=T
+  )
+  
+  ## Run deseq and collect the results. Order by p-value
+  deseq_data = runDeseq(
+    aggregated_counts=aggregated_counts,
+    lowest_rank=lowest_rank,
+    metadata=metadata,
+    design=design,
+    return_obj='all'
+  ) 
+  
+  deseq_obj = deseq_data$deseq_obj
+  deseq_results_df = deseq_data$deseq_results_df %>% arrange(pvalue)
+  taxa_counts = deseq_data$taxa_counts
+  
+  # print(sprintf("pvalue<%0.2f", pvalue_cutoff))
+  
+  ### Filter the counts for significance and return dataframe with taxa
+  ### as columns (see documentation in getSignificanTaxaCounts function)
+  significant_taxa_counts = getSignificantTaxaCounts(
+    deseq_results_df, 
+    aggregated_counts, 
+    sprintf("pvalue<%0.2f", pvalue_cutoff)
+  )
+  
+  ### Collect list of significant taxa from deseq results
+  significant_taxa = 
+    deseq_results_df %>% 
+    filter(pvalue<=pvalue_cutoff) %>% 
+    select(glommed_taxa) %>%
+    pull(glommed_taxa)
+  print("dim sig taxa")
+  print(length(significant_taxa))
+  
+  return(list(
+    aggregated_counts=aggregated_counts,
+    deseq_obj=deseq_obj,
+    deseq_results_df=deseq_results_df,
+    taxa_counts=taxa_counts,
+    significant_taxa_counts=significant_taxa_counts,
+    significant_taxa=significant_taxa,
+    sampleIDs=sampleIDs
+  ))
+}
+
+writeDeseqData = function(basename, deseq_results_df, force=T)
+{
+  print(dim(deseq_results_df))
+  print(colnames(deseq_results_df))
+  
+  
+  filename = paste0('tables/', basename, '.tsv')
+  print(filename)
+  if (!file.exists(filename) | force==TRUE)
+  {
+    write.table(
+      deseq_results_df,
+      file=filename,
+      quote=F,
+      col.names=T,
+      row.names=F,
+      sep='\t'
+    )
+  }
+  
+  filename = paste0('tables/', basename, '.xlsx')
+  print(filename)
+  if(!file.exists(filename) | force==TRUE)
+  {
+    write.xlsx(
+      deseq_results_df,
+      file=filename,
+      col.names=T,
+      row.names=F
+    ) 
+  }
 }
