@@ -101,6 +101,24 @@ runDeseq = function(
   return_obj='df' # Whether to return dataframe (default 'df') or 'raw' deseq results object
 )
 {
+  print(design)
+  print(as.character(design))
+  print(paste(as.character(design), collapse=""))
+  
+  im_here = sprintf("in getMultivariateDeseqResults with: \n
+                    \taggregated_counts=%s \n
+                    \tmetadata=%s \n
+                    \tlowest_rank=%s \n
+                    \tdesign=%s \n
+                    \treturn_obj=%s \n",
+                    paste(dim(aggregated_counts), collapse=" "),
+                    paste(dim(metadata), collapse=" "),
+                    lowest_rank,
+                    paste(as.character(design), collapse=""),
+                    return_obj
+  )
+  writeLines(im_here)
+  
   ### Run deseq on aggregated taxa rank counts. Input has counts for glommed taxa names (aggregated
   ### over those taxa) for each sample.
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
@@ -247,7 +265,7 @@ plotTaxaCounts = function(
   if (normalize)
   {
     significant_taxa_counts = significant_taxa_counts %>% 
-      mutate_at(vars(significant_taxa), funs(./sum(.)))
+      mutate_at(vars(significant_taxa), list(./sum(.)))
   }
   
   # print("splitting formula")
@@ -454,6 +472,16 @@ collectDeseqData = function(
 )
 {
   
+  im_here = sprintf("in collectDeseqData with: \n
+                    \tlowest_rank=%s \n
+                    \tpvalue_cutoff=%s \n
+                    \tpadj_cutoff=%s\n
+                    \tdesign=%s",
+                    lowest_rank, pvalue_cutoff, padj_cutoff, 
+                    paste(as.character(design), collapse="")
+  )
+  writeLines(im_here)
+  
   # lowest_rank = 'Phylum'
   # pvalue_cutoff=1
   # padj_cutoff=1
@@ -544,4 +572,376 @@ writeDeseqData = function(basename, deseq_results_df, force=T)
       row.names=F
     ) 
   }
+}
+
+getMultivariateDeseqResults = function(
+    lowest_rank,
+    pvalue_cutoff,
+    padj_cutoff,
+    design
+  )
+{
+  
+  im_here = sprintf("In getMultivariateDeseqResults with: \n
+                    \tlowest_rank=%s \n
+                    \tpvalue_cutoff=%s \n
+                    \tpadj_cutoff=%s\n
+                    \tdesign=%s",
+                    lowest_rank, pvalue_cutoff, padj_cutoff, 
+                    paste(as.character(design), collapse="")
+                    )
+  writeLines(im_here)
+  
+  ### Utility vectors for reused data
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  deseq_results_cols = c("baseMean", "log2FoldChange", "lfcSE", "stat", "pvalue", "padj")
+  deseq_keep_cols = c("log2FoldChange", "pvalue", "padj")
+  
+  lowest_rank_index = match(lowest_rank, all_ranks)
+  ranks_to_keep = all_ranks[1:lowest_rank_index]
+  
+  ### Get the deseq results and auxiliary data
+  deseq_data = collectDeseqData(
+    lowest_rank=lowest_rank,
+    pvalue_cutoff=pvalue_cutoff,
+    padj_cutoff=padj_cutoff,
+    design=design
+  )
+  
+  ### The deseq object
+  deseq_obj = deseq_data$deseq_obj
+  
+  ### The results names for contrasts, for example Gender_M_vs_F
+  results_names = resultsNames(deseq_obj)
+  
+  ### Create a list where the names are the simple covariate names
+  ### and the values are the results_names
+  cov_name_list = sapply(results_names[-1], 
+   function(x)
+   {
+     ### Split off the covariate name. 
+     split_result_name = strsplit(x, '_')[[1]]
+     print(split_result_name)
+     print(length(split_result_name))
+     if (length(split_result_name)==1)
+     {
+       print(x)
+       names(x) = x
+     } else
+     {
+       ### Usually, this requires removing
+       ### the last 3 elements of the split string which are
+       ### ['M','vs','F'] for example for Gender_M_vs_F.
+       ### We need to be careful because variables without levels
+       ### such as continuous variables show up as just the name of
+       ### the covariate. To determine where to cut off the list of
+       ### split characters, we first find the location of 'vs'.
+       # vs_index = match('vs', split_result_name)
+       # print(vs_index)
+       ### Then we keep only up to that index - 1 to 
+       ### also drop the two list items before 'vs' which are 'F' and '_'
+       ### Finally, we put what is left back together with a '_'
+       split_result_name = split_result_name %>% head(-3)
+       print(split_result_name)
+       reassembled_name = paste0(split_result_name, collapse='_')
+       print(reassembled_name)
+       ### Set the name of the value to the covariate name
+       names(x) = reassembled_name
+     }
+     
+     return(x)
+   }, 
+   USE.NAMES=F,
+   simplify=T
+  )
+  
+  print(cov_name_list)
+  
+  ### This is going to create a list where the names are the 
+  ### covariate names, and each value is a dataframe of deseq
+  ### result stats for that covariate.
+  
+  ### initialize empty list
+  results_list = list()
+  
+  ### loop through covariate name list
+  for (cov_name in names(cov_name_list))
+  {
+    print(sprintf('%s: %s', cov_name, cov_name_list[[cov_name]]))
+    
+    temp_results = 
+      ### Get the results for the current covariate by
+      ### using its result_name
+      results(deseq_obj, name=cov_name_list[[cov_name]]) %>%
+      ### Coerce to dataframe
+      as.data.frame() %>%
+      ### Drop columns of stats we don't need
+      select(one_of(deseq_keep_cols)) %>% 
+      ### Get the glommed taxa from the rownames
+      ### It's important that these are in the right order
+      ### for the join in the next step
+      tibble::rownames_to_column('glommed_taxa') %>%
+      ### Join to the aggregated counts to get some things we want:
+      ### short_glommed_taxa and the separate taxa for each rank
+      ### could be useful later
+      inner_join(deseq_data$aggregated_counts, by='glommed_taxa') %>%
+      ### But we don't need the actual raw counts, so drop the 
+      ### sampleID colunns
+      select(-one_of(deseq_data$sampleIDs)) %>%
+      ### Each result dataframe is going to have columns named
+      ### `pvalue`, `padj`, and `log2FoldChange`. Use this trick
+      ### to append the covariate name to the column names for these
+      ### variables so we can distinguish them in the final combined dataframe
+      rename_at(deseq_keep_cols, funs(paste0(.,'.', cov_name)))
+    
+    # print(colnames(temp_results))
+    
+    ### Add the results dataframe to the list
+    results_list[[cov_name]] = temp_results
+  }
+  
+  ### This is a bit tricky. We have a list of dataframes that contain the
+  ### deseq stats results for each covariate. We actually want to join them
+  ### by their shared columns (glommed_taxa, short_glommed_taxa, and taxa ranks).
+  ### To generalize this for an unknown number of covariates, use the `Reduce`
+  ### function to sequentially join the dataframes together.
+  all_results = Reduce(
+    function(...)
+    {
+      inner_join(..., by=c(rank_names, 'glommed_taxa', 'short_glommed_taxa'))
+    },
+    results_list
+  ) %>%
+    ### Finally, reorder the columns so that the stats columns are all together
+    select(glommed_taxa, short_glommed_taxa, one_of(ranks_to_keep), everything())
+    
+  return(all_results)
+  
+}
+
+runDeseqFromTables = function(
+    asv_table,
+    taxonomy_table,
+    metadata,
+    lowest_rank,
+    design
+  )
+{
+  ### Utility vectors for reused data
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  deseq_results_cols = c("baseMean", "log2FoldChange", "lfcSE", "stat", "pvalue", "padj")
+  deseq_keep_cols = c("log2FoldChange", "pvalue", "padj")
+  
+  lowest_rank_index = match(lowest_rank, all_ranks)
+  ranks_to_keep = all_ranks[1:lowest_rank_index]
+  
+  print("getting sample ids")
+  sampleIDs = as.vector(metadata[['SampleID']])
+  print(sampleIDs[1:3])
+  
+  ### Collect counts aggregated at a specific taxonomic rank
+  print("getting aggregated counts")
+  aggregated_counts = getAggregatedTaxaRankCounts(
+    taxonomy_table=taxonomy_table, 
+    asv_table=asv_table, 
+    lowest_rank=lowest_rank,
+    clean=T
+  )
+  print(dim(aggregated_counts))
+  
+  print("getting taxa counts")
+  taxa_counts =
+    aggregated_counts %>%
+    ### Remove zeros so log does not cause errors
+    replace(.==0, 1) %>%
+    ### Change tax glom to rownames
+    tibble::remove_rownames() %>%
+    tibble::column_to_rownames('glommed_taxa') %>%
+    select(one_of(sampleIDs)) %>%
+    data.frame()
+  print(dim(taxa_counts))
+  
+  # cat('dim counts:', dim(counts))
+  # cat('dim metadata:', dim(metadata))
+  
+  print("making deseq data set")
+  dds <- DESeqDataSetFromMatrix(
+    countData=taxa_counts,
+    colData=metadata,
+    design=design
+  )
+  
+  print("making deseq object (running deseq)")
+  deseq_obj = DESeq(
+    dds,
+    test='Wald',
+    fitType='mean'
+  )
+  
+  ### The results names for contrasts, for example Gender_M_vs_F
+  results_names = resultsNames(deseq_obj)
+  writeLines(c("results names:", results_names))
+  
+  ### Create a list where the names are the simple covariate names
+  ### and the values are the results_names
+  print("getting cov_name_list")
+  cov_name_list = sapply(results_names[-1], 
+    function(x)
+    {
+     ### Split off the covariate name. 
+     split_result_name = strsplit(x, '_')[[1]]
+     print(split_result_name)
+     print(length(split_result_name))
+     if (length(split_result_name)==1)
+     {
+       print(x)
+       names(x) = x
+     } else
+     {
+       ### Usually, this requires removing
+       ### the last 3 elements of the split string which are
+       ### ['M','vs','F'] for example for Gender_M_vs_F.
+       ### We need to be careful because variables without levels
+       ### such as continuous variables show up as just the name of
+       ### the covariate. To determine where to cut off the list of
+       ### split characters, we first find the location of 'vs'.
+       # vs_index = match('vs', split_result_name)
+       # print(vs_index)
+       ### Then we keep only up to that index - 1 to 
+       ### also drop the two list items before 'vs' which are 'F' and '_'
+       ### Finally, we put what is left back together with a '_'
+       split_result_name = split_result_name %>% head(-3)
+       print(split_result_name)
+       reassembled_name = paste0(split_result_name, collapse='_')
+       print(reassembled_name)
+       ### Set the name of the value to the covariate name
+       names(x) = reassembled_name
+     }
+     
+     return(x)
+    }, 
+    USE.NAMES=F,
+    simplify=T
+  )
+  
+  print(cov_name_list)
+  
+  ### This is going to create a list where the names are the 
+  ### covariate names, and each value is a dataframe of deseq
+  ### result stats for that covariate.
+  
+  ### initialize empty list
+  results_list = list()
+  
+  ### loop through covariate name list
+  print("getting results_list")
+  for (cov_name in names(cov_name_list))
+  {
+    print(sprintf('%s: %s', cov_name, cov_name_list[[cov_name]]))
+    
+    temp_results = 
+      ### Get the results for the current covariate by
+      ### using its result_name
+      results(deseq_obj, name=cov_name_list[[cov_name]]) %>%
+      ### Coerce to dataframe
+      as.data.frame() %>%
+      ### Drop columns of stats we don't need
+      select(one_of(deseq_keep_cols)) %>% 
+      ### Get the glommed taxa from the rownames
+      ### It's important that these are in the right order
+      ### for the join in the next step
+      tibble::rownames_to_column('glommed_taxa') %>%
+      ### Join to the aggregated counts to get some things we want:
+      ### short_glommed_taxa and the separate taxa for each rank
+      ### could be useful later
+      inner_join(aggregated_counts, by='glommed_taxa') %>%
+      ### But we don't need the actual raw counts, so drop the 
+      ### sampleID colunns
+      select(-one_of(sampleIDs)) %>%
+      ### Each result dataframe is going to have columns named
+      ### `pvalue`, `padj`, and `log2FoldChange`. Use this trick
+      ### to append the covariate name to the column names for these
+      ### variables so we can distinguish them in the final combined dataframe
+      rename_at(deseq_keep_cols, funs(paste0(.,'.', cov_name)))
+    
+    # print(colnames(temp_results))
+    
+    ### Add the results dataframe to the list
+    results_list[[cov_name]] = temp_results
+  }
+  
+  print(dim(results_list))
+  
+  ### This is a bit tricky. We have a list of dataframes that contain the
+  ### deseq stats results for each covariate. We actually want to join them
+  ### by their shared columns (glommed_taxa, short_glommed_taxa, and taxa ranks).
+  ### To generalize this for an unknown number of covariates, use the `Reduce`
+  ### function to sequentially join the dataframes together.
+  print("assembling deseq_results")
+  deseq_results = Reduce(
+    function(...)
+    {
+      inner_join(..., by=c(rank_names, 'glommed_taxa', 'short_glommed_taxa'))
+    },
+    results_list
+    ) %>%
+    ### Finally, reorder the columns so that the stats columns are all together
+    select(glommed_taxa, short_glommed_taxa, one_of(ranks_to_keep), everything())
+  
+  # deseq_results_df = 
+  #   ### Collect a structure with the deseq_results
+  #   data.frame(deseq_results@listData) %>%
+  #   ### Collect the glommed_taxa from the deseq_results
+  #   mutate('glommed_taxa' = deseq_results@rownames) %>%
+  #   ### Join to aggregated counts for further plotting
+  #   inner_join(aggregated_counts, by='glommed_taxa') %>%
+  #   ### Drop the sampleIDs which were included in the aggregated counts
+  #   ### Samples are irrelevant now--just want the taxa counts and stats
+  #   select(-one_of(sampleIDs))
+  # 
+  # ### Make short glommed names with only Phylum and lowest rank.
+  # ### Use these for plots because full glommed_taxa don't fit
+  # if (match(lowest_rank, all_ranks) == 1)
+  # {
+  #   ### Lowest rank taxa is Phylum, so no ranks to glom
+  #   ### But still need this variable as it will be referred to
+  #   ### in plotting
+  #   deseq_results_df =
+  #     deseq_results_df %>%
+  #     mutate(short_glommed_taxa = Phylum)
+  # } else
+  # {
+  #   ### Glom Phylum with lowest rank to make a short name
+  #   ### There are cases where these are not unique, so use
+  #   ### `make.unique` to uniqify them
+  #   deseq_results_df =
+  #     deseq_results_df %>%
+  #     mutate_(short_glommed_taxa = sprintf('paste0(Phylum, "_", %s)',lowest_rank)) %>%
+  #     mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
+  # }
+  # 
+  # ### Filter the counts for significance and return dataframe with taxa
+  # ### as columns (see documentation in getSignificanTaxaCounts function)
+  # significant_taxa_counts = getSignificantTaxaCounts(
+  #   deseq_results_df, 
+  #   aggregated_counts, 
+  #   sprintf("pvalue<%0.2f", pvalue_cutoff)
+  # )
+  # 
+  # ### Collect list of significant taxa from deseq results
+  # significant_taxa = 
+  #   deseq_results_df %>% 
+  #   filter(pvalue<=pvalue_cutoff) %>% 
+  #   select(glommed_taxa) %>%
+  #   pull(glommed_taxa)
+  # print("dim sig taxa")
+  # print(length(significant_taxa))
+  
+  return(list(
+    deseq_results=deseq_results,
+    aggregated_counts=aggregated_counts,
+    deseq_obj=deseq_obj,
+    taxa_counts=taxa_counts,
+    sampleIDs=sampleIDs
+  ))
 }
