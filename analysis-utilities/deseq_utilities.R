@@ -37,13 +37,14 @@ getAggregatedTaxaRankCounts = function(
   print("ranks_to_glom")
   print(ranks_to_glom)
   
-  sampleIDs = metadata[['SampleID']]
+  sampleIDs = as.vector(metadata$SampleID)
   
   if (clean)
   {
     taxonomy_table = 
       taxonomy_table %>%
-      filter_(sprintf("!is.na(%s)", lowest_rank))
+      # filter(sprintf("!is.na(%s)", lowest_rank))
+      filter(!is.na(!!sym(lowest_rank)))
   }
   
   # print("Setdiff")
@@ -51,16 +52,17 @@ getAggregatedTaxaRankCounts = function(
   # print(metadata[['SampleID']])
   # print(setdiff(colnames(asv_table), metadata[['SampleID']]))
   
+  
   print("creating tax abundance table")
   tax_abundance_table = 
     ### Join asv_table and taxonomy_table on ASVs to get sample abundances and rank names
     asv_table %>% 
-    inner_join(taxonomy_table, by='ASVs') %>% 
+    inner_join(taxonomy_table, by='ASVs')%>% 
     ### Drop everything but the sampleIDs and requested taxa
-    select(one_of(sampleIDs), one_of(ranks_to_glom)) %>%
+    select(one_of(!!sampleIDs), one_of(ranks_to_glom))%>%
     ### Sum all the counts grouping by the axa (effectively genus)
     group_by(.dots=ranks_to_glom) %>%
-    summarize_all(sum) %>%
+    summarize_all(sum)%>%
     ### Glom taxa ranks together for additinoal column
     mutate(glommed_taxa = paste(!!!syms(ranks_to_glom), sep='_')) %>%
     ### Fix hyphens in taxa names so they don't mess up column names later
@@ -72,7 +74,7 @@ getAggregatedTaxaRankCounts = function(
     select(one_of('glommed_taxa', sampleIDs, ranks_to_glom))  %>%
     ### Convert to dataframe (instead of tibble)
     data.frame() %>%
-    mutate_(short_glommed_taxa = sprintf('paste0(Phylum, "_", %s)',lowest_rank)) %>%
+    mutate(short_glommed_taxa = sprintf('paste0(Phylum, "_", %s)',lowest_rank)) %>%
     mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
   
   # print(dim(tax_abundance_table))
@@ -93,7 +95,7 @@ getMasterTable = function(
   ### sample, columns include metadata followed by agglomerated taxa names.
   ### Values are counts.
   
-  sampleIDs = metadata$SampleID
+  sampleIDs = as.vector(metadata$SampleID)
   
   aggregated_counts = getAggregatedTaxaRankCounts(
     taxonomy_table, 
@@ -130,9 +132,9 @@ runDeseq = function(
   return_obj='df' # Whether to return dataframe (default 'df') or 'raw' deseq results object
 )
 {
-  print(design)
-  print(as.character(design))
-  print(paste(as.character(design), collapse=""))
+  # print(design)
+  # print(as.character(design))
+  # print(paste(as.character(design), collapse=""))
   
   im_here = sprintf("in getMultivariateDeseqResults with: \n
                     \taggregated_counts=%s \n
@@ -169,7 +171,7 @@ runDeseq = function(
   # cat('dim counts:', dim(counts))
   # cat('dim metadata:', dim(metadata))
   
-  dds <- DESeqDataSetFromMatrix(
+  dds = DESeqDataSetFromMatrix(
     countData=taxa_counts,
     colData=metadata,
     design=design
@@ -240,6 +242,214 @@ runDeseq = function(
 }
 
 
+getDeseqObj = function(
+  asv_table,
+  taxonomy_table,
+  metadata,
+  lowest_rank='Genus',
+  design
+)
+{
+  
+  ### Run deseq on aggregated taxa rank counts. Input has counts for glommed taxa names (aggregated
+  ### over those taxa) for each sample.
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  print("design")
+  print(design)
+  
+  sampleIDs = metadata %>% pull(SampleID) %>% as.vector()
+  
+  print("getting aggregated counts")
+  aggregated_counts = getAggregatedTaxaRankCounts(
+    asv_table=asv_table, 
+    taxonomy_table=taxonomy_table, 
+    metadata=metadata,
+    lowest_rank=lowest_rank,
+    clean=T
+  )
+  
+  print("getting taxa counts")
+  taxa_counts =
+    aggregated_counts %>%
+    ### Remove zeros so log does not cause errors
+    replace(.==0, 1) %>%
+    ### Change tax glom to rownames
+    tibble::remove_rownames() %>%
+    tibble::column_to_rownames('glommed_taxa') %>%
+    select(one_of(sampleIDs)) %>%
+    data.frame()
+  
+  # cat('dim counts:', dim(counts))
+  # cat('dim metadata:', dim(metadata))
+  
+  dds = DESeqDataSetFromMatrix(
+    countData=taxa_counts,
+    colData=metadata,
+    design=design
+  )
+  
+  deseq_obj = DESeq(
+    dds,
+    test='Wald',
+    fitType='mean'
+  )
+  
+  # results_df = 
+  #   results(deseq_obj, contrast=contrast) %>%
+  #   data.frame() %>%
+  #   ### Collect the glommed_taxa from the deseq_results
+  #   mutate('glommed_taxa' = rownames(deseq_obj)) %>%
+  #   ### Join to aggregated counts for further plotting
+  #   inner_join(aggregated_counts, by='glommed_taxa') %>%
+  #   ### Drop the sampleIDs which were included in the aggregated counts
+  #   ### Samples are irrelevant now--just want the taxa counts and stats
+  #   select(-one_of(sampleIDs), -short_glommed_taxa)
+  # 
+  # if (return=='all')
+  # {
+  #   deseq_data = list(
+  #     results_df=results_df,
+  #     deseq_obj=deseq_obj,
+  #     taxa_counts=taxa_counts
+  #   )
+  #   return(deseq_data)
+  # } else if(return=='obj')
+  # {
+  #   return(deseq_obj)
+  # } else
+  # {
+  #   message('ERROR: Unknown return type')
+  #   return(FALSE)
+  # }
+  
+  return(deseq_obj)
+  
+}
+
+
+runDeseq2 = function(
+  aggregated_counts, # table with columns for taxa names, agglommerated taxa names, and counts for each sample.
+  metadata, # sample metadata
+  lowest_rank='Phylum',
+  design,  # design formulat or matrix
+  contrast,
+  return_obj='df' # Whether to return dataframe (default 'df') or 'all' deseq results object
+)
+{
+  # print(design)
+  # print(as.character(design))
+  # print(paste(as.character(design), collapse=""))
+  
+  im_here = sprintf("in getMultivariateDeseqResults with: \n
+                    \taggregated_counts=%s \n
+                    \tmetadata=%s \n
+                    \tlowest_rank=%s \n
+                    \tdesign=%s \n
+                    \treturn_obj=%s \n",
+                    paste(dim(aggregated_counts), collapse=" "),
+                    paste(dim(metadata), collapse=" "),
+                    lowest_rank,
+                    paste(as.character(design), collapse=""),
+                    return_obj
+  )
+  writeLines(im_here)
+  
+  ### Run deseq on aggregated taxa rank counts. Input has counts for glommed taxa names (aggregated
+  ### over those taxa) for each sample.
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  print("design")
+  print(design)
+  
+  sampleIDs = as.vector(metadata[['SampleID']])
+  
+  print("getting taxa counts")
+  taxa_counts =
+    aggregated_counts %>%
+    ### Remove zeros so log does not cause errors
+    replace(.==0, 1) %>%
+    ### Change tax glom to rownames
+    tibble::remove_rownames() %>%
+    tibble::column_to_rownames('glommed_taxa') %>%
+    select(one_of(sampleIDs)) %>%
+    data.frame()
+  
+  # cat('dim counts:', dim(counts))
+  # cat('dim metadata:', dim(metadata))
+  
+  print("creating deseq dataset")
+  dds = DESeqDataSetFromMatrix(
+    countData=taxa_counts,
+    colData=metadata,
+    design=design
+  )
+  
+  print("running deseq")
+  deseq_obj = DESeq(
+    dds,
+    test='Wald',
+    fitType='mean'
+  )
+  
+  print(resultsNames(deseq_obj))
+  deseq_results = results(deseq_obj, contrast=contrast)
+  deseq_results_column_descriptions = deseq_results@elementMetadata$description
+  
+  print("creating results df")
+  deseq_results_df = 
+    ### Collect a structure with the deseq_results
+    data.frame(deseq_results@listData) %>%
+    ### Collect the glommed_taxa from the deseq_results
+    mutate('glommed_taxa' = deseq_results@rownames) %>%
+    ### Join to aggregated counts for further plotting
+    inner_join(aggregated_counts, by='glommed_taxa') %>%
+    ### Drop the sampleIDs which were included in the aggregated counts
+    ### Samples are irrelevant now--just want the taxa counts and stats
+    select(-one_of(sampleIDs))
+  
+  ### Make short glommed names with only Phylum and lowest rank.
+  ### Use these for plots because full glommed_taxa don't fit
+  if (match(lowest_rank, all_ranks) == 1)
+  {
+    ### Lowest rank taxa is Phylum, so no ranks to glom
+    ### But still need this variable as it will be referred to
+    ### in plotting
+    deseq_results_df =
+      deseq_results_df %>%
+      mutate(short_glommed_taxa = Phylum)
+  } else
+  {
+    ### Glom Phylum with lowest rank to make a short name
+    ### There are cases where these are not unique, so use
+    ### `make.unique` to uniqify them
+    deseq_results_df =
+      deseq_results_df %>%
+      mutate_(short_glommed_taxa = sprintf('paste0(Phylum, "_", %s)',lowest_rank)) %>%
+      mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
+  }
+  
+  # print(dim(deseq_results_df))
+  # print(colnames(deseq_results_df))
+  
+  if (return_obj=='all')
+  {
+    deseq_data = list(
+      deseq_results_df=deseq_results_df,
+      deseq_obj=deseq_obj,
+      taxa_counts=taxa_counts
+    )
+    return(deseq_data)
+  } else if(return_obj=='df')
+  {
+    return(deseq_results_df)
+  } else
+  {
+    message('ERROR: Unknown return type')
+    return(FALSE)
+  }
+  
+}
+
+
 getSignificantTaxaCounts = function(
   deseq_results_df,
   aggregated_counts,
@@ -255,7 +465,7 @@ getSignificantTaxaCounts = function(
   
   significant_glommed_taxa = 
     deseq_results_df %>% 
-    filter_(cutoff_expr) %>%
+    filter(cutoff_expr) %>%
     pull(glommed_taxa)
   
   # print(head(significant))
@@ -283,6 +493,8 @@ plotTaxaCounts = function(
   select_taxa,
   taxa_rank,
   formula,
+  pvalue_cutoff=0.1,
+  padj_cutoff=0.2,
   normalize=F
 )
 {
@@ -320,15 +532,20 @@ plotTaxaCounts = function(
   gathered_data =  
     master_table %>%
     select(one_of(select_taxa, kept_columns)) %>%
-    gather(key='Taxa', value='Counts', -kept_columns, factor_key=T)
+    gather(key='Taxa', value='Counts', -kept_columns, factor_key=T) %>%
+    mutate(Taxa = shortenTaxaNames(Taxa))
+  
+  # print(head(gathered_data))
   
   print("dim gathered data")
   print(dim(gathered_data))
   
-  gathered_data$Taxa = sapply(gathered_data$Taxa, shortenTaxaName)
+  # gathered_data$Taxa = sapply(gathered_data$Taxa, shortenTaxaName)
+  # print(head(gathered_data))
   
   plot_title = 
-    sprintf('%s level relative abundance for p<=0.05 significant taxa', taxa_rank)
+    sprintf('%s level relative abundance for p<=%s, padj<=%s significant taxa', taxa_rank, pvalue_cutoff, padj_cutoff)
+  print(plot_title)
   
   plot_obj = ggplot(gathered_data, aes(x=SampleID, y=Counts)) + 
     geom_bar(stat='identity') + 
@@ -342,7 +559,8 @@ plotTaxaCounts = function(
 plotDeseqLogFoldChangeBarplot = function(
   deseq_results_df,
   lowest_rank='Phylum',
-  data_suffix,
+  variable_name,
+  variable_levels,
   pvalue_cutoff,
   padj_cutoff,
   fill_col='pvalue',
@@ -360,13 +578,13 @@ plotDeseqLogFoldChangeBarplot = function(
   print(pvalue_cutoff)
   print(padj_cutoff)
   
-  if (data_suffix != "")
+  if (variable_name != "")
   {
-    pvalue_cutoff_expr = paste0('pvalue', '.', data_suffix, '<', pvalue_cutoff)
-    padj_cutoff_expr = paste0('padj', '.', data_suffix, '<', padj_cutoff)
-    abs_l2fc = paste0('abs(log2FoldChange', '.', data_suffix, ')')
-    l2fc = paste0('log2FoldChange', '.', data_suffix)
-    fill_string = paste0(fill_col, '.', data_suffix)
+    pvalue_cutoff_expr = paste0('pvalue', '.', variable_name, '<', pvalue_cutoff)
+    padj_cutoff_expr = paste0('padj', '.', variable_name, '<', padj_cutoff)
+    abs_l2fc = paste0('abs(log2FoldChange', '.', variable_name, ')')
+    l2fc = paste0('log2FoldChange', '.', variable_name)
+    fill_string = paste0(fill_col, '.', variable_name)
   } else
   {
     pvalue_cutoff_expr = paste0('pvalue', '<', pvalue_cutoff)
@@ -387,9 +605,9 @@ plotDeseqLogFoldChangeBarplot = function(
   top_N_logfold =
     deseq_results_df %>%
     ### Apply p-value cutoffs
-    filter_(
-      pvalue_cutoff_expr, 
-      padj_cutoff_expr
+    filter(
+      .data(pvalue_cutoff_expr), 
+      .data(padj_cutoff_expr)
     ) %>%
     ### Sort by biggest fold change magnitudes + OR -
     arrange_(abs_l2fc) %>%
@@ -424,8 +642,10 @@ plotDeseqLogFoldChangeBarplot = function(
   print('Creating title')
   ### Create dynamic title
   title = sprintf(
-    "%s Level Log2(AMD/Control) Abundance (p<=%0.2f and q<=%0.2f)",
+    "%s Level Log2(%s/%s) Abundance (p<=%0.2f and q<=%0.2f)",
     lowest_rank,
+    variable_levels[2],
+    variable_levels[1],
     pvalue_cutoff,
     padj_cutoff
   )
@@ -452,14 +672,14 @@ plotDeseqLogFoldChangeBarplot = function(
     annotate("text", 
              x=topN, 
              y=1.1*most_minus/2, 
-             label = "Reduced in AMD", 
+             label = paste0("Reduced in ", variable_levels[2]), 
              size=3, 
              fontface=2
              ) + 
     annotate("text", 
              x=1, 
              y=1.1*most_plus/2, 
-             label = "Increased in AMD", 
+             label = paste0("Increased in ", variable_levels[2]), 
              size=3, 
              fontface=2
              )
@@ -470,6 +690,118 @@ plotDeseqLogFoldChangeBarplot = function(
   
   return(plot_obj)
 }
+
+
+plotDeseqLogFoldChangeBarplot2 = function(
+    results_df,
+    lowest_rank='Phylum',
+    contrast,
+    pvalue_cutoff,
+    padj_cutoff,
+    fill_col='pvalue',
+    topN=20
+  )
+{
+  ### Makes a horizontal bar chart of log2 fold-changes returned from deseq analysis.
+  ### Accepts filtering criteria for pvalue, qvalue (adjusted p value), and how many
+  ### of the most significant taxa to plot. Additionally accepts a fill variable for
+  ### coloring the bars.
+  ###
+  ### Hypothetically, you could add columns to the input df for additional coloring
+  ### options. This has not been tested.
+  
+  print("getting top_N_logfold")
+  top_N_logfold =
+    results_df %>%
+    ### Apply p-value cutoffs
+    filter(
+      pvalue<pvalue_cutoff, 
+      padj<padj_cutoff
+    ) %>%
+    ### Sort by biggest fold change magnitudes + OR -
+    arrange(abs(log2FoldChange)) %>%
+    ### Scrape the top N
+    top_n(n=-topN) %>%
+    ### Now order by actual fold change + to -
+    arrange(log2FoldChange) %>%
+    ### Make glommed taxa a factor and set levels to current order
+    ### Otherwise, the bars will plot in alphabetical order
+    mutate(short_glommed_taxa = factor(short_glommed_taxa, levels=short_glommed_taxa))
+  
+  print(dim(top_N_logfold))
+  print(colnames(top_N_logfold))
+  
+  if (dim(top_N_logfold)[1] < topN)
+  {
+    topN = dim(top_N_logfold)[1]
+    message = sprintf(
+      "Only %i taxa meet the conditions: p<=%0.2f and q<=%0.2f",
+      topN,
+      pvalue_cutoff,
+      padj_cutoff
+    )
+  }
+  
+  most_minus = top_N_logfold$log2FoldChange[1]
+  print(most_minus)
+  most_plus = top_N_logfold$log2FoldChange[topN]
+  print(most_plus)
+  print(topN)
+  
+  print('Creating title')
+  ### Create dynamic title
+  title = sprintf(
+    "%s Level Log2(%s/%s) Abundance (p<=%0.2f and q<=%0.2f)",
+    lowest_rank,
+    contrast[2],
+    contrast[3],
+    pvalue_cutoff,
+    padj_cutoff
+    )
+  
+  print("plotting")
+  # ggplot(data=top_N_logfold, aes(x=glommed_taxa, y=log2FoldChange, fill=padj)) +
+  plot_obj = ggplot(
+    data=top_N_logfold, 
+    aes_string(
+      x='short_glommed_taxa', 
+      y='log2FoldChange', 
+      fill=fill_col
+    )) +
+    geom_bar(stat='identity') +
+    coord_flip() +
+    ggtitle(title) +
+    ylab("Log2 AMD/Control") +
+    xlab("Significant Taxa") + 
+    theme(
+      axis.text.x = element_text(size=7),
+      axis.text.y = element_text(size=7),
+      plot.title = element_text(hjust=0, size=10, margin=margin(unit = "in"))
+    ) + 
+    annotate("text", 
+             x=topN, 
+             y=1.1*most_minus/2, 
+             label = paste0("Reduced in ", contrast[2]), 
+             size=3, 
+             fontface=2
+    ) + 
+    annotate("text", 
+             x=1, 
+             y=1.1*most_plus/2, 
+             label = paste0("Increased in ", contrast[2]), 
+             size=3, 
+             fontface=2
+    )
+  
+  # https://stackoverflow.com/a/22000100/188963
+  
+  # print(sprintf('annotate("text", x=%i, y=%0.2f, label = "Reduced in AMD", size=6)', topN, most_minus/2))
+  
+  return(plot_obj)
+}
+
+
+
 
 printFancyKableTable = function(
   data,
@@ -838,7 +1170,7 @@ runDeseqFromTables = function(
     metadata=metadata,
     lowest_rank=lowest_rank,
     clean=T
-  )
+   )
   # print(dim(aggregated_counts))
   # 
   # print("colnames aggregated counts")
@@ -997,7 +1329,7 @@ getSignificantTaxaCounts2 = function(raw_counts, deseq_results_df, cutoff_expr
   
   significant_glommed_taxa = 
     deseq_results_df %>%
-    filter_(cutoff_expr) %>%
+    filter(.data(cutoff_expr)) %>%
     pull(glommed_taxa)
   
   sig_taxa_counts = 
