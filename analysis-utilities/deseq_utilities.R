@@ -184,12 +184,10 @@ runDeseq = function(
   )
   
   print(resultsNames(deseq_obj))
-  deseq_results = results(deseq_obj)
+  deseq_results = results(deseq_obj, tidy=T)
   deseq_results_column_descriptions = deseq_results@elementMetadata$description
 
   deseq_results_df = 
-    ### Collect a structure with the deseq_results
-    data.frame(deseq_results@listData) %>%
     ### Collect the glommed_taxa from the deseq_results
     mutate('glommed_taxa' = deseq_results@rownames) %>%
     ### Join to aggregated counts for further plotting
