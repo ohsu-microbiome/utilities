@@ -142,7 +142,7 @@ echo "$initial_command"
 
 if [[ $conda_env != "" ]]; then
     sbatch_body="$sbatch_body
-source /home/exacloud/lustre1/teamMicrobiome/conda/etc/profile.d/conda.sh
+source /home/exacloud/tempwork/teamMicrobiome/conda/etc/profile.d/conda.sh
 conda activate $conda_env"
 fi
 
