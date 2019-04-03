@@ -136,7 +136,7 @@ runDeseq = function(
   # print(as.character(design))
   # print(paste(as.character(design), collapse=""))
   
-  im_here = sprintf("in getMultivariateDeseqResults with: \n
+  im_here = sprintf("in runDesqe with: \n
                     \taggregated_counts=%s \n
                     \tmetadata=%s \n
                     \tlowest_rank=%s \n
@@ -508,6 +508,102 @@ plotTaxaCounts = function(
     print("normalizing counts for select")
     master_table = 
       master_table %>% 
+      mutate_at(vars(select_taxa), funs(./sum(.)))
+  }
+  
+  print("splitting formula")
+  split_formula = as.character(formula)
+  lhs = split_formula[2] %>% trimws()
+  rhs = split_formula[3]
+  rhs_pieces = strsplit(rhs, '+', fixed=T)[[1]] %>% trimws()
+  cat('lhs:', lhs, 'rhs pices:', rhs_pieces, '\n')
+  
+  kept_columns = c('SampleID', rhs_pieces)
+  print("kept columns")
+  print(kept_columns)
+  
+  # gathered_data =  
+  #   counts %>%
+  #   select(glommed_taxa, one_of(kept_columns)) %>%
+  # gather(key='Taxa', value='Counts', -kept_columns, factor_key=T) 
+  
+  gathered_data =  
+    master_table %>%
+    select(one_of(select_taxa, kept_columns)) %>%
+    gather(key='Taxa', value='Counts', -kept_columns, factor_key=T) %>%
+    mutate(Taxa = shortenTaxaNames(Taxa))
+  
+  # print(head(gathered_data))
+  
+  print("dim gathered data")
+  print(dim(gathered_data))
+  
+  # gathered_data$Taxa = sapply(gathered_data$Taxa, shortenTaxaName)
+  # print(head(gathered_data))
+  
+  plot_title = 
+    sprintf('%s level relative abundance for p<=%s, padj<=%s significant taxa', taxa_rank, pvalue_cutoff, padj_cutoff)
+  print(plot_title)
+  
+  plot_obj = ggplot(gathered_data, aes(x=SampleID, y=Counts)) + 
+    geom_bar(stat='identity') + 
+    facet_grid(formula, scale='free') +
+    theme(strip.text.y=element_text(angle=0, hjust=1, size=8)) +
+    ggtitle(plot_title)
+  
+  return(plot_obj)
+}
+
+plotTaxaCounts2 = function(
+  taxa_counts,
+  deseq_results_df,
+  taxa_rank,
+  formula,
+  pvalue_cutoff=0.1,
+  padj_cutoff=0.2,
+  normalize=F
+)
+{
+  ### Creates a faceted set of bar plots of the taxa abundance in each sample.
+  ### Accepts a formula to use for faceting. Right now, the LHS has to be Taxa,
+  ### and only one feature on the RHS.
+  
+  # print('head counts')
+  # print(head(counts))
+  
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  
+  transpose_taxa_counts = 
+    taxa_counts %>%
+    select(-c(short_glommed_taxa, all_ranks)) %>%
+    tibble::column_to_rownames('glommed_taxa') %>%
+    t() %>%
+    data.frame() %>%
+    tibble::rownames_to_column('SampleID') %>%
+    as.data.frame()
+  
+  select_taxa = 
+    deseq_results_df %>%
+    filter(pvalue<pvalue_cutoff, padj<padj_cutoff) %>%
+    pull(short_glommed_taxa) %>%
+    as.vector()
+  
+  master_table = 
+    taxa_counts %>%
+    select(-c(glommed_taxa, all_ranks)) %>%
+    tibble::column_to_rownames('short_glommed_taxa') %>%
+    t() %>%
+    data.frame() %>%
+    tibble::rownames_to_column('SampleID') %>%
+    as.data.frame() %>%
+    inner_join(metadata, by='SampleID') %>%
+    select(!!colnames(metadata), !!select_taxa)
+  
+  if (normalize)
+  {
+    print("normalizing counts for select")
+    transpose_taxa_counts = 
+      transpose_taxa_counts %>% 
       mutate_at(vars(select_taxa), funs(./sum(.)))
   }
   
@@ -1336,5 +1432,97 @@ getSignificantTaxaCounts2 = function(raw_counts, deseq_results_df, cutoff_expr
     tibble::column_to_rownames('glommed_taxa') %>%
     t() %>%
     as.data.frame()
+}
+
+getFilteredTaxaCounts = function(
+    asv_table,
+    taxonomy_table,
+    metadata,
+    lowest_rank,
+    relative_abundance_cutoff,
+    prevalence_cutoff,
+    clean=T
+  )
+{
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  print(lowest_rank)
+  lowest_rank_index = match(lowest_rank, all_ranks)
+  ranks_to_glom = all_ranks[1:lowest_rank_index]
+  print("ranks_to_glom")
+  print(ranks_to_glom)
+  
+  sampleIDs = as.vector(metadata$SampleID)
+  
+  if (clean)
+  {
+    taxonomy_table = 
+      taxonomy_table %>%
+      # filter(sprintf("!is.na(%s)", lowest_rank))
+      filter(!is.na(!!sym(lowest_rank)))
+  }
+  
+  print("creating tax counts")
+  taxa_counts = 
+    ### Join asv_table and taxonomy_table on ASVs to get sample abundances and rank names
+    asv_table %>% 
+    inner_join(taxonomy_table, by='ASVs') %>% 
+    ### Drop everything but the sampleIDs and requested taxa
+    select(!!c(sampleIDs, ranks_to_glom)) %>%
+    ### Sum all the counts grouping by the axa (effectively genus)
+    group_by(.dots=ranks_to_glom) %>%
+    summarize_all(sum)%>%
+    ### Glom taxa ranks together for additinoal column
+    mutate(glommed_taxa = paste(!!!syms(ranks_to_glom), sep='_')) %>%
+    ### Fix hyphens in taxa names so they don't mess up column names later
+    mutate(glommed_taxa = gsub('-', '_dash_', glommed_taxa)) %>%
+    ### Fix slashes in taxa names so they don't mess up column names later
+    mutate(glommed_taxa = gsub('/', '_slash_', glommed_taxa)) %>%
+    ### Select again so glommed_taxa is first row (better way?)
+    ### Could glom earlier and then group by ranks and glommed_taxa
+    select(one_of('glommed_taxa', sampleIDs, ranks_to_glom))  %>%
+    ### Convert to dataframe (instead of tibble)
+    data.frame() %>%
+    mutate(short_glommed_taxa = sprintf('paste0(Phylum, "_", %s)',lowest_rank)) %>%
+    mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
+  
+  print("dim taxa counts")
+  print(dim(taxa_counts))
+  
+  print("Filtering taxa")
+  print("Relative Abundance Filter")
+  count_filtered_taxa = 
+    taxa_counts %>%
+    mutate_if(is.numeric, funs(ifelse(./sum(.)<relative_abundance_cutoff, 0, .))) %>%
+    mutate(rowsum=rowSums(select_if(.,is.numeric))) %>%
+    filter(rowsum>0) %>%
+    select(-rowsum)
+  
+  print(dim(count_filtered_taxa))
+  num_taxa_frequency_dropped = dim(taxa_counts)[1] - dim(count_filtered_taxa)[1]
+  print(paste('Num taxa dropped:', num_taxa_frequency_dropped))
+  
+  print("Prevalence Filter")
+  prevalence_filtered_taxa =
+    count_filtered_taxa %>%
+    mutate(
+      ### Get the number of numeric columns
+      numall=length(select_if(., is.numeric)),
+      ### Get the number of zeros
+      num_nonzero=rowSums(select_if(.,is.numeric)!=0),
+      ### Fraction that are zero
+      fract_nonzero=num_nonzero/numall
+    ) %>%
+    ### Drop ASVs appearing in less than 10% of samples
+    filter(fract_nonzero>=prevalence_cutoff) %>%
+    ### Drop temporary columns
+    select(-numall, -num_nonzero, -fract_nonzero)
+  num_prevalence_filtered_taxa = dim(prevalence_filtered_taxa)[1]
+  
+  num_taxa_prevalence_dropped = 
+    dim(count_filtered_taxa)[1] - dim(prevalence_filtered_taxa)[1]
+  
+  print(paste0('Num taxa dropped: ', num_taxa_prevalence_dropped))
+  
+  return(prevalence_filtered_taxa)
   
 }
