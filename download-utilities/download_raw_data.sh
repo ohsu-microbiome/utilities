@@ -51,7 +51,7 @@ fi
 
 # Download raw data files with wget ----------
 # make a directory called fastq_files
-mkdir "$DIR"/data/raw
+mkdir -p "$DIR"/data/raw
 
 wget \
   -r \
@@ -67,7 +67,7 @@ wget \
 echo "finished downloading raw fastq files"
 
 # Download quality control FastQC data files with wget ----------
-mkdir "$DIR"/data/quality
+mkdir -p "$DIR"/data/quality
 wget \
   -r \
   -e \

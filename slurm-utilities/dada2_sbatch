@@ -1,0 +1,10 @@
+#!/bin/bash
+
+dada2_script_path='/home/exacloud/lustre1/teamMicrobiome/microbiome-workflows/dada2_to_tables_master.R'
+project_meta_file=$1
+
+cmd="qsbatch -c32 -m32G -t24:00:00 -e dada2 -Ev Rscript --vanilla $dada2_script_path $project_meta_file"
+echo "executing command:"
+echo "$cmd"
+$cmd
+

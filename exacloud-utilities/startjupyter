@@ -77,10 +77,10 @@ fi
 
 
 ### Check if conda is active. Execute `which conda` and check exit status.
-if [[ `which conda &> /dev/null; echo $?` == 1 ]]; then
-    echo "Conda not active. Sourcing initialization script"
-    source /home/exacloud/lustre1/teamMicrobiome/conda/etc/profile.d/conda.sh
-fi
+#if [[ `which conda &> /dev/null; echo $?` == 1 ]]; then
+#    echo "Conda not active. Sourcing initialization script"
+#    source /home/exacloud/lustre1/teamMicrobiome/conda/etc/profile.d/conda.sh
+#fi
 
 
 ### For now, always work from the base environment to guarantee that all features
@@ -93,14 +93,13 @@ conda activate base
 host=$(hostname)
 ip=$(host $host | cut -d" " -f4)
 
-
-tunnel_command="ssh -L $port:$ip:$sport exacloud"
+tunnel_command="ssh -L $port:`hostname`:$sport exacloud"
 echo "tunnel command:"
 echo $tunnal_command
 
 if [[ $write_tunnel ]]; then
     echo "writing tunnel command to $tunnel_file"
-    echo "ssh -L $port:$ip:$port exacloud" > $tunnel_file
+    echo "$tunnel_command" > $tunnel_file
 fi
 
 
