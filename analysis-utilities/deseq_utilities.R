@@ -74,7 +74,7 @@ getAggregatedTaxaRankCounts = function(
     select(one_of('glommed_taxa', sampleIDs, ranks_to_glom))  %>%
     ### Convert to dataframe (instead of tibble)
     data.frame() %>%
-    mutate(short_glommed_taxa = sprintf('paste0(Phylum, "_", %s)',lowest_rank)) %>%
+    mutate(short_glommed_taxa=paste0(Phylum, "_", !!as.name(lowest_rank))) %>%
     mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
   
   # print(dim(tax_abundance_table))
@@ -120,6 +120,33 @@ getMasterTable = function(
     mutate(SampleID=factor(sampleIDs)) %>%
     inner_join(metadata, by='SampleID') %>% 
     select(one_of(colnames(metadata), aggregated_counts[['glommed_taxa']]))
+  
+  return(master_table)
+}
+
+getMasterTable2 = function(
+  taxa_counts,
+  metadata
+)
+{
+  ### Table combining agglomerated taxa counts and metadata. For each
+  ### sample, columns include metadata followed by agglomerated taxa names.
+  ### Values are counts.
+  
+  sampleIDs = as.vector(metadata$SampleID)
+  
+  master_table = 
+    taxa_counts %>%
+    select(c('glommed_taxa', sampleIDs)) %>%
+    ### Add rownames which will become colnames (headers) when transposed
+    tibble::column_to_rownames('glommed_taxa') %>% 
+    ### Transpose and coerce back to dataframe
+    t() %>% 
+    data.frame() %>% 
+    tibble::remove_rownames() %>% 
+    mutate(SampleID=sampleIDs) %>%
+    inner_join(metadata, by='SampleID') %>% 
+    select(c(colnames(metadata), taxa_counts$glommed_taxa))
   
   return(master_table)
 }
@@ -493,7 +520,7 @@ plotTaxaCounts = function(
   formula,
   pvalue_cutoff=0.1,
   padj_cutoff=0.2,
-  normalize=F
+  normalize=T
 )
 {
   ### Creates a faceted set of bar plots of the taxa abundance in each sample.
@@ -503,6 +530,7 @@ plotTaxaCounts = function(
   # print('head counts')
   # print(head(counts))
   
+  print("checking normalize")
   if (normalize)
   {
     print("normalizing counts for select")
@@ -529,7 +557,7 @@ plotTaxaCounts = function(
   
   gathered_data =  
     master_table %>%
-    select(one_of(select_taxa, kept_columns)) %>%
+    select(c(!!select_taxa, !!kept_columns)) %>%
     gather(key='Taxa', value='Counts', -kept_columns, factor_key=T) %>%
     mutate(Taxa = shortenTaxaNames(Taxa))
   
@@ -556,12 +584,13 @@ plotTaxaCounts = function(
 
 plotTaxaCounts2 = function(
   taxa_counts,
+  metadata,
   deseq_results_df,
   taxa_rank,
   formula,
   pvalue_cutoff=0.1,
   padj_cutoff=0.2,
-  normalize=F
+  normalize=T
 )
 {
   ### Creates a faceted set of bar plots of the taxa abundance in each sample.
@@ -573,39 +602,25 @@ plotTaxaCounts2 = function(
   
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
   
-  transpose_taxa_counts = 
-    taxa_counts %>%
-    select(-c(short_glommed_taxa, all_ranks)) %>%
-    tibble::column_to_rownames('glommed_taxa') %>%
-    t() %>%
-    data.frame() %>%
-    tibble::rownames_to_column('SampleID') %>%
-    as.data.frame()
-  
-  select_taxa = 
-    deseq_results_df %>%
-    filter(pvalue<pvalue_cutoff, padj<padj_cutoff) %>%
-    pull(short_glommed_taxa) %>%
-    as.vector()
-  
-  master_table = 
-    taxa_counts %>%
-    select(-c(glommed_taxa, all_ranks)) %>%
-    tibble::column_to_rownames('short_glommed_taxa') %>%
-    t() %>%
-    data.frame() %>%
-    tibble::rownames_to_column('SampleID') %>%
-    as.data.frame() %>%
-    inner_join(metadata, by='SampleID') %>%
-    select(!!colnames(metadata), !!select_taxa)
+  sampleIDs = metadata %>% pull(SampleID) %>% as.vector()
   
   if (normalize)
   {
     print("normalizing counts for select")
-    transpose_taxa_counts = 
-      transpose_taxa_counts %>% 
-      mutate_at(vars(select_taxa), funs(./sum(.)))
+    taxa_counts = 
+      taxa_counts %>% 
+      mutate_if(is.numeric, funs(./sum(.)))
   }
+  
+  select_taxa = 
+    deseq_results_df %>%
+    filter(pvalue<pvalue_cutoff, padj<padj_cutoff) %>%
+    pull(glommed_taxa) %>%
+    as.vector()
+  
+  master_table = 
+    getMasterTable2(taxa_counts, metadata) %>%
+    select(!!colnames(metadata), !!select_taxa)
   
   print("splitting formula")
   split_formula = as.character(formula)
@@ -1482,7 +1497,7 @@ getFilteredTaxaCounts = function(
     select(one_of('glommed_taxa', sampleIDs, ranks_to_glom))  %>%
     ### Convert to dataframe (instead of tibble)
     data.frame() %>%
-    mutate(short_glommed_taxa = sprintf('paste0(Phylum, "_", %s)',lowest_rank)) %>%
+    mutate(short_glommed_taxa=paste0(Phylum, "_", !!as.name(lowest_rank))) %>%
     mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
   
   print("dim taxa counts")
@@ -1493,7 +1508,7 @@ getFilteredTaxaCounts = function(
   count_filtered_taxa = 
     taxa_counts %>%
     mutate_if(is.numeric, funs(ifelse(./sum(.)<relative_abundance_cutoff, 0, .))) %>%
-    mutate(rowsum=rowSums(select_if(.,is.numeric))) %>%
+    mutate(rowsum=apply(select_if(.,is.numeric), 1, sum)) %>%
     filter(rowsum>0) %>%
     select(-rowsum)
   
