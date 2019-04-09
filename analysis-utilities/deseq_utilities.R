@@ -659,8 +659,11 @@ plotTaxaCounts2 = function(
   plot_obj = ggplot(gathered_data, aes(x=SampleID, y=Counts)) + 
     geom_bar(stat='identity') + 
     facet_grid(formula, scale='free') +
-    theme(strip.text.y=element_text(angle=0, hjust=1, size=8)) +
-    ggtitle(plot_title)
+    ggtitle(plot_title) +
+    theme(
+      strip.text.y=element_text(angle=0, hjust=1, size=8),
+      plot.title = element_text(hjust=0, size=8)
+      )
   
   return(plot_obj)
 }
@@ -885,7 +888,7 @@ plotDeseqLogFoldChangeBarplot2 = function(
     theme(
       axis.text.x = element_text(size=7),
       axis.text.y = element_text(size=7),
-      plot.title = element_text(hjust=0, size=10, margin=margin(unit = "in"))
+      plot.title = element_text(hjust=0, size=8, margin=margin(unit = "in"))
     ) + 
     annotate("text", 
              x=topN, 
@@ -1450,14 +1453,15 @@ getSignificantTaxaCounts2 = function(raw_counts, deseq_results_df, cutoff_expr
 }
 
 getFilteredTaxaCounts = function(
-    asv_table,
-    taxonomy_table,
-    metadata,
-    lowest_rank,
-    relative_abundance_cutoff,
-    prevalence_cutoff,
-    clean=T
-  )
+      asv_table,
+      taxonomy_table,
+      metadata,
+      lowest_rank,
+      relative_abundance_cutoff,
+      prevalence_cutoff,
+      clean=T,
+      n_max_by_mean=F
+    )
 {
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
   print(lowest_rank)
@@ -1465,6 +1469,8 @@ getFilteredTaxaCounts = function(
   ranks_to_glom = all_ranks[1:lowest_rank_index]
   print("ranks_to_glom")
   print(ranks_to_glom)
+  print("n_max_by_mean")
+  print(n_max_by_mean)
   
   sampleIDs = as.vector(metadata$SampleID)
   
@@ -1538,6 +1544,18 @@ getFilteredTaxaCounts = function(
   
   print(paste0('Num taxa dropped: ', num_taxa_prevalence_dropped))
   
-  return(prevalence_filtered_taxa)
+  if (n_max_by_mean != F)
+  {
+    means=rowMeans(prevalence_filtered_taxa %>% select(sampleIDs))
+    means_order = order(means)
+    
+    filtered_taxa = prevalence_filtered_taxa[means_order,]
+  } else
+  {
+    filtered_taxa = prevalence_filtered_taxa
+  }
+
+  
+  return(filtered_taxa)
   
 }
