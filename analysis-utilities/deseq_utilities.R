@@ -1463,23 +1463,38 @@ getFilteredTaxaCounts = function(
       n_max_by_mean=F
     )
 {
+  print(sprintf("lowest_rank = %s", lowest_rank))
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
-  print(lowest_rank)
+  
   lowest_rank_index = match(lowest_rank, all_ranks)
   ranks_to_glom = all_ranks[1:lowest_rank_index]
-  print("ranks_to_glom")
-  print(ranks_to_glom)
-  print("n_max_by_mean")
-  print(n_max_by_mean)
+  # print("ranks_to_glom")
+  # print(ranks_to_glom)
+  # 
+  # print("dim asv table")
+  # print(dim(asv_table))
+  # print("dim taxonomy table")
+  # print(dim(taxonomy_table))
+  # print("dim metadata")
+  # print(dim(metadata))
+  # print(sprintf("lowest_rank = %s", lowest_rank))
+  # print(sprintf("relative_abundance_cutoff = %0.4f", relative_abundance_cutoff))
+  # print(sprintf("prevalence_cutoff = %0.4f", prevalence_cutoff))
+  # print(sprintf("clean = %s", clean))
+  # print(sprintf("n_max_by_mean = %d", n_max_by_mean))
   
   sampleIDs = as.vector(metadata$SampleID)
+  print(sprintf("length sampleIDs = ", length(sampleIDs)))
   
   if (clean)
   {
-    taxonomy_table = 
+    taxonomy_table =
       taxonomy_table %>%
       # filter(sprintf("!is.na(%s)", lowest_rank))
       filter(!is.na(!!sym(lowest_rank)))
+
+    print("dim clean tax table")
+    print(dim(taxonomy_table))
   }
   
   print("creating tax counts")
@@ -1549,7 +1564,7 @@ getFilteredTaxaCounts = function(
     means=rowMeans(prevalence_filtered_taxa %>% select(sampleIDs))
     means_order = order(means)
     
-    filtered_taxa = prevalence_filtered_taxa[means_order,]
+    filtered_taxa = prevalence_filtered_taxa[means_order[1:n_max_by_mean],]
   } else
   {
     filtered_taxa = prevalence_filtered_taxa
