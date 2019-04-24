@@ -811,7 +811,7 @@ plotDeseqLogFoldChangeBarplot2 = function(
     pvalue_cutoff,
     padj_cutoff,
     fill_col='pvalue',
-    topN=20
+    max_num_taxa=NA
   )
 {
   ### Makes a horizontal bar chart of log2 fold-changes returned from deseq analysis.
@@ -832,8 +832,6 @@ plotDeseqLogFoldChangeBarplot2 = function(
     ) %>%
     ### Sort by biggest fold change magnitudes + OR -
     arrange(abs(log2FoldChange)) %>%
-    ### Scrape the top N
-    top_n(n=-topN) %>%
     ### Now order by actual fold change + to -
     arrange(log2FoldChange) %>%
     ### Make glommed taxa a factor and set levels to current order
@@ -843,23 +841,24 @@ plotDeseqLogFoldChangeBarplot2 = function(
   print(dim(top_N_logfold))
   print(colnames(top_N_logfold))
   
-  if (dim(top_N_logfold)[1] < topN)
-  {
-    topN = dim(top_N_logfold)[1]
-    message = sprintf(
-      "Only %i taxa meet the conditions: p<=%0.2f and q<=%0.2f",
-      topN,
-      pvalue_cutoff,
-      padj_cutoff
-    )
-  }
+  # if (dim(top_N_logfold)[1] < topN)
+  # {
+  #   topN = dim(top_N_logfold)[1]
+  #   message = sprintf(
+  #     "Only %i taxa meet the conditions: p<=%0.2f and q<=%0.2f",
+  #     topN,
+  #     pvalue_cutoff,
+  #     padj_cutoff
+  #   )
+  # }
+  
+  num_taxa = length(top_N_logfold$log2FoldChange)
   
   most_minus = top_N_logfold$log2FoldChange[1]
   print(most_minus)
-  most_plus = top_N_logfold$log2FoldChange[topN]
+  most_plus = top_N_logfold$log2FoldChange[num_taxa]
   print(most_plus)
-  print(topN)
-  
+
   print('Creating title')
   ### Create dynamic title
   title = sprintf(
@@ -891,7 +890,7 @@ plotDeseqLogFoldChangeBarplot2 = function(
       plot.title = element_text(hjust=0, size=8, margin=margin(unit = "in"))
     ) + 
     annotate("text", 
-             x=topN, 
+             x=num_taxa, 
              y=1.1*most_minus/2, 
              label = paste0("Reduced in ", contrast[2]), 
              size=3, 
@@ -1468,20 +1467,6 @@ getFilteredTaxaCounts = function(
   
   lowest_rank_index = match(lowest_rank, all_ranks)
   ranks_to_glom = all_ranks[1:lowest_rank_index]
-  # print("ranks_to_glom")
-  # print(ranks_to_glom)
-  # 
-  # print("dim asv table")
-  # print(dim(asv_table))
-  # print("dim taxonomy table")
-  # print(dim(taxonomy_table))
-  # print("dim metadata")
-  # print(dim(metadata))
-  # print(sprintf("lowest_rank = %s", lowest_rank))
-  # print(sprintf("relative_abundance_cutoff = %0.4f", relative_abundance_cutoff))
-  # print(sprintf("prevalence_cutoff = %0.4f", prevalence_cutoff))
-  # print(sprintf("clean = %s", clean))
-  # print(sprintf("n_max_by_mean = %d", n_max_by_mean))
   
   sampleIDs = as.vector(metadata$SampleID)
   print(sprintf("length sampleIDs = ", length(sampleIDs)))
@@ -1559,15 +1544,21 @@ getFilteredTaxaCounts = function(
   
   print(paste0('Num taxa dropped: ', num_taxa_prevalence_dropped))
   
+  filtered_taxa = 
+    prevalence_filtered_taxa %>%
+    mutate(mean=rowMeans(select(., sampleIDs)))
+  
   if (n_max_by_mean != F)
   {
-    means=rowMeans(prevalence_filtered_taxa %>% select(sampleIDs))
-    means_order = order(means)
-    
-    filtered_taxa = prevalence_filtered_taxa[means_order[1:n_max_by_mean],]
+    filtered_taxa = 
+      filtered_taxa %>%
+      mutate(mean=rowMeans(select(., sampleIDs))) %>%
+      arrange(mean) %>%
+      tail(n_max_by_mean) %>%
+      arrange(padj)
   } else
   {
-    filtered_taxa = prevalence_filtered_taxa
+    filtered_taxa = filtered_taxa %>% arrange(padj)
   }
 
   
