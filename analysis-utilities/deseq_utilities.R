@@ -1459,7 +1459,8 @@ getFilteredTaxaCounts = function(
       relative_abundance_cutoff,
       prevalence_cutoff,
       clean=T,
-      n_max_by_mean=F
+      n_max_by_mean=F,
+      id_col="SampleID"
     )
 {
   print(sprintf("lowest_rank = %s", lowest_rank))
@@ -1468,7 +1469,7 @@ getFilteredTaxaCounts = function(
   lowest_rank_index = match(lowest_rank, all_ranks)
   ranks_to_glom = all_ranks[1:lowest_rank_index]
   
-  sampleIDs = as.vector(metadata$SampleID)
+  sampleIDs = as.vector(metadata[,id_col])
   print(sprintf("length sampleIDs = ", length(sampleIDs)))
   
   if (clean)
@@ -1505,6 +1506,8 @@ getFilteredTaxaCounts = function(
     data.frame() %>%
     mutate(short_glommed_taxa=paste0(Phylum, "_", !!as.name(lowest_rank))) %>%
     mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
+  
+  print(colnames(taxa_counts))
   
   print("dim taxa counts")
   print(dim(taxa_counts))
@@ -1554,11 +1557,10 @@ getFilteredTaxaCounts = function(
       filtered_taxa %>%
       mutate(mean=rowMeans(select(., sampleIDs))) %>%
       arrange(mean) %>%
-      tail(n_max_by_mean) %>%
-      arrange(padj)
+      tail(n_max_by_mean) 
   } else
   {
-    filtered_taxa = filtered_taxa %>% arrange(padj)
+    filtered_taxa = filtered_taxa 
   }
 
   
