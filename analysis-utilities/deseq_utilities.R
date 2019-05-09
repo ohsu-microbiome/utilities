@@ -1451,11 +1451,12 @@ getSignificantTaxaCounts2 = function(raw_counts, deseq_results_df, cutoff_expr
     as.data.frame()
 }
 
+
 getFilteredTaxaCounts = function(
       asv_table,
       taxonomy_table,
       metadata,
-      lowest_rank,
+      lowest_rank=NA,
       relative_abundance_cutoff,
       prevalence_cutoff,
       clean=T,
@@ -1463,17 +1464,37 @@ getFilteredTaxaCounts = function(
       id_col="SampleID"
     )
 {
+  
   print(sprintf("lowest_rank = %s", lowest_rank))
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
   
-  lowest_rank_index = match(lowest_rank, all_ranks)
-  ranks_to_glom = all_ranks[1:lowest_rank_index]
-  
-  sampleIDs = as.vector(metadata[,id_col])
-  print(sprintf("length sampleIDs = ", length(sampleIDs)))
-  
-  if (clean)
+  if (is.na(lowest_rank))
   {
+    print("using ASVs")
+    use_taxa = F
+    lowest_rank = 'Genus'
+  } else
+  {
+    print("using taxa")
+    use_taxa = T
+  }
+  
+  lowest_rank_index = match(lowest_rank, all_ranks)
+  ### get just the ranks that will be used in
+  ### 1. The glommed name
+  ### 2. The step of aggregating sums
+  ranks_to_glom = all_ranks[1:lowest_rank_index]
+  print("ranks to glom")
+  print(ranks_to_glom)
+  
+  sampleIDs = as.character(metadata[,id_col])
+  print(sprintf("length sampleIDs = %d", length(sampleIDs)))
+  
+  if (clean && use_taxa)
+  {
+    ### Remove any taxa that are NA at the lowest level.
+    ### No point in having ASVs aggregated to the same genus
+    ### if that genus is NA.
     taxonomy_table =
       taxonomy_table %>%
       # filter(sprintf("!is.na(%s)", lowest_rank))
@@ -1483,16 +1504,25 @@ getFilteredTaxaCounts = function(
     print(dim(taxonomy_table))
   }
   
-  print("creating tax counts")
-  taxa_counts = 
-    ### Join asv_table and taxonomy_table on ASVs to get sample abundances and rank names
-    asv_table %>% 
-    inner_join(taxonomy_table, by='ASVs') %>% 
-    ### Drop everything but the sampleIDs and requested taxa
-    select(!!c(sampleIDs, ranks_to_glom)) %>%
-    ### Sum all the counts grouping by the axa (effectively genus)
-    group_by(.dots=ranks_to_glom) %>%
-    summarize_all(sum)%>%
+  print("creating asv taxa counts table")
+  counts = inner_join(asv_table, taxonomy_table, by="ASVs")
+  
+  if (use_taxa)
+  {
+    print("Aggregating by ranks")
+    ### Aggregate counts by ranks being kept
+    counts = 
+      counts %>%
+      ### Drop the ASVs
+      select(!!c(sampleIDs, ranks_to_glom)) %>%
+      ### Group and sum
+      group_by(.dots=ranks_to_glom) %>%
+      summarize_all(sum)
+  }
+  
+  print("glomming taxa names counts")
+  glommed_taxa_counts = 
+    counts %>%
     ### Glom taxa ranks together for additinoal column
     mutate(glommed_taxa = paste(!!!syms(ranks_to_glom), sep='_')) %>%
     ### Fix hyphens in taxa names so they don't mess up column names later
@@ -1501,69 +1531,71 @@ getFilteredTaxaCounts = function(
     mutate(glommed_taxa = gsub('/', '_slash_', glommed_taxa)) %>%
     ### Select again so glommed_taxa is first row (better way?)
     ### Could glom earlier and then group by ranks and glommed_taxa
-    select(one_of('glommed_taxa', sampleIDs, ranks_to_glom))  %>%
+    select(one_of('glommed_taxa', sampleIDs, ranks_to_glom), everything())  %>%
     ### Convert to dataframe (instead of tibble)
     data.frame() %>%
     mutate(short_glommed_taxa=paste0(Phylum, "_", !!as.name(lowest_rank))) %>%
     mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
   
-  print(colnames(taxa_counts))
+  # print(colnames(glommed_taxa_counts))
   
   print("dim taxa counts")
-  print(dim(taxa_counts))
+  print(dim(glommed_taxa_counts))
   
   print("Filtering taxa")
   print("Relative Abundance Filter")
-  count_filtered_taxa = 
-    taxa_counts %>%
+  relative_abundance_filtered_counts = 
+    glommed_taxa_counts %>%
+    ### Set counts with relative abundance less than cutoff to 0
     mutate_if(is.numeric, funs(ifelse(./sum(.)<relative_abundance_cutoff, 0, .))) %>%
-    mutate(rowsum=apply(select_if(.,is.numeric), 1, sum)) %>%
+    ### Add a rowsum column
+    mutate(rowsum=select_if(.,is.numeric) %>% rowSums()) %>%
+    ### Drop rows that now have all zero counts
     filter(rowsum>0) %>%
+    ### Drop the rowsum column
     select(-rowsum)
   
-  print(dim(count_filtered_taxa))
-  num_taxa_frequency_dropped = dim(taxa_counts)[1] - dim(count_filtered_taxa)[1]
-  print(paste('Num taxa dropped:', num_taxa_frequency_dropped))
+  print(dim(relative_abundance_filtered_counts))
+  num_taxa_frequency_dropped = dim(glommed_taxa_counts)[1] - dim(relative_abundance_filtered_counts)[1]
+  print(paste('Num count filtered taxa dropped:', num_taxa_frequency_dropped))
   
   print("Prevalence Filter")
-  prevalence_filtered_taxa =
-    count_filtered_taxa %>%
+  prevalence_filtered_counts =
+    relative_abundance_filtered_counts %>%
     mutate(
       ### Get the number of numeric columns
-      numall=length(select_if(., is.numeric)),
+      num_numeric=length(select_if(., is.numeric)),
       ### Get the number of zeros
-      num_nonzero=rowSums(select_if(.,is.numeric)!=0),
+      num_nonzero_numeric=rowSums(select_if(.,is.numeric)!=0),
       ### Fraction that are zero
-      fract_nonzero=num_nonzero/numall
+      fract_nonzero=num_nonzero_numeric/num_numeric
     ) %>%
-    ### Drop ASVs appearing in less than 10% of samples
+    ### Keep only features appearing in more than 10% of samples
     filter(fract_nonzero>=prevalence_cutoff) %>%
     ### Drop temporary columns
-    select(-numall, -num_nonzero, -fract_nonzero)
-  num_prevalence_filtered_taxa = dim(prevalence_filtered_taxa)[1]
+    select(-num_numeric, -num_nonzero_numeric, -fract_nonzero)
+  num_prevalence_filtered_taxa = dim(prevalence_filtered_counts)[1]
   
   num_taxa_prevalence_dropped = 
-    dim(count_filtered_taxa)[1] - dim(prevalence_filtered_taxa)[1]
+    dim(relative_abundance_filtered_counts)[1] - dim(prevalence_filtered_counts)[1]
   
-  print(paste0('Num taxa dropped: ', num_taxa_prevalence_dropped))
-  
-  filtered_taxa = 
-    prevalence_filtered_taxa %>%
-    mutate(mean=rowMeans(select(., sampleIDs)))
-  
+  print(paste0('Num prevalence filtered taxa dropped: ', num_taxa_prevalence_dropped))
+
   if (n_max_by_mean != F)
   {
-    filtered_taxa = 
-      filtered_taxa %>%
+   ### Keep only the n_max_by_mean features 
+    prevalence_filtered_counts = 
+      prevalence_filtered_counts %>%
+      ### Create a column of row means
       mutate(mean=rowMeans(select(., sampleIDs))) %>%
+      ### Order by the means (ascending)
       arrange(mean) %>%
-      tail(n_max_by_mean) 
-  } else
-  {
-    filtered_taxa = filtered_taxa 
+      ### Take the highest ones (n_max_by_mean)
+      tail(n_max_by_mean) %>%
+      ### Drop the mean column
+      select(-mean)
   }
 
-  
-  return(filtered_taxa)
+  return(prevalence_filtered_counts)
   
 }
