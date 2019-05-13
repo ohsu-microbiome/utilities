@@ -1484,6 +1484,7 @@ getFilteredTaxaCounts = function(
   ### 1. The glommed name
   ### 2. The step of aggregating sums
   ranks_to_glom = all_ranks[1:lowest_rank_index]
+  short_ranks = all_ranks[c(1,lowest_rank_index)]
   print("ranks to glom")
   print(ranks_to_glom)
   
@@ -1520,7 +1521,9 @@ getFilteredTaxaCounts = function(
       summarize_all(sum)
   }
   
-  print("glomming taxa names counts")
+  print("glomming taxa names")
+  print(dim(counts))
+
   glommed_taxa_counts = 
     counts %>%
     ### Glom taxa ranks together for additinoal column
@@ -1534,10 +1537,11 @@ getFilteredTaxaCounts = function(
     select(one_of('glommed_taxa', sampleIDs, ranks_to_glom), everything())  %>%
     ### Convert to dataframe (instead of tibble)
     data.frame() %>%
-    mutate(short_glommed_taxa=paste0(Phylum, "_", !!as.name(lowest_rank))) %>%
+    mutate(short_glommed_taxa = 
+             unite(., 'short_glommed_taxa', short_ranks, sep="_") %>% 
+             pull(short_glommed_taxa)
+           ) %>%
     mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
-  
-  # print(colnames(glommed_taxa_counts))
   
   print("dim taxa counts")
   print(dim(glommed_taxa_counts))
@@ -1587,7 +1591,9 @@ getFilteredTaxaCounts = function(
     prevalence_filtered_counts = 
       prevalence_filtered_counts %>%
       ### Create a column of row means
-      mutate(mean=rowMeans(select(., sampleIDs))) %>%
+      mutate(mean=rowMeans(
+        select(., sampleIDs)/sum(select(., sampleIDs))
+      )) %>%
       ### Order by the means (ascending)
       arrange(mean) %>%
       ### Take the highest ones (n_max_by_mean)
