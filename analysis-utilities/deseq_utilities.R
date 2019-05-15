@@ -1461,7 +1461,7 @@ getFilteredTaxaCounts = function(
       prevalence_cutoff,
       clean=T,
       n_max_by_mean=F,
-      id_col="SampleID"
+      id_col="SampleName"
     )
 {
   
@@ -1488,25 +1488,28 @@ getFilteredTaxaCounts = function(
   print("ranks to glom")
   print(ranks_to_glom)
   
-  sampleIDs = as.character(metadata[,id_col])
-  print(sprintf("length sampleIDs = %d", length(sampleIDs)))
+  sample_names = as.character(metadata[,id_col])
+  print(sprintf("length sample_names = %d", length(sample_names)))
   
   if (clean && use_taxa)
   {
     ### Remove any taxa that are NA at the lowest level.
     ### No point in having ASVs aggregated to the same genus
     ### if that genus is NA.
-    taxonomy_table =
+    clean_taxonomy_table =
       taxonomy_table %>%
       # filter(sprintf("!is.na(%s)", lowest_rank))
       filter(!is.na(!!sym(lowest_rank)))
 
     print("dim clean tax table")
-    print(dim(taxonomy_table))
+    print(dim(clean_taxonomy_table))
+  }else
+  {
+    clean_taxonomy_table = taxonomy_table
   }
   
   print("creating asv taxa counts table")
-  counts = inner_join(asv_table, taxonomy_table, by="ASVs")
+  counts = inner_join(asv_table, clean_taxonomy_table, by="ASVs")
   
   if (use_taxa)
   {
@@ -1515,10 +1518,11 @@ getFilteredTaxaCounts = function(
     counts = 
       counts %>%
       ### Drop the ASVs
-      select(!!c(sampleIDs, ranks_to_glom)) %>%
+      select(!!c(sample_names, ranks_to_glom)) %>%
       ### Group and sum
       group_by(.dots=ranks_to_glom) %>%
-      summarize_all(sum)
+      summarize_all(sum) %>%
+      ungroup()
   }
   
   print("glomming taxa names")
@@ -1527,20 +1531,17 @@ getFilteredTaxaCounts = function(
   glommed_taxa_counts = 
     counts %>%
     ### Glom taxa ranks together for additinoal column
-    mutate(glommed_taxa = paste(!!!syms(ranks_to_glom), sep='_')) %>%
+    mutate(glommed_taxa = unite(., 'q', ranks_to_glom)$q) %>%
     ### Fix hyphens in taxa names so they don't mess up column names later
     mutate(glommed_taxa = gsub('-', '_dash_', glommed_taxa)) %>%
     ### Fix slashes in taxa names so they don't mess up column names later
     mutate(glommed_taxa = gsub('/', '_slash_', glommed_taxa)) %>%
     ### Select again so glommed_taxa is first row (better way?)
     ### Could glom earlier and then group by ranks and glommed_taxa
-    select(one_of('glommed_taxa', sampleIDs, ranks_to_glom), everything())  %>%
+    select(one_of('glommed_taxa', sample_names, ranks_to_glom), everything())  %>%
     ### Convert to dataframe (instead of tibble)
-    data.frame() %>%
-    mutate(short_glommed_taxa = 
-             unite(., 'short_glommed_taxa', short_ranks, sep="_") %>% 
-             pull(short_glommed_taxa)
-           ) %>%
+    # data.frame() %>%
+    mutate(short_glommed_taxa = unite(., 'q', short_ranks, sep="_")$q) %>%
     mutate(short_glommed_taxa = make.unique(short_glommed_taxa))
   
   print("dim taxa counts")
@@ -1551,9 +1552,9 @@ getFilteredTaxaCounts = function(
   relative_abundance_filtered_counts = 
     glommed_taxa_counts %>%
     ### Set counts with relative abundance less than cutoff to 0
-    mutate_if(is.numeric, funs(ifelse(./sum(.)<relative_abundance_cutoff, 0, .))) %>%
+    mutate_at(.vars=sample_names, funs(ifelse(./sum(.)<relative_abundance_cutoff, 0, .))) %>%
     ### Add a rowsum column
-    mutate(rowsum=select_if(.,is.numeric) %>% rowSums()) %>%
+    mutate(rowsum=apply(select(., sample_names), 1, sum)) %>%
     ### Drop rows that now have all zero counts
     filter(rowsum>0) %>%
     ### Drop the rowsum column
@@ -1592,7 +1593,7 @@ getFilteredTaxaCounts = function(
       prevalence_filtered_counts %>%
       ### Create a column of row means
       mutate(mean=rowMeans(
-        select(., sampleIDs)/sum(select(., sampleIDs))
+        select(., sample_names)/sum(select(., sample_names))
       )) %>%
       ### Order by the means (ascending)
       arrange(mean) %>%

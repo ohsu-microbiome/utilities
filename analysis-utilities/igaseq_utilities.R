@@ -39,13 +39,18 @@ library(tidyr)
 
 
 getIgAIndices = function(
-  abundances_table,
-  sample_data,
-  iga_colname='IGA',
-  iga_fraction_names=list(pos='Pos', neg='Neg', allbac='AllBac'),
-  zero_correction=0,
-  extra_cols=c()
-)
+    ### Sample-wise normalized counts
+    abundances_table, 
+    sample_data, 
+    ### Column of sample_data that contains iga status
+    iga_colname='IGA', 
+    ### Values that iga status column has
+    iga_fraction_names=list(pos='Pos', neg='Neg', allbac='AllBac'),
+    ### Value to inject into relative abundance to avoid log(0) or /0 errors
+    zero_correction=0,
+    ### Columns to add to the results, such as taxa and p-values
+    extra_cols=c()
+  )
 {
   
   print("getting iga- samples")
@@ -66,10 +71,23 @@ getIgAIndices = function(
   iga_neg = 
     abundances_table %>% 
     select(iga_neg_samples)
-  colnames(iga_neg) = gsub("([A-Z0-9]+)_.*$", "\\1", colnames(iga_neg))
+  ### Change colnames from SampleName to SubjectID
+  colnames(iga_neg) = 
+    sample_data %>%
+    filter(SampleName %in% iga_neg_samples) %>%
+    pull(SubjectID)
+    
+    # gsub("([A-Z0-9]+)_.*$", "\\1", colnames(iga_neg))
 
-  iga_pos = abundances_table %>% select(iga_pos_samples)
-  colnames(iga_pos) = gsub("([A-Z0-9]+)_.*$", "\\1", colnames(iga_pos))
+  iga_pos = 
+    abundances_table %>% 
+    select(iga_pos_samples)
+  # colnames(iga_pos) = gsub("([A-Z0-9]+)_.*$", "\\1", colnames(iga_pos))
+  ### Change colnames from SampleName to SubjectID
+  colnames(iga_pos) = 
+    sample_data %>%
+    filter(SampleName %in% iga_pos_samples) %>%
+    pull(SubjectID)
   
   print("getting corrected logs")
   log_neg = log(iga_neg + zero_correction)
