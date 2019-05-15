@@ -212,7 +212,7 @@ removeOutlierRows = function(
 getTopNbyRowMean = function(
   data_table,
   use_samples=c(),
-  N
+  num_top_features
 )
 {
   if (length(use_samples)==0)
