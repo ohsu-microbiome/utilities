@@ -1603,6 +1603,6 @@ getFilteredTaxaCounts = function(
       select(-mean)
   }
 
-  return(prevalence_filtered_counts)
+  return(prevalence_filtered_counts %>% data.frame())
   
 }

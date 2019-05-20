@@ -119,7 +119,8 @@ getRelAbund = function(
   
   relabund = 
     counts %>%
-    mutate_if(is.numeric, funs(./sum(.)))
+    mutate_if(is.numeric, funs(./sum(.))) %>%
+    data.frame()
   
   return(relabund)
 }
@@ -229,4 +230,105 @@ getTopNbyRowMean = function(
     select(-RowSums)
   
   return(top_N)
+}
+
+getWilcoxonPvalForFeature = function(
+  abundance,
+  sample_data,
+  feature,
+  feature_col_name,
+  paired=TRUE
+)
+{
+  print(feature)
+  print(feature_col_name)
+  
+  iga_pos_samples = 
+    sample_data %>%
+    filter(IGA=='Pos') %>%
+    pull(SampleName) %>%
+    as.character()
+  
+  iga_neg_samples = 
+    sample_data %>%
+    filter(IGA=='Neg') %>%
+    pull(SampleName) %>%
+    as.character()
+  
+  pos = 
+    abundance %>% 
+    filter(!!as.name(feature_col_name)==feature) %>% 
+    select(iga_pos_samples) %>%
+    t() %>%
+    data.frame() %>%
+    setNames(c('Pos')) %>% 
+    tibble::rownames_to_column('SampleName') %>%
+    inner_join(sample_data, by='SampleName') %>%
+    select(Pos, SubjectID)
+  
+  neg = 
+    abundance %>% 
+    filter(!!as.name(feature_col_name)==feature) %>% 
+    select(iga_neg_samples) %>%
+    t() %>%
+    data.frame() %>%
+    setNames(c('Neg')) %>% 
+    tibble::rownames_to_column('SampleName') %>%
+    inner_join(sample_data, by='SampleName') %>%
+    select(Neg, SubjectID)
+  
+  pos_neg_by_subject = 
+    inner_join(pos, neg, by="SubjectID") %>%
+    select(SubjectID, Pos, Neg)
+  
+  stat = wilcox.test(
+    pos_neg_by_subject$Pos, 
+    pos_neg_by_subject$Neg,
+    paired=paired
+    )
+  
+  return(stat$p.value)
+}
+
+
+
+getWilcoxonPvalForVariable = function(
+  feature_abundance,
+  sample_data,
+  variable,
+  variable_values
+)
+{
+  print(variable)
+  print(variable_values)
+  
+  val_1_samples = 
+    sample_data %>%
+    filter(!!as.name(variable)==variable_values[1]) %>%
+    pull(SampleName) %>%
+    as.character()
+  
+  val_2_samples = 
+    sample_data %>%
+    filter(!!as.name(variable)==variable_values[2]) %>%
+    pull(SampleName) %>%
+    as.character()
+
+  val1 = 
+    feature_abundance %>% 
+    select(val_1_samples) %>%
+    as.numeric()
+
+  val2 = 
+    feature_abundance %>% 
+    select(val_2_samples) %>%
+    as.numeric()
+
+  stat = wilcox.test(
+    val1, 
+    val2,
+    paired=FALSE
+  )
+  
+  return(stat$p.value)
 }
