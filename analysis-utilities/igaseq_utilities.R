@@ -242,7 +242,7 @@ getWilcoxonPvalForFeature = function(
 {
   print(feature)
   print(feature_col_name)
-  
+
   iga_pos_samples = 
     sample_data %>%
     filter(IGA=='Pos') %>%
