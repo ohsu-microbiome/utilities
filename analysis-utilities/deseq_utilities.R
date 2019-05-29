@@ -1731,9 +1731,19 @@ getFilteredTaxaCounts = function(
 
 
 addGlommedTaxaNames = function(
-    feature_abundance
+    feature_abundance,
+    lowest_rank='Genus'
   )
 {
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  lowest_rank_index = match(lowest_rank, all_ranks)
+  ### get just the ranks that will be used in
+  ### 1. The glommed name
+  ### 2. The step of aggregating sums
+  ranks_to_glom = all_ranks[1:lowest_rank_index]
+  print("ranks to glom")
+  print(ranks_to_glom)
+  
   print("glomming taxa names")
   print(dim(counts))
   
@@ -1744,12 +1754,18 @@ addGlommedTaxaNames = function(
     unite('short_glommed_taxa', c('Phylum', lowest_rank), sep="_", remove=F) %>%
     mutate(short_glommed_taxa = make.unique(short_glommed_taxa)) %>%
     ### Fix hyphens in taxa names so they don't mess up column names later
-    mutate(glommed_taxa = gsub('-', '_dash_', glommed_taxa)) %>%
-    ### Fix slashes in taxa names so they don't mess up column names later
-    mutate(glommed_taxa = gsub('/', '_slash_', glommed_taxa)) %>%
+    mutate(
+      glommed_taxa = gsub('-', '_dash_', glommed_taxa),
+      short_glommed_taxa = gsub('-', '_dash_', short_glommed_taxa)
+      ) %>%
+    # ### Fix slashes in taxa names so they don't mess up column names later
+    mutate(
+      glommed_taxa = gsub('/', '_slash_', glommed_taxa),
+      short_glommed_taxa = gsub('/', '_slash_', short_glommed_taxa)
+      ) %>%
     ### Select again so glommed_taxa is first row (better way?)
     ### Could glom earlier and then group by ranks and glommed_taxa
-    select(c('glommed_taxa', 'short_glommed_taxa', sample_names, ranks_to_glom), everything())  %>%
+    select(c('glommed_taxa', 'short_glommed_taxa'), everything(), ranks_to_glom)  %>%
     ### Convert to dataframe (instead of tibble)
     data.frame()
   
