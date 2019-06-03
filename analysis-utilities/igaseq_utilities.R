@@ -331,4 +331,70 @@ getWilcoxonPvalForVariable = function(
   )
   
   return(stat$p.value)
+
+}
+
+makeIndexBarPlot = function(
+  index,
+  control_subjects,
+  case_subjects,
+  index_title_name,
+  pval_colname
+  )
+{
+  print("index colnames")
+  print(index %>% colnames())
+  
+  barplot_data = 
+    index %>%
+    ### Keep only data columns and short glommed taxa names
+    select(-Phylum, -Class, -Order, -Family, -Genus, -glommed_taxa) %>%
+    ### Trasform to long format keeping some columns (specified by - sign)
+    ### Long columns are subject ID and iga index value
+    gather(
+      key='subject', 
+      value='score', 
+      -short_glommed_taxa, 
+      -!!as.name(pval_colname)
+    ) %>%
+    ### rename pvals (shorter)
+    mutate(pvals = !!as.name(pval_colname)) %>%
+    select(-pval_colname) %>%
+    ### Long column of AMD or Control for each subject
+    # mutate(CaseString=
+    #          case_when(
+    #            subject %in% case_subjects ~ 'AMD',
+    #            subject %in% control_subjects ~ 'Control'
+    #          )
+    # ) %>%
+    mutate(CaseString = ifelse(subject %in% case_subjects, 'AMD', 'Control')) %>%
+    select(-subject)
+  
+  print('barplot data colnames')
+  print(barplot_data %>% colnames())
+  
+  barplot_data %>%
+    ggplot() +
+    geom_bar(
+      aes(
+        x=short_glommed_taxa, 
+        y=score,
+        fill=pvals
+      ),
+      stat='summary',
+      fun.y='mean'
+    ) +
+    facet_grid(cols=vars(CaseString)) + 
+    coord_flip() +
+    labs(
+      x='Taxa',
+      y=sprintf('Mean %s (across taxa)', index_title_name),
+      fill='Unadjusted p-values'
+    ) +
+    ggtitle(sprintf("Case vs. Control Significance of Taxa by %s", index_title_name)) + 
+    theme(
+      plot.title = element_text(size=16, hjust=0.6),
+      legend.title = element_text(size=10),
+      axis.title = element_text(size=14)
+    )
 }
