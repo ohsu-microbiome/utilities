@@ -339,7 +339,8 @@ makeIndexBarPlot = function(
   control_subjects,
   case_subjects,
   index_title_name,
-  pval_colname
+  pval_colname,
+  pval_name='Unadjusted'
   )
 {
   print("index colnames")
@@ -348,7 +349,12 @@ makeIndexBarPlot = function(
   barplot_data = 
     index %>%
     ### Keep only data columns and short glommed taxa names
-    select(-Phylum, -Class, -Order, -Family, -Genus, -glommed_taxa) %>%
+    select(
+      short_glommed_taxa, 
+      control_subjects, 
+      case_subjects, 
+      !!as.name(pval_colname)
+      ) %>%
     ### Trasform to long format keeping some columns (specified by - sign)
     ### Long columns are subject ID and iga index value
     gather(
@@ -359,7 +365,7 @@ makeIndexBarPlot = function(
     ) %>%
     ### rename pvals (shorter)
     mutate(pvals = !!as.name(pval_colname)) %>%
-    select(-pval_colname) %>%
+    # select(-pval_colname) %>%
     ### Long column of AMD or Control for each subject
     # mutate(CaseString=
     #          case_when(
@@ -373,13 +379,13 @@ makeIndexBarPlot = function(
   print('barplot data colnames')
   print(barplot_data %>% colnames())
   
-  barplot_data %>%
+  plt = barplot_data %>%
     ggplot() +
     geom_bar(
       aes(
         x=short_glommed_taxa, 
         y=score,
-        fill=pvals
+        fill=as.numeric(pvals)
       ),
       stat='summary',
       fun.y='mean'
@@ -389,12 +395,15 @@ makeIndexBarPlot = function(
     labs(
       x='Taxa',
       y=sprintf('Mean %s (across taxa)', index_title_name),
-      fill='Unadjusted p-values'
+      fill=pval_name
     ) +
     ggtitle(sprintf("Case vs. Control Significance of Taxa by %s", index_title_name)) + 
     theme(
       plot.title = element_text(size=16, hjust=0.6),
       legend.title = element_text(size=10),
       axis.title = element_text(size=14)
-    )
+    ) + 
+    scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
+
+    return(plt)
 }
