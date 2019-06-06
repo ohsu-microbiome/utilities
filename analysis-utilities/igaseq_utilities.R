@@ -3,40 +3,6 @@ library(DESeq2)
 library(ggplot2)
 library(tidyr)
 
-# getIgAIndeces = function(
-#     iga_neg,
-#     iga_pos,
-#     count_type="raw",
-#     zero_correction=0,
-#     extra_cols=c()
-#   )
-# {
-#   if (count_type == "raw")
-#   {
-#     log_neg = log(iga_neg + zero_correction)
-#     log_pos = log(iga_pos + zero_correction)
-#   } else if(count_type == "rel")
-#   {
-#     log_neg = log(iga_neg + zero_correction)
-#     log_pos = log(iga_pos + zero_correction)
-#   } else
-#   {
-#     warning("Invalid count type. Use \"raw\" or \"rel\"")
-#     return()
-#   }
-#   
-#   iga_indices = (log_neg - log_pos)/(log_neg + log_pos)
-#   
-#   if (length(extra_cols) != 0)
-#   {
-#     iga_indices = 
-#       iga_indices %>%
-#       cbind(extra_cols)
-#   }
-#   
-#   return(iga_indices)
-# }
-
 
 getIgAIndices = function(
     ### Sample-wise normalized counts
@@ -379,7 +345,8 @@ makeIndexBarPlot = function(
   print('barplot data colnames')
   print(barplot_data %>% colnames())
   
-  plt = barplot_data %>%
+  # plt = 
+    barplot_data %>%
     ggplot() +
     geom_bar(
       aes(
@@ -404,6 +371,160 @@ makeIndexBarPlot = function(
       axis.title = element_text(size=14)
     ) + 
     scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
+    
+  # + scale_fill_gradientn(colours = c("green", "blue","blue", "red","red", "yellow"),breaks = c(0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.4, 0.6, 0.8, 1))
+  
+  # plt = plt + scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
 
-    return(plt)
+  # return(plt)
+}
+
+getWilcoxonPvalsForTaxa = function(
+  data, 
+  taxa, 
+  formula, 
+  ... ### extra parameters to pass on to wilcox test
+)
+{
+  rhs = as.character(formula)[[2]]
+  pvals = lapply(taxa, function(taxon)
+  {
+    formula=as.formula(paste(taxon, '~', rhs))
+    # print(formula)
+    stat = wilcox.test(
+      formula=formula,
+      data=data, 
+      ... 
+    )
+    
+    return(stat$p.value)
+  })
+}
+
+getStudentsPvalsForTaxa = function(
+  data, 
+  taxa, 
+  formula, 
+  ... ### extra parameters to pass on to wilcox test
+)
+{
+  rhs = as.character(formula)[[2]]
+  pvals = lapply(taxa, function(taxon)
+  {
+    formula=as.formula(paste(taxon, '~', rhs))
+    # print(formula)
+    stat = t.test(
+      formula=formula,
+      data=data, 
+      ... 
+    )
+    
+    return(stat$p.value)
+  })
+}
+
+makePValPlot = function(
+  taxa_data, 
+  pval_col, 
+  data_name,
+  subjects
+)
+{
+  p_value = taxa_data %>% pull(pval_col)
+  max_value = taxa_data %>% select(subjects) %>% max()
+  
+  plt = 
+    taxa_data %>%
+    select(-pval_col) %>%
+    gather(key='subject', value=data_name, -short_glommed_taxa) %>%
+    mutate(Case=ifelse(subject %in% case_subjects, 'Case', 'Control')) %>%
+    select(-subject) %>%
+    ggplot() + 
+    geom_quasirandom(
+      aes(x=Case, y=data_name, shape=Case),
+      nbins=10, 
+      # bandwidth=0.1, 
+      width=0.1,
+      method='smiley', 
+      varwidth = T,
+      size=3
+    ) + 
+    geom_boxplot(
+      aes(x=Case, y=data_name),
+      alpha=0.2, 
+      width=0.3, 
+      fill='grey', 
+      show.legend = F
+    ) +
+    annotate(
+      "text", 
+      x = 1.5, 
+      y = max_value*1.2, 
+      label = sprintf('p-value = %0.2f', p_value)
+    ) +
+    theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(data_name)
+    ) +
+    ggtitle(taxa_data$short_glommed_taxa)
+  print(plt)
+}
+
+getDataWithPvals = function(
+    data,
+    data_name,
+    taxa_list,
+    pval_col,
+    pval_name,
+    pval_cutoff,
+    formula,
+    write_files=F
+  )
+{
+  
+  pvals = getWilcoxonPvalsForTaxa(
+    data=data,
+    taxa=taxa_list,
+    formula=~formula
+  )
+  
+  padj = p.adjust(pvals, method='fdr')
+  
+  data_with_pvals = 
+    ### Turn the pval lists (by taxa) into a dataframe. It automatically
+    ### has the taxa as rownames.
+    as.data.frame(
+      cbind(
+        padj %>% unlist(),
+        pvals %>% unlist()
+      ),
+      stringsAsFactors = F
+    ) %>%
+    ### Set the colnames (probably not necessary here)
+    set_names(c('padj', 'pvals')) %>% 
+    ### Move the taxa names to a column for the join
+    tibble::rownames_to_column('short_glommed_taxa') %>%
+    inner_join(iga_index, by='short_glommed_taxa') %>%
+    arrange(padj)
+  if (write_files)
+  {
+    filename = file.path(tables_dir, paste0('miseq-278_', data_name, '.tsv'))
+    write.table(
+      data_with_pvals,
+      file=filename,
+      sep='\t',
+      quote=F
+    )
+    
+    filename = file.path(tables_dir, paste0('miseq-278_', data_name, '.xlsx'))
+    write.xlsx(
+      data_with_pvals,
+      file=filename,
+      sep='\t',
+      quote=F
+    ) 
+  }
+
+  return(data_with_pvals)
+  
 }
