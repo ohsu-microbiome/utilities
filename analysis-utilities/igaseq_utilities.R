@@ -200,130 +200,6 @@ getTopNbyRowMean = function(
   return(top_N)
 }
 
-makeIndexBarPlot = function(
-  data_with_pvals,
-  sample_metadata,
-  group_data, ### = list(group_name='GroupName', classA='Green', classB='Red')
-  index_title_name,
-  pval_colname,
-  pval_name='Unadjusted'
-  )
-{
-
-  
-  # data_with_pvals=iga_index_with_pvals
-  # sample_metadata = sample_metadata
-  # group_data=list(group_name='AREDS', classA='N', classB='Y')
-  # index_title_name='IgA Index'
-  # pval_colname='pvals'
-  # pval_name='Undjusted P-Values'
-
-  # print("the data")
-  # print(class(data_with_pvals))
-  # print(typeof(data_with_pvals))
-  # print(data_with_pvals$pvals)
-  # print(dim(data_with_pvals))
-  # head(data_with_pvals)
-  # print('makeIndexBarPlot')
-  # print(group_data)
-  # print("data_with_pvalsw colnames")
-  # print(data_with_pvals %>% colnames())
-  # print(data_with_pvals)
-  # data_with_pvals %>% print()
-
-
-  group_name = group_data$group_name
-  classA = group_data$classA
-  classB = group_data$classB
-
-  # print(sprintf('group_name=%s, classA=%s, classB=%s',
-  #   group_name,
-  #   classA,
-  #   classB
-  #   ))
-
-  class_a_subjects =
-    sample_metadata %>%
-    filter(!!as.name(group_name)==classA) %>%
-    pull(SubjectID) %>%
-    as.character() %>%
-    unique()
-
-  # print(class_a_subjects)
-
-  class_b_subjects =
-    sample_metadata %>%
-    filter(!!as.name(group_name)==classB) %>%
-    pull(SubjectID) %>%
-    as.character() %>%
-    unique()
-
-  # print(class_b_subjects)
-
-  # print('getting barplot data')
-  barplot_data =
-    data_with_pvals %>%
-    ### Keep only data columns and short glommed taxa names
-    select(
-      short_glommed_taxa,
-      class_a_subjects,
-      class_b_subjects,
-      pvals=!!pval_colname
-      ) %>%
-    ### Trasform to long format keeping some columns (specified by - sign)
-    ### Long columns are subject ID and iga index value
-    gather(
-      key='subject',
-      value='score',
-      -short_glommed_taxa,
-      -pvals
-    ) %>%
-    ### rename pvals (shorter)
-    # mutate(pvals = !!pval_colname) %>%
-    mutate(class = ifelse(
-      subject %in% class_a_subjects,
-      classA, classB
-      )) %>%
-    select(-subject)
-
-  # print("barplot_data")
-  # print(barplot_data)
-
-  # print('barplot data colnames')
-  # print(barplot_data %>% colnames())
-
-  plt=
-    barplot_data %>%
-    ggplot() +
-    geom_bar(
-      aes(
-        x=short_glommed_taxa,
-        y=score,
-        fill=pvals
-      ),
-      stat='summary',
-      fun.y='mean'
-    ) +
-    facet_grid(cols=vars(class)) +
-    coord_flip() +
-    labs(
-      x='Taxa',
-      y=sprintf('Mean %s (across taxa)', index_title_name)
-    ) +
-    ggtitle(sprintf("%s vs. %s Significance of Taxa by %s",
-      classA,
-      classB,
-      index_title_name
-      )) +
-    theme(
-      plot.title = element_text(size=16, hjust=0.6),
-      legend.title = element_text(size=10),
-      axis.title = element_text(size=14)
-    ) +
-    scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
-  print(plt)
-  
-}
 
 getWilcoxonPvalsForTaxa = function(
   data, 
@@ -368,62 +244,6 @@ getStudentsPvalsForTaxa = function(
     return(stat$p.value)
   })
 }
-
-makePValPlot1 = function(
-  taxa_data, 
-  pval_col, 
-  data_name,
-  group_data,
-  subjects
-)
-{
-  p_value = taxa_data %>% pull(pval_col)
-  max_value = taxa_data %>% select(subjects) %>% max()
-  
-  group_name = group_data$group_name
-  classA = group_data$classA
-  classB = group_data$classB
-  
-  plt = 
-    taxa_data %>%
-    select(-pval_col) %>%
-    gather(key='subject', value=data_name, -short_glommed_taxa) %>%
-    mutate(group_name
-           := ifelse(subject %in% case_subjects, 'Case', 'Control')) %>%
-    select(-subject) %>%
-    ggplot() + 
-    geom_quasirandom(
-      aes(x=Case, y=data_name, shape=),
-      nbins=10, 
-      # bandwidth=0.1, 
-      width=0.1,
-      method='smiley', 
-      varwidth = T,
-      size=3
-    ) + 
-    geom_boxplot(
-      aes(x=Case, y=data_name),
-      alpha=0.2, 
-      width=0.3, 
-      fill='grey', 
-      show.legend = F
-    ) +
-    annotate(
-      "text", 
-      x = 1.5, 
-      y = max_value*1.2, 
-      label = sprintf('p-value = %0.2f', p_value)
-    ) +
-    theme(
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(data_name)
-    ) +
-    ggtitle(taxa_data$short_glommed_taxa)
-  
-  print(plt)
-  
-}
-
 
 getDataWithPvals = function(
     data,
@@ -552,77 +372,76 @@ writeData = function(
   )
 }
 
-makePValPlot = function(
-  data_with_pvals,
-  sample_metadata,
-  pval_colname,
-  data_name,
-  variable_colname,
-  variable_name, 
-  group_data
-)
+
+makePvalPlot = function(
+    data_with_metadata,
+    data_name, ### for title
+    data_col, ### e.g. taxon
+    variable_data, 
+    p_value, ### list(type=type, value=value)
+    labels=list(case='Case', control='Control')
+  )
 {
-  # 
-  # data_with_pvals=iga_index_with_pvals
-  # sample_metadata=sample_metadata
-  # pval_colname='pvals'
+
+  # data_with_metadata=iga_index_and_sample_metadata
   # data_name='IgA Index'
-  # variable_colname='short_glommed_taxa'
-  # variable_name="Firmicutes_Subdoligranulum" 
-  # group_data=list(group_name='AREDS', classA='N', classB='Y')
-  
-  data_row = 
-    data_with_pvals %>%
-    filter(!!as.name(variable_colname) == variable_name)
-    
-  p_value = 
-    data_row %>% 
-    pull(pval_colname)
+  # data_col=data_for_pval_plots$short_glommed_taxa[[1]]
+  # grouping_col=list(name='CNV_Either_Eye', values=c(0,1))
+  # grouping_col=list(name='CFH_rs1061170', values=c('TT', 'CC'))
+  # p_value=list(type='Unadjusted', value=data_for_pval_plots %>% pull(pvals) %>% .[[1]])
+  # variable_data = list(
+  #   covariate_of_interest='ARMS2_rs10490924',
+  #   control='GG',
+  #   case='TT'
+  # )
   
   
-  group_name = group_data$group_name
-  classA = group_data$classA
-  classB = group_data$classB
-  
-  # print(sprintf('group_name=%s, classA=%s, classB=%s',
-  #   group_name,
-  #   classA,
-  #   classB
-  #   ))
-  
-  class_a_subjects =
-    sample_metadata %>%
-    filter(!!as.name(group_name)==classA) %>%
-    pull(SubjectID) %>%
-    as.character() %>%
-    unique()
-  
-  # print(class_a_subjects)
-  
-  class_b_subjects =
-    sample_metadata %>%
-    filter(!!as.name(group_name)==classB) %>%
-    pull(SubjectID) %>%
-    as.character() %>%
-    unique()
+  variable_name=variable_data$covariate_of_interest
+  case = variable_data$case
+  control = variable_data$control
   
   plot_data = 
-    data_row %>%
-    select(-pval_colname) %>%
-    gather(key='subject', value=!!data_name, -short_glommed_taxa) %>%
-    mutate(!!group_name := ifelse(subject %in% class_a_subjects, classA, classB)) %>%
-    select(-subject)
+    data_with_metadata %>%
+    filter(!!as.name(variable_name) %in% c(case, control)) %>%
+    select(data_col, variable_name) %>%
+    mutate(!!variable_name := factor(
+      !!as.name(variable_name), 
+      # levels=c(paste(control, '(Control)'), paste(case, '(Case)'))))
+      levels=c(control,case)
+    ))
   
-  max_value = max(plot_data[[data_name]])
+  # print(sprintf('variable_name=%s', variable_name))
+
+  if (length(labels) != 0)
+  {
+    case_label = paste0(case, ' (', labels$case, ')')
+    control_label = paste0(control, ' (', labels$control, ')')
+    # print(sprintf('control_label=%s, case_label=%s', control_label, case_label))
+    
+    plot_data = 
+      plot_data %>%
+      mutate(!!variable_name := ifelse(
+        !!as.name(variable_name) == case, case_label, control_label))
+  } else
+  {
+    case_label = case
+    control_label = control
+  }
+  
+  # print(sprintf('control_label=%s, case_label=%s', control_label, case_label))
+
+  # print(plot_data)
+  
+  max_value = max(plot_data[[data_col]])
   
   plt = 
-    ggplot(plot_data) + 
+    ggplot(plot_data) +
     geom_quasirandom(
       aes(
-        x=!!as.name(group_name), 
-        y=!!as.name(data_name), 
-        shape=!!as.name(group_name)
-        ),
+        x=!!as.name(variable_name), 
+        y=!!as.name(data_col), 
+        shape=!!as.name(variable_name)
+      ),
       nbins=10,
       # bandwidth=0.1,
       width=0.1,
@@ -630,8 +449,12 @@ makePValPlot = function(
       varwidth = T,
       size=3
     ) +
+    # scale_fill_manual(
+    #   values=!!as.name(variable_name), 
+    #   labels = c(paste(case, '(Case)'), paste(control, '(Control)'))
+    #   ) +
     geom_boxplot(
-      aes(x=!!as.name(group_name), y=!!as.name(data_name)),
+      aes(x=!!as.name(variable_name), y=!!as.name(data_col)),
       alpha=0.2, 
       width=0.3, 
       fill='grey', 
@@ -641,14 +464,142 @@ makePValPlot = function(
       "text", 
       x = 1.5, 
       y = max_value*1.2, 
-      label = sprintf('p-value = %0.2f', p_value)
+      label = sprintf('%s p-value = %0.2f', p_value$type, p_value$value)
     ) +
     theme(
       axis.title.x = element_text(variable_name),
-      axis.title.y = element_text(data_name)
+      axis.title.y = element_text(data_col)
     ) +
-    ggtitle(variable_name)
+    ggtitle(paste0(data_name, ': ', data_col))
   
+  print(plt)
+}
+
+
+makeIndexBarPlot = function(
+    data_with_pvals,
+    sample_metadata,
+    variable_data,
+    data_name,
+    pval_colname,
+    pval_name='Unadjusted'
+  )
+{
+  
+  # 
+  # data_with_pvals=iga_index_with_pvals
+  # sample_metadata = sample_metadata
+  # variable_data=list(variable_name='AREDS', case='N', control='Y')
+  # data_name='IgA Index'
+  # pval_colname='pvals'
+  # pval_name='Undjusted P-Values'
+  # variable_data=list(covariate_of_interest='ARMS2_rs10490924', case='GG', control='TT')
+
+  
+  # print("the data")
+  # print(class(data_with_pvals))
+  # print(typeof(data_with_pvals))
+  # print(data_with_pvals$pvals)
+  # print(dim(data_with_pvals))
+  # head(data_with_pvals)
+  # print('makeIndexBarPlot')
+  # print(variable_data)
+  # print("data_with_pvalsw colnames")
+  # print(data_with_pvals %>% colnames())
+  # print(data_with_pvals)
+  # data_with_pvals %>% print()
+  
+  
+  variable_name = variable_data$covariate_of_interest
+  case = variable_data$case
+  control = variable_data$control
+  
+  # print(sprintf('variable_name=%s, case=%s, control=%s',
+  #   variable_name,
+  #   case,
+  #   control
+  #   ))
+  
+  case_subjects =
+    sample_metadata %>%
+    filter(!!as.name(variable_name)==case) %>%
+    pull(SubjectID) %>%
+    as.character() %>%
+    unique()
+  
+  # print(case_subjects)
+  
+  control_subjects =
+    sample_metadata %>%
+    filter(!!as.name(variable_name)==control) %>%
+    pull(SubjectID) %>%
+    as.character() %>%
+    unique()
+  
+  # print(control_subjects)
+  
+  # print('getting barplot data')
+  barplot_data =
+    data_with_pvals %>%
+    ### Keep only data columns and short glommed taxa names
+    select(
+      short_glommed_taxa,
+      case_subjects,
+      control_subjects,
+      pvals=!!pval_colname
+    ) %>%
+    ### Trasform to long format keeping some columns (specified by - sign)
+    ### Long columns are subject ID and iga index value
+    gather(
+      key='subject',
+      value='score',
+      -short_glommed_taxa,
+      -pvals
+    ) %>%
+    ### rename pvals (shorter)
+    # mutate(pvals = !!pval_colname) %>%
+    mutate(class = ifelse(
+      subject %in% case_subjects,
+      paste(case, '(Case)'), 
+      paste(control, '(Control)')
+    )) %>%
+    select(-subject)
+  
+  # print("barplot_data")
+  # print(barplot_data)
+  
+  # print('barplot data colnames')
+  # print(barplot_data %>% colnames())
+  
+  plt=
+    barplot_data %>%
+    ggplot() +
+    geom_bar(
+      aes(
+        x=short_glommed_taxa,
+        y=score,
+        fill=pvals
+      ),
+      stat='summary',
+      fun.y='mean'
+    ) +
+    facet_grid(cols=vars(class)) +
+    coord_flip() +
+    labs(
+      x='Taxa',
+      y=sprintf('Mean %s (across taxa)', data_name)
+    ) +
+    ggtitle(sprintf(
+      "%s: %s and Significance of Taxa",
+      variable_name,
+      data_name
+    )) +
+    theme(
+      plot.title = element_text(size=16, hjust=0.6),
+      legend.title = element_text(size=10),
+      axis.title = element_text(size=14)
+    ) +
+    scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
   print(plt)
   
 }
