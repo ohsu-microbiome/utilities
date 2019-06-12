@@ -265,8 +265,7 @@ getDataWithPvals = function(
   #   case='AMD',
   #   control='Control'
   # )
-  # variable_data = variables_of_interest[['ARMS2_rs10490924']]
-  # variable_data = variables_of_interest[['SKIV2L_rs429608']]
+  # variable_data = variables_of_interest[['ARMS2.rs10490924']]
   # formula = as.formula(paste('~', variable_data$covariate_of_interest))
 
   variable_name = variable_data$covariate_of_interest
