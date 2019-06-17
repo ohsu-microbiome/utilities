@@ -6,80 +6,13 @@ library(ggplot2)
 library(ggbeeswarm)
 
 
-getIgAIndices = function(
-    ### Sample-wise normalized counts
-    abundances_table,
-    sample_data,
-    ### Column of sample_data that contains iga status
-    iga_colname='IGA',
-    ### Values that iga status column has
-    iga_fraction_names=list(pos='Pos', neg='Neg', allbac='AllBac'),
-    ### Value to inject into relative abundance to avoid log(0) or /0 errors
-    zero_correction=0,
-    ### Columns to add to the results, such as taxa and p-values
-    extra_cols=c()
-  )
-{
-
-  print("getting iga- samples")
-  iga_neg_samples =
-    sample_data %>%
-    filter(!!as.name(iga_colname) == iga_fraction_names$neg) %>%
-    pull(SampleName)
-  print(iga_neg_samples)
-
-  print("getting iga+ samples")
-  iga_pos_samples =
-    sample_data %>%
-    filter(!!as.name(iga_colname) == iga_fraction_names$pos) %>%
-    pull(SampleName)
-  print(iga_pos_samples)
-
-  print("getting + and - abundances")
-  iga_neg =
-    abundances_table %>%
-    select(iga_neg_samples)
-  ### Change colnames from SampleName to SubjectID
-  colnames(iga_neg) =
-    sample_data %>%
-    filter(SampleName %in% iga_neg_samples) %>%
-    pull(SubjectID)
-
-    # gsub("([A-Z0-9]+)_.*$", "\\1", colnames(iga_neg))
-
-  iga_pos =
-    abundances_table %>%
-    select(iga_pos_samples)
-  # colnames(iga_pos) = gsub("([A-Z0-9]+)_.*$", "\\1", colnames(iga_pos))
-  ### Change colnames from SampleName to SubjectID
-  colnames(iga_pos) =
-    sample_data %>%
-    filter(SampleName %in% iga_pos_samples) %>%
-    pull(SubjectID)
-
-  print("getting corrected logs")
-  log_neg = log(iga_neg + zero_correction)
-  log_pos = log(iga_pos + zero_correction)
-
-  print("calculating index")
-  iga_indices = (log_neg - log_pos)/(log_neg + log_pos)
-
-  if (length(extra_cols) != 0)
-  {
-    iga_indices =
-      iga_indices %>%
-      cbind(abundances_table %>% select(extra_cols))
-  }
-
-  return(iga_indices)
-}
-
-
 getRelAbund = function(
   counts,
   use_cols=c()
 )
 {
+  ### Normalize columns by column sum
+  
   if ( length(use_cols) == 0 )
   {
     use_cols = colnames(df)
@@ -94,41 +27,6 @@ getRelAbund = function(
 }
 
 
-getICIScores = function(
-  iga_neg,
-  iga_pos,
-  count_type="raw",
-  zero_correction=0,
-  extra_cols=c()
-)
-{
-  if (count_type == "raw")
-  {
-    neg = iga_neg + zero_correction
-    pos = iga_pos + zero_correction
-  } else if(count_type == "rel")
-  {
-    neg = iga_neg + zero_correction
-    pos = iga_pos + zero_correction
-  } else
-  {
-    warning("Invalid count type. Use \"raw\" or \"rel\"")
-    return()
-  }
-
-  iga_scores = pos/neg
-
-  if (length(extra_cols) != 0)
-  {
-    iga_scores =
-      iga_scores %>%
-      cbind(extra_cols)
-  }
-
-  return(iga_scores)
-}
-
-
 removeOutlierRows = function(
   df,
   min_pct,
@@ -137,6 +35,8 @@ removeOutlierRows = function(
 )
 {
 
+  ### Experimental
+  
   print(df)
 
   if ( length(use_cols) == 0 )
@@ -184,6 +84,7 @@ getTopNbyRowMean = function(
   num_top_features
 )
 {
+  ### Not used I don't think. Seems superfluous
   if (length(use_samples)==0)
   {
     use_samples = everything()
@@ -208,6 +109,8 @@ getWilcoxonPvalsForTaxa = function(
   ... ### extra parameters to pass on to wilcox test
 )
 {
+  
+  ### Developer note: add parameter for test: wilcox.test, t.test, 
   rhs = as.character(formula)[[2]]
   pvals = lapply(taxa, function(taxon)
   {
@@ -342,6 +245,12 @@ getDataCombinedWithMetadata = function(
   metadata_pivot_column
 )
 {
+  
+  ### Table with subjects or samples as rows and columns are taxa as well
+  ### as the metadata. This allows stats stuff with formulas containing
+  ### a taxon and a metadata column (e.g. Case, SNP, Gender)
+  
+  ### Data for testing
   # data = taxa_abundance
   # metadata = sample_metadata
   # observation_pivot_column='short_glommed_taxa'
@@ -390,15 +299,20 @@ writeData = function(
 
 
 makePvalPlot = function(
-    data_with_metadata,
-    data_name, ### for title
+    data_with_metadata, ### rows=subjects/samples, cols=taxa + metadata
+    data_name="", ### for title only
     data_col, ### e.g. taxon
-    variable_data,
+    variable_data, ### list(covariate_of_interest="A", case='Y', control='N')
     p_value, ### list(type=type, value=value)
-    labels=list(case='Case', control='Control')
+    labels=list(case='Case', control='Control') ### etc.
   )
 {
 
+  ### Developer Note:
+  ### variable_data and labels seem redundant. Labels has the titles or names such as
+  ### Risk/"Non-Risk" that may be different than case/control.
+  
+  ### Data for testing
   # data_with_metadata=iga_index_and_sample_metadata
   # data_name='IgA Index'
   # data_col=data_for_pval_plots$short_glommed_taxa[[1]]
@@ -411,15 +325,17 @@ makePvalPlot = function(
   #   case='TT'
   # )
 
-
   variable_name=variable_data$covariate_of_interest
   case = variable_data$case
   control = variable_data$control
 
   plot_data =
     data_with_metadata %>%
+    ### Make sure we only filter out only two classes. Perhaps expand later.
     filter(!!as.name(variable_name) %in% c(case, control)) %>%
+    ### Only need the variable name and counts
     select(data_col, variable_name) %>%
+    ### Turning it into a factor helps ggplot
     mutate(!!variable_name := factor(
       !!as.name(variable_name),
       # levels=c(paste(control, '(Control)'), paste(case, '(Case)'))))
@@ -428,6 +344,7 @@ makePvalPlot = function(
 
   # print(sprintf('variable_name=%s', variable_name))
 
+  ### Allow for labels other than Case/Control
   if (length(labels) != 0)
   {
     case_label = paste0(case, ' (', labels$case, ')')
@@ -448,27 +365,28 @@ makePvalPlot = function(
 
   # print(plot_data)
 
+  ### Used to position pval annotation
   max_value = max(plot_data[[data_col]])
 
   plt =
     ggplot(plot_data) +
+    ### beeswarm part of plot. maybe aes_string would be easier?
     geom_quasirandom(
       aes(
         x=!!as.name(variable_name),
         y=!!as.name(data_col),
         shape=!!as.name(variable_name)
       ),
+      ### Arbitrary choice. Perhaps add as parameter or make functino of count
       nbins=10,
       # bandwidth=0.1,
+      ### Is this redundant with nbins?
       width=0.1,
       method='smiley',
       varwidth = T,
       size=3
     ) +
-    # scale_fill_manual(
-    #   values=!!as.name(variable_name),
-    #   labels = c(paste(case, '(Case)'), paste(control, '(Control)'))
-    #   ) +
+    ### Boxplot part. Split by values of variable_name
     geom_boxplot(
       aes(x=!!as.name(variable_name), y=!!as.name(data_col)),
       alpha=0.2,
@@ -476,6 +394,7 @@ makePvalPlot = function(
       fill='grey',
       show.legend = F
     ) +
+    ### add in pvalue annotation.
     annotate(
       "text",
       x = 1.5,
@@ -487,22 +406,27 @@ makePvalPlot = function(
       axis.title.y = element_text(data_col)
     ) +
     ggtitle(paste0(data_name, ': ', data_col))
+    #+
+    # scale_fill_manual(
+    #   values=!!as.name(variable_name),
+    #   labels = c(paste(case, '(Case)'), paste(control, '(Control)'))
+    #   ) 
 
   print(plt)
 }
 
 
 makeIndexBarPlot = function(
-    data_with_pvals,
+    data_with_pvals, ### rows are taxa, cols are subjects and pvalues
     sample_metadata,
-    variable_data,
-    data_name,
-    pval_colname,
-    pval_name='Unadjusted'
+    variable_data, ### list(covariate_of_interest="A", case='Y', control='N')
+    data_name, ### for plot title only
+    pval_colname, ### e.g. pvals, padj, whatever
+    pval_name='Unadjusted' ### For legend only
   )
 {
 
-  #
+  ### Data for testing
   # data_with_pvals=iga_index_with_pvals
   # sample_metadata = sample_metadata
   # variable_data=list(variable_name='AREDS', case='N', control='Y')
@@ -510,21 +434,6 @@ makeIndexBarPlot = function(
   # pval_colname='pvals'
   # pval_name='Undjusted P-Values'
   # variable_data=list(covariate_of_interest='ARMS2_rs10490924', case='GG', control='TT')
-
-
-  # print("the data")
-  # print(class(data_with_pvals))
-  # print(typeof(data_with_pvals))
-  # print(data_with_pvals$pvals)
-  # print(dim(data_with_pvals))
-  # head(data_with_pvals)
-  # print('makeIndexBarPlot')
-  # print(variable_data)
-  # print("data_with_pvalsw colnames")
-  # print(data_with_pvals %>% colnames())
-  # print(data_with_pvals)
-  # data_with_pvals %>% print()
-
 
   variable_name = variable_data$covariate_of_interest
   case = variable_data$case
@@ -536,6 +445,8 @@ makeIndexBarPlot = function(
   #   control
   #   ))
 
+  ### Since subjects are col names, make lists of them to
+  ### help selecting easier.
   case_subjects =
     sample_metadata %>%
     filter(!!as.name(variable_name)==case) %>%
@@ -590,6 +501,7 @@ makeIndexBarPlot = function(
   plt=
     barplot_data %>%
     ggplot() +
+    ### Barplot fill intensity by pvalues (whichever were chosen)
     geom_bar(
       aes(
         x=short_glommed_taxa,
@@ -599,7 +511,9 @@ makeIndexBarPlot = function(
       stat='summary',
       fun.y='mean'
     ) +
+    ### Facet by Case/Control, Yes/No, 0/1, etc.
     facet_grid(cols=vars(class)) +
+    ### Put bars sideways
     coord_flip() +
     labs(
       x='Taxa',
@@ -615,6 +529,8 @@ makeIndexBarPlot = function(
       legend.title = element_text(size=10),
       axis.title = element_text(size=14)
     ) +
+    ### Use grayscale that makes only fairly low pvalues dark
+  ### Color would be nice, but apparently journals charge for it?!?!?
     scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
   print(plt)
 
