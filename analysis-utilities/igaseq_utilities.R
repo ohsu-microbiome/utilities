@@ -4,27 +4,7 @@ library(magrittr)
 library(DESeq2)
 library(ggplot2)
 library(ggbeeswarm)
-
-
-getRelAbund = function(
-  counts,
-  use_cols=c()
-)
-{
-  ### Normalize columns by column sum
-  
-  if ( length(use_cols) == 0 )
-  {
-    use_cols = colnames(df)
-  }
-
-  relabund =
-    counts %>%
-    mutate_if(is.numeric, funs(./sum(.))) %>%
-    data.frame()
-
-  return(relabund)
-}
+library(pwr)
 
 
 removeOutlierRows = function(
@@ -36,7 +16,7 @@ removeOutlierRows = function(
 {
 
   ### Experimental
-  
+
   print(df)
 
   if ( length(use_cols) == 0 )
@@ -78,29 +58,6 @@ removeOutlierRows = function(
   return(df)
 }
 
-getTopNbyRowMean = function(
-  data_table,
-  use_samples=c(),
-  num_top_features
-)
-{
-  ### Not used I don't think. Seems superfluous
-  if (length(use_samples)==0)
-  {
-    use_samples = everything()
-  }
-
-  top_N =
-    data_table %>%
-    mutate_at(.vars=use_samples, funs(./sum(.))) %>%
-    mutate(RowSums = rowSums(select(.,use_samples))) %>%
-    arrange(RowSums) %>%
-    tail(n=num_top_features) %>%
-    select(-RowSums)
-
-  return(top_N)
-}
-
 
 getWilcoxonPvalsForTaxa = function(
   data,
@@ -109,8 +66,8 @@ getWilcoxonPvalsForTaxa = function(
   ... ### extra parameters to pass on to wilcox test
 )
 {
-  
-  ### Developer note: add parameter for test: wilcox.test, t.test, 
+
+  ### Developer note: add parameter for test: wilcox.test, t.test,
   rhs = as.character(formula)[[2]]
   pvals = lapply(taxa, function(taxon)
   {
@@ -238,66 +195,6 @@ getDataWithPvals = function(
 }
 
 
-getDataCombinedWithMetadata = function(
-  data,
-  metadata,
-  data_pivot_column,
-  metadata_pivot_column
-)
-{
-  
-  ### Table with subjects or samples as rows and columns are taxa as well
-  ### as the metadata. This allows stats stuff with formulas containing
-  ### a taxon and a metadata column (e.g. Case, SNP, Gender)
-  
-  ### Data for testing
-  # data = taxa_abundance
-  # metadata = sample_metadata
-  # observation_pivot_column='short_glommed_taxa'
-  # metadata_pivot_column = 'SampleName'
-
-  data_and_metadata =
-    data %>%
-    ### Stash short_glommed_taxa as rownames before transpose
-    ### They will become
-    tibble::remove_rownames() %>%
-    tibble::column_to_rownames(data_pivot_column) %>%
-    ### Transpose to put samples in rows, taxa and metadata in cols
-    t() %>%
-    ### Coerce back to dataframe for further manipulation
-    data.frame() %>%
-    ### The subject IDs were the column names. After the transpose
-    ### they became row names. To be "tidy" we need them in an actual column
-    tibble::rownames_to_column(metadata_pivot_column) %>%
-    ### Join this table to the sample_metadata table
-    left_join(metadata, by=metadata_pivot_column)
-}
-
-writeData = function(
-    data,
-    project,
-    dir,
-    name
-  )
-{
-  filename = file.path(dir, paste0(project, name, '.tsv'))
-  write.table(
-    data,
-    file=filename,
-    sep='\t',
-    quote=F
-  )
-
-  filename = file.path(dir, paste0(project, name, '.xlsx'))
-  write.xlsx(
-    data,
-    file=filename,
-    sep='\t',
-    quote=F
-  )
-}
-
-
 makePvalPlot = function(
     data_with_metadata, ### rows=subjects/samples, cols=taxa + metadata
     data_name="", ### for title only
@@ -311,7 +208,7 @@ makePvalPlot = function(
   ### Developer Note:
   ### variable_data and labels seem redundant. Labels has the titles or names such as
   ### Risk/"Non-Risk" that may be different than case/control.
-  
+
   ### Data for testing
   # data_with_metadata=iga_index_and_sample_metadata
   # data_name='IgA Index'
@@ -341,6 +238,45 @@ makePvalPlot = function(
       # levels=c(paste(control, '(Control)'), paste(case, '(Case)'))))
       levels=c(control,case)
     ))
+
+  stats =
+    plot_data %>%
+    group_by(!!as.name(variable_name)) %>%
+    summarize(N=n(), mu=mean(!!as.name(data_col)))
+
+  SD = sd(plot_data[[data_col]])
+
+  effect_size = abs(diff(stats$mu))/SD
+
+  print(sprintf("taxon=%s, variable=%s", data_col, variable_name))
+
+  if (stats$N[1]>=2 & stats$N[2]>=2)
+  {
+    power = pwr.t2n.test(
+      n1=stats$N[1],
+      n2=stats$N[2],
+      d=effect_size,
+      sig.level=0.2
+    )
+    print(power)
+  } else
+  {
+    warning("Insufficient sample size for power calculation.")
+  }
+
+  num_case =
+    plot_data %>%
+    filter(!!as.name(variable_name) == case) %>%
+    summarise(N=n()) %>%
+    pull(N)
+
+  num_control =
+    plot_data %>%
+    filter(!!as.name(variable_name) == control) %>%
+    summarise(N=n()) %>%
+    pull(N)
+
+
 
   # print(sprintf('variable_name=%s', variable_name))
 
@@ -410,7 +346,7 @@ makePvalPlot = function(
     # scale_fill_manual(
     #   values=!!as.name(variable_name),
     #   labels = c(paste(case, '(Case)'), paste(control, '(Control)'))
-    #   ) 
+    #   )
 
   print(plt)
 }
