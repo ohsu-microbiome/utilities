@@ -214,3 +214,60 @@ calculateAlphaDiversity2 = function(
     rownames_to_column('SampleName')
 }
 
+
+makeAlphaDivPlot = function(
+  metadata,
+  alpha_div_table,
+  indices,
+  aesthetics, ### list(x_var='', color_var='', facet_var='')
+  additional_title_text=''
+)
+{
+  ### Aesthetics
+  ### x_var: Which variable defines the groups along the x-axis
+  ### color_var: which variable is used for different color groups (legend)
+  ### facet_var: which variable is used to group the plots
+  ### index: the variable that has a list of alpha diversity indeces (e.g. shannon, ...)
+  
+  ### Data for testing
+  # metadata = sample_metadata %>% filter(IGA %in% c('Neg', 'Pos'))
+  # alpha_div_table = alpha_diversity
+  # indices = c('shannon', 'simpson')
+  # aesthetics = list(x_var='index', color_var='IGA', facet_var='CaseString')
+  
+  x_var = aesthetics$x_var
+  color_var = aesthetics$color_var
+  facet_var = aesthetics$facet_var
+  cols_to_not_gather = setdiff(c(x_var, color_var, facet_var), c('index'))
+  
+  metadata %>%
+    inner_join(alpha_div_table, by='SampleName') %>%
+    select(indices, cols_to_not_gather) %>%
+    gather(key='index', value='value', -!!cols_to_not_gather) %>%
+    ggplot(aes_string(
+      x=x_var, 
+      y='value', 
+      color=color_var
+    )) + 
+    geom_quasirandom(
+      width=0.2, 
+      method='smiley', 
+      alpha=0.7, 
+      size=0.8, 
+      dodge.width=1
+    ) +
+    # geom_boxplot(alpha=0.1, fill='black', colour='black', size=0.5, varwidth=T, width=0.7) +
+    geom_boxplot(
+      aes_string(
+        x=x_var, 
+        y='value', 
+        color=color_var
+      ),
+      alpha=0.1,
+      # color='black',
+      size=0.5,
+      width=0.7
+    )+
+    facet_wrap(as.formula(paste('~',facet_var)), scales='free', shrink=F) + 
+    ggtitle(paste('Alpha Diversity:', color_var, '+', x_var, additional_title_text))
+}
