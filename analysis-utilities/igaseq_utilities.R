@@ -318,7 +318,8 @@ makePvalPlot = function(
       # bandwidth=0.1,
       ### Is this redundant with nbins?
       width=0.1,
-      method='smiley',
+      # method='smiley',
+      dodge.width=1,
       varwidth = T,
       size=3
     ) +
@@ -328,7 +329,12 @@ makePvalPlot = function(
       alpha=0.2,
       width=0.3,
       fill='grey',
-      show.legend = F
+      show.legend = F,
+      outlier.alpha=1,
+      outlier.color='red',
+      outlier.fill='red',
+      outlier.shape=18,
+      outlier.size=3
     ) +
     ### add in pvalue annotation.
     annotate(

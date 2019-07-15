@@ -48,45 +48,31 @@ makePvalPlot = function(
       levels=c(control,case)
     ))
   
-  stats =
-    plot_data %>%
-    group_by(!!as.name(variable_name)) %>%
-    summarize(N=n(), mu=mean(!!as.name(data_col)))
-  
-  SD = sd(plot_data[[data_col]])
-  
-  effect_size = abs(diff(stats$mu))/SD
-  
-  print(sprintf("taxon=%s, variable=%s", data_col, variable_name))
-  
-  if (stats$N[1]>=2 & stats$N[2]>=2)
-  {
-    power = pwr.t2n.test(
-      n1=stats$N[1],
-      n2=stats$N[2],
-      d=effect_size,
-      sig.level=0.2
-    )
-    print(power)
-  } else
-  {
-    warning("Insufficient sample size for power calculation.")
-  }
-  
-  num_case =
-    plot_data %>%
-    filter(!!as.name(variable_name) == case) %>%
-    summarise(N=n()) %>%
-    pull(N)
-  
-  num_control =
-    plot_data %>%
-    filter(!!as.name(variable_name) == control) %>%
-    summarise(N=n()) %>%
-    pull(N)
-  
-  
-  
+  # stats =
+  #   plot_data %>%
+  #   group_by(!!as.name(variable_name)) %>%
+  #   summarize(N=n(), mu=mean(!!as.name(data_col)))
+  # 
+  # SD = sd(plot_data[[data_col]])
+  # 
+  # effect_size = abs(diff(stats$mu))/SD
+  # 
+  # print(sprintf("taxon=%s, variable=%s", data_col, variable_name))
+  # 
+  # if (stats$N[1]>=2 & stats$N[2]>=2)
+  # {
+  #   power = pwr.t2n.test(
+  #     n1=stats$N[1],
+  #     n2=stats$N[2],
+  #     d=effect_size,
+  #     sig.level=0.2
+  #   )
+  #   print(power)
+  # } else
+  # {
+  #   warning("Insufficient sample size for power calculation.")
+  # }
+
   # print(sprintf('variable_name=%s', variable_name))
   
   ### Allow for labels other than Case/Control
@@ -189,11 +175,15 @@ calculateAlphaDiversity = function(
 
 
 calculateAlphaDiversity2 = function(
-  taxa_abundance,
+  sample_metadata_taxa_table,
   taxa_columns,
   indices=c('shannon')
 )
 {
+  
+  # sample_metadata_taxa_table = master_table
+  # taxa_columns = filtered_taxa
+  # indices = c('shannon', 'observed')
   
   print("in calculateAlphaDiversity")
   # sample_names_df = 
@@ -205,10 +195,18 @@ calculateAlphaDiversity2 = function(
   
   sapply(indices, function(index)
   {
-    taxa_abundance %>% 
+    temp = 
+      sample_metadata_taxa_table %>% 
       column_to_rownames('SampleName') %>%
-      select(taxa_columns) %>% 
-      diversity(index=index)
+      select(taxa_columns)
+    
+    if (index=='observed')
+    {
+      return(rowSums(temp != 0))
+    }else
+    {
+      return(diversity(temp, index=index))
+    }
   }) %>%
     data.frame() %>%
     rownames_to_column('SampleName')
@@ -230,20 +228,51 @@ makeAlphaDivPlot = function(
   ### index: the variable that has a list of alpha diversity indeces (e.g. shannon, ...)
   
   ### Data for testing
-  # metadata = sample_metadata %>% filter(IGA %in% c('Neg', 'Pos'))
+  # additional_title_text = ''
+  # metadata = allbac_metadata
   # alpha_div_table = alpha_diversity
   # indices = c('shannon', 'simpson')
-  # aesthetics = list(x_var='index', color_var='IGA', facet_var='CaseString')
-  
+  # aesthetics = list(x_var='index', color_var='index', facet_var='')
+  # 
   x_var = aesthetics$x_var
   color_var = aesthetics$color_var
   facet_var = aesthetics$facet_var
-  cols_to_not_gather = setdiff(c(x_var, color_var, facet_var), c('index'))
+
+  print(sprintf("x_var %s, color_var %s, facet_var %s", x_var, color_var, facet_var))
   
-  metadata %>%
+  ### Cols containing data that will be used in the plot
+  ### The data is grouped by these columns and the rest left out.
+  cols_to_gather = c(indices, x_var, color_var)
+  if (facet_var != '')
+  {
+    print("got facet_var")
+    cols_to_gather = c(cols_to_gather, facet_var)
+  }
+  
+  ### Because "index" is always present as a grouping column,
+  ### if it is going to be used in plot aesthetics, that is it is
+  ### one of x_var, color_var, or facet_var, it must be left
+  ### out of the gathered columns.
+  
+  ### NOTE: 'index' is different from the variable `indices` which
+  ### is a list of the alpha diversity indices to plot which are
+  ### columns in the input data.
+  cols_to_gather = setdiff(cols_to_gather, c('index'))
+  
+  print("cols to gather:")
+  print(cols_to_gather)
+  
+  plot_data = 
+    metadata %>%
     inner_join(alpha_div_table, by='SampleName') %>%
-    select(indices, cols_to_not_gather) %>%
-    gather(key='index', value='value', -!!cols_to_not_gather) %>%
+    select(!!cols_to_gather) %>%
+    # gather(key='index', value='value', -!!cols_to_not_gather) %>%
+    gather(key='index', value='value', indices)
+    
+  # return(plot_data)
+    
+  plt = 
+    plot_data %>%
     ggplot(aes_string(
       x=x_var, 
       y='value', 
@@ -268,6 +297,28 @@ makeAlphaDivPlot = function(
       size=0.5,
       width=0.7
     )+
-    facet_wrap(as.formula(paste('~',facet_var)), scales='free', shrink=F) + 
     ggtitle(paste('Alpha Diversity:', color_var, '+', x_var, additional_title_text))
+  
+  
+  if (facet_var != '')
+  {
+    print("got facet_var 2")
+    plt = plt + facet_wrap(
+      as.formula(paste('~',facet_var)), 
+      scales='free', 
+      shrink=F
+      )
+  }
+  
+  # print(plt)
+  
+  return(plt)
+}
+
+geom_pval_annotation = function(annotations)
+{
+  geom_text(
+    data=annotation_df,
+    aes(x=xloc, y=yloc, label=pvals)
+    )
 }
