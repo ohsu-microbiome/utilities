@@ -213,12 +213,13 @@ calculateAlphaDiversity2 = function(
 }
 
 
-makeAlphaDivPlot = function(
+makeAlphaDivPlot1 = function(
   metadata,
   alpha_div_table,
   indices,
   aesthetics, ### list(x_var='', color_var='', facet_var='')
-  additional_title_text=''
+  additional_title_text='',
+  annotation_data=''
 )
 {
   ### Aesthetics
@@ -267,9 +268,12 @@ makeAlphaDivPlot = function(
     inner_join(alpha_div_table, by='SampleName') %>%
     select(!!cols_to_gather) %>%
     # gather(key='index', value='value', -!!cols_to_not_gather) %>%
-    gather(key='index', value='value', indices)
+    gather(key='index', value='value', indices) %>%
+    left_join(annotation_data, by='index')
     
-  # return(plot_data)
+  print('colnames plot_data')
+  print(colnames(plot_data))
+  # print(colnames(annotation_data))
     
   plt = 
     plot_data %>%
@@ -299,6 +303,16 @@ makeAlphaDivPlot = function(
     )+
     ggtitle(paste('Alpha Diversity:', color_var, '+', x_var, additional_title_text))
   
+  print("adding geom text")
+  if (annotation_data != '')
+  {
+    plt = plt + 
+      geom_text(
+        # data=annotation_data,
+        aes(x=xloc, y=yloc, label=pvals, color=index),
+        color='black'
+      )
+  }
   
   if (facet_var != '')
   {
@@ -321,4 +335,147 @@ geom_pval_annotation = function(annotations)
     data=annotation_df,
     aes(x=xloc, y=yloc, label=pvals)
     )
+}
+
+
+
+makeAlphaDivPlot = function(
+  master_table,
+  indices,
+  aesthetics, ### list(x_var='', color_var='', facet_var='')
+  additional_title_text='',
+  annotation_data=''
+)
+{
+  
+  ### Aesthetics
+  ### x_var: Which variable defines the groups along the x-axis
+  ### color_var: which variable is used for different color groups (legend)
+  ### facet_var: which variable is used to group the plots
+  ### index: the variable that has a list of alpha diversity indeces (e.g. shannon, ...)
+  
+  ## Data for testing
+  # additional_title_text = ''
+  # master_table = all_master_table
+  # indices = c('shannon', 'simpson')
+  # aesthetics = list(x_var='index', color_var='index', facet_var='index')
+  # #
+  # annotation_data=pval_annotations %>%
+  #   filter(TestGroup=='All')
+
+  # additional_title_text = ''
+  # master_table = fb_master_table
+  # indices = c('Firmicutes', 'Bacteroidetes')
+  # aesthetics = list(x_var='index', color_var='index', facet_var='index')
+  # annotation_data=pval_annotations %>%
+  #   filter(TestGroup=='All')
+  # indices=c('Firmicutes', 'Bacteroidetes')
+  # aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index')
+  # annotation_data=pval_annotations %>% filter(TestGroup=='All')
+  
+
+  x_var = aesthetics$x_var
+  color_var = aesthetics$color_var
+  facet_var = aesthetics$facet_var
+
+  print(sprintf("x_var %s, color_var %s, facet_var %s", x_var, color_var, facet_var))
+  print(indices)
+
+  
+  ### Cols containing data that will be used in the plot
+  ### The data is grouped by these columns and the rest left out.
+  cols_to_gather = c(indices, x_var, color_var)
+  if (facet_var != '')
+  {
+    print("got facet_var")
+    cols_to_gather = c(cols_to_gather, facet_var)
+  }
+  
+  ### Because "index" is always present as a grouping column,
+  ### if it is going to be used in plot aesthetics, that is it is
+  ### one of x_var, color_var, or facet_var, it must be left
+  ### out of the gathered columns.
+  
+  ### NOTE: 'index' is different from the variable `indices` which
+  ### is a list of the alpha diversity indices to plot which are
+  ### columns in the input data.
+  cols_to_gather = setdiff(cols_to_gather, c('index'))
+  
+  print("cols to gather:")
+  print(cols_to_gather)
+  
+  plot_data = 
+    master_table %>%
+    select(!!cols_to_gather) %>%
+    # gather(key='index', value='value', -!!cols_to_not_gather) %>%
+    gather(key='index', value='value', indices)
+
+  if (annotation_data != '')
+  {
+    annotation_data=annotation_data %>% 
+      filter(
+        index %in% indices, 
+        TestVariable==x_var
+      )
+  }
+  
+  print('colnames plot_data')
+  print(colnames(plot_data))
+  # print(colnames(annotation_data))
+  
+  plt = 
+    plot_data %>%
+    ggplot(aes_string(
+      x=x_var, 
+      y='value', 
+      color=color_var
+    )) + 
+    geom_quasirandom(
+      width=0.2, 
+      method='smiley', 
+      alpha=0.7, 
+      size=0.8, 
+      dodge.width=1
+    ) +
+    # geom_boxplot(alpha=0.1, fill='black', colour='black', size=0.5, varwidth=T, width=0.7) +
+    geom_boxplot(
+      aes_string(
+        x=x_var, 
+        y='value', 
+        color=color_var
+      ),
+      alpha=0.1,
+      # color='black',
+      size=0.5,
+      width=0.7
+    )+
+    ggtitle(paste('Alpha Diversity:', color_var, '+', x_var, additional_title_text))
+  
+  if (annotation_data != '')
+  {
+    print("adding geom text")
+    
+    plt = plt + 
+      geom_text(
+        data=annotation_data,
+        aes(x=xloc, y=yloc, label=pvals, color=index),
+        color='black'
+      )
+  }
+  
+  if (facet_var != '')
+  {
+    print("got facet_var 2")
+    plt = plt + facet_wrap(
+      as.formula(paste('~',facet_var)), 
+      scales='free', 
+      shrink=F
+    )
+  }
+  
+  plt
+  
+  # print(plt)
+  
+  return(plt)
 }
