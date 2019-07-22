@@ -344,7 +344,7 @@ makeAlphaDivPlot = function(
   indices,
   aesthetics, ### list(x_var='', color_var='', facet_var='')
   additional_title_text='',
-  annotation_data=''
+  annotation_data=c()
 )
 {
   
@@ -363,12 +363,11 @@ makeAlphaDivPlot = function(
   # annotation_data=pval_annotations %>%
   #   filter(TestGroup=='All')
 
-  # additional_title_text = ''
-  # master_table = fb_master_table
+  # additional_title_text = "title text"
+  # master_table = temp_master_table
   # indices = c('Firmicutes', 'Bacteroidetes')
-  # aesthetics = list(x_var='index', color_var='index', facet_var='index')
-  # annotation_data=pval_annotations %>%
-  #   filter(TestGroup=='All')
+  # aesthetics = list(x_var='ARMS2rs10490924', color_var='ARMS2rs10490924', facet_var='index')
+  # annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
   # indices=c('Firmicutes', 'Bacteroidetes')
   # aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index')
   # annotation_data=pval_annotations %>% filter(TestGroup=='All')
@@ -410,9 +409,10 @@ makeAlphaDivPlot = function(
     # gather(key='index', value='value', -!!cols_to_not_gather) %>%
     gather(key='index', value='value', indices)
 
-  if (annotation_data != '')
+  if (!is.null(annotation_data) && dim(annotation_data)[1] != 0)
   {
-    annotation_data=annotation_data %>% 
+    print('filtering annotation data')
+    annotations=annotation_data %>% 
       filter(
         index %in% indices, 
         TestVariable==x_var
@@ -422,11 +422,17 @@ makeAlphaDivPlot = function(
   print('colnames plot_data')
   print(colnames(plot_data))
   # print(colnames(annotation_data))
+  print("dim plot data")
+  # print(dim(plot_data))
+  # print("plot data")
+  # print(plot_data)
+  # print(class(plot_data))
+  # print(typeof(plot_data))
   
   plt = 
     plot_data %>%
     ggplot(aes_string(
-      x=x_var, 
+      x='index', 
       y='value', 
       color=color_var
     )) + 
@@ -440,7 +446,7 @@ makeAlphaDivPlot = function(
     # geom_boxplot(alpha=0.1, fill='black', colour='black', size=0.5, varwidth=T, width=0.7) +
     geom_boxplot(
       aes_string(
-        x=x_var, 
+        x='index', 
         y='value', 
         color=color_var
       ),
@@ -451,13 +457,13 @@ makeAlphaDivPlot = function(
     )+
     ggtitle(paste('Alpha Diversity:', color_var, '+', x_var, additional_title_text))
   
-  if (annotation_data != '')
+  if (dim(annotation_data)[1] != 0 && !is.null(annotation_data))
   {
     print("adding geom text")
     
     plt = plt + 
       geom_text(
-        data=annotation_data,
+        data=annotations,
         aes(x=xloc, y=yloc, label=pvals, color=index),
         color='black'
       )
@@ -473,9 +479,275 @@ makeAlphaDivPlot = function(
     )
   }
   
+  if (additional_title_text != '')
+  {
+    plt = plt + 
+      ggtitle(paste(additional_title_text, name))
+  }
+  
+  plt = plt + ylab("Value") 
+  
   plt
   
   # print(plt)
   
   return(plt)
 }
+
+
+
+plotPairTests = function(
+    variables,
+    master_table,
+    indices,
+    title_template,
+    annotation_data
+  )
+{
+  
+  print("plotPairTests")
+  
+  # indices=c('Firmicutes', 'Bacteroidetes')
+  # title_template="Firmicutes and Bacteroidetes: AMD Only"
+  # annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+  # variables=amd_only_variables
+  # # variables = variables['ARMS2rs10490924']
+  # master_table = amd_only_master_table
+  # 
+  for (var in variables)
+  {
+    name = var$covariate_of_interest
+    case = var$case
+    control = var$control
+    
+    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    print("labels")
+    print(var$labels %>% unlist())
+    
+    if (!all(c(case, control) %in% master_table[[name]]))
+    {
+      print("not all levels present. skipping...")
+      next
+    }
+    
+    temp_master_table =
+      master_table %>%
+      filter(!!as.name(name) %in% c(case, control))
+    
+    plt = makePairPlot(
+      master_table=temp_master_table,
+      indices=indices,
+      var_data=var,
+      aesthetics = list(
+        x_var=name,
+        color_var=name,
+        facet_var='index'
+      ),
+      annotation_data=annotation_data,
+      title_template=title_template
+    )
+    
+    print(plt)
+  }
+}
+
+# indices=c('Firmicutes', 'Bacteroidetes')
+# title_template="Firmicutes and Bacteroidetes: AMD Only"
+# annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+# variables=amd_only_variables
+# # variables = variables['CFHrs10737680']
+# master_table = amd_only_master_table
+# 
+# plotPairTests(
+#   variables=variables,
+#   master_table=master_table,
+#   indices=indices,
+#   title_template=title_template,
+#   annotation_data=annotation_data
+# )
+
+
+
+
+
+makePairPlot= function(
+  master_table,
+  indices,
+  var_data,
+  aesthetics, ### list(x_var='', color_var='', facet_var='')
+  title_template='',
+  annotation_data=c()
+)
+{
+  
+  
+  # print(var_data)
+  
+  ### Aesthetics
+  ### x_var: Which variable defines the groups along the x-axis
+  ### color_var: which variable is used for different color groups (legend)
+  ### facet_var: which variable is used to group the plots
+  ### index: the variable that has a list of alpha diversity indeces (e.g. shannon, ...)
+  
+  x_var = aesthetics$x_var
+  color_var = aesthetics$color_var
+  facet_var = aesthetics$facet_var
+  
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  
+  # master_table = 
+  #   master_table %>%
+  #   filter(!!as.name(name) %in% c(case, control))
+  
+  print(sprintf("x_var %s, color_var %s, facet_var %s", x_var, color_var, facet_var))
+  print(indices)
+  
+  ### Cols containing data that will be used in the plot
+  ### The data is grouped by these columns and the rest left out.
+  cols_to_gather = c(indices, x_var, color_var)
+  if (facet_var != '')
+  {
+    print("got facet_var")
+    cols_to_gather = c(cols_to_gather, facet_var)
+  }
+  
+  ### Because "index" is always present as a grouping column,
+  ### if it is going to be used in plot aesthetics, that is it is
+  ### one of x_var, color_var, or facet_var, it must be left
+  ### out of the gathered columns.
+  
+  ### NOTE: 'index' is different from the variable `indices` which
+  ### is a list of the alpha diversity indices to plot which are
+  ### columns in the input data.
+  cols_to_gather = setdiff(cols_to_gather, c('index'))
+  
+  print("cols to gather:")
+  print(cols_to_gather)
+  
+  plot_data = 
+    master_table %>%
+    select(!!cols_to_gather) %>%
+    # gather(key='index', value='value', -!!cols_to_not_gather) %>%
+    gather(key='index', value='value', indices) %>%
+    mutate(label=case_when(
+      !!as.name(x_var)==case ~ var_data$labels$comparison,
+      !!as.name(x_var)==control ~ var_data$labels$reference
+    ))
+  
+  # print(plot_data %>% select(!!as.name(name), label))
+  
+  if (!is.null(annotation_data) && dim(annotation_data)[1] != 0)
+  {
+    print('filtering annotation data')
+    annotations=annotation_data %>% 
+      filter(
+        index %in% indices, 
+        TestVariable==x_var
+      )
+  }
+  
+  print('colnames plot_data')
+  print(colnames(plot_data))
+  # print(colnames(annotation_data))
+  print("dim plot data")
+  # print(dim(plot_data))
+  # print("plot data")
+  # print(plot_data)
+  # print(class(plot_data))
+  # print(typeof(plot_data))
+  
+  plt = 
+    plot_data %>%
+    ggplot(aes_string(
+      x='label', 
+      y='value', 
+      color=color_var
+    )) + 
+    geom_quasirandom(
+      width=0.2, 
+      method='smiley', 
+      alpha=0.7, 
+      size=0.8, 
+      dodge.width=1
+    ) +
+    # geom_boxplot(alpha=0.1, fill='black', colour='black', size=0.5, varwidth=T, width=0.7) +
+    geom_boxplot(
+      aes_string(
+        x='label', 
+        y='value', 
+        color=color_var
+      ),
+      alpha=0.1,
+      # color='black',
+      size=0.5,
+      width=0.7
+    )
+  
+    # ggtitle(paste('Alpha Diversity:', color_var, '+', x_var, title_template))
+  
+  if (dim(annotation_data)[1] != 0 && !is.null(annotation_data))
+  {
+    print("adding geom text")
+    
+    plt = plt + 
+      geom_text(
+        data=annotations,
+        aes(x=xloc, y=yloc, label=pvals, color=index),
+        color='black'
+      )
+  }
+  
+  if (facet_var != '')
+  {
+    print("got facet_var 2")
+    plt = plt + facet_wrap(
+      as.formula(paste('~',facet_var)), 
+      scales='free', 
+      shrink=F
+    )
+  }
+  
+  if (title_template != '')
+  {
+    plt = plt + 
+      ggtitle(paste(title_template, name))
+  }
+  
+  # print(var_data$labels)
+  legend_labels = 
+    sprintf('(%s) %s', c(case, control), c(var_data$labels$comparison, var_data$labels$reference))
+  # print(legend_labels)
+  
+  plt = plt +
+    scale_color_discrete(
+      name = name, 
+      breaks=c(case, control),
+      labels=legend_labels
+    ) +
+    ylab("Value") +
+    xlab(NULL)
+  
+  plt
+  
+  # print(plt)
+  
+  return(plt)
+}
+
+# master_table = fb_master_table
+# indices=c('Firmicutes', 'Bacteroidetes')
+# var_data=variables_of_interest$CaseString
+# aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index')
+# annotation_data=pval_annotations %>% filter(TestGroup=='All')
+# title_template='title template'
+# 
+# makePairPlot(
+#   master_table=master_table,
+#   indices=indices,
+#   var_data=var_data,
+#   aesthetics=aesthetics,
+#   annotation_data=annotation_data,
+#   title_template=title_template
+# )

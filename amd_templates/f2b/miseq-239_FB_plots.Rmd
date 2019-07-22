@@ -1,0 +1,393 @@
+---
+title: "MiSeq-239"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+# FB Analysis -- Plots {.tabset}
+
+## Setup
+### Start Conda ENV
+```{r}
+startCondaEnv('alphadiv')
+```
+
+### Set Knitr Options
+```{r}
+library(rmarkdown)
+library(knitr)
+
+opts_chunk$set(
+  echo=TRUE,
+  dpi=300,
+  fig.width=12
+  )
+```
+
+### Load Libraries
+```{r}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(nlme)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+```
+
+
+### Set Paths
+```{r}
+project_dir = "~/miseq-239"
+dada2_table_dir = file.path(project_dir, "processed_data")
+metadata_dir = file.path(project_dir, "metadata")
+analysis_dir = file.path(project_dir, 'analysis/f2b_ratio')
+tables_dir = file.path(analysis_dir, 'tables')
+```
+
+### Load Data
+```{r}
+fb_master_table = read.xlsx(file.path(tables_dir, 'miseq-239_F_B_master_table.xlsx'))
+age_lt_90_master_table = fb_master_table %>% filter(Age<90)
+amd_only_master_table = fb_master_table %>% filter(CaseString=='AMD')
+
+filename = file.path(tables_dir, 'miseq-239_fb_pair_tests_unadjusted.xlsx')
+pair_stats = read.xlsx(filename)
+```
+
+```{r}
+
+pval_annotations = data.frame(
+  index = c(
+    'Firmicutes',
+    'Bacteroidetes',
+    'F2B_Ratio',
+    'LogF2B_Ratio',
+    'FB_Index'
+  ),
+  xloc = c(1.5, 1.5, 1.5, 1.5, 1.5),
+  yloc = 1.3*fb_master_table %>% 
+    select(Firmicutes, Bacteroidetes, F2B_Ratio, LogF2B_Ratio, FB_Index) %>% 
+    summarize_all(max) %>% 
+    unlist()
+)
+
+pval_annotations =
+  pair_stats %>% 
+  gather(key="index", value='pvals', c(Firmicutes, Bacteroidetes, F2B_Ratio, LogF2B_Ratio, FB_Index)) %>%
+  left_join(pval_annotations, by='index') %>%
+  mutate(pvals = paste0('p = ', round(pvals, 3)))
+
+```
+
+
+### Variables of interest
+```{r}
+variables_of_interest = list(
+  CaseString = list(
+    covariate_of_interest='CaseString',
+    control='Control',
+    case='AMD',
+    labels=list(reference='Control', comparison='AMD')
+  ),
+  ARMS2rs10490924 = list(
+    covariate_of_interest='ARMS2rs10490924',
+    control='GG',
+    case='TT',
+    labels=list(reference='Non-Risk', comparison='Risk')
+    ),
+  CFHrs1061170 = list(covariate_of_interest='CFHrs1061170',
+    control='TT',
+    case='CC',
+    labels=list(reference='Non-Risk', comparison='Risk')
+    ),
+  CFHrs10737680 = list(
+    covariate_of_interest='CFHrs10737680',
+    control='CC',
+    case='AA',
+    labels=list(reference='Non-Risk', comparison='Risk')
+    ),
+  SKIV2Lrs429608 = list(
+    covariate_of_interest='SKIV2Lrs429608',
+    control='AA',
+    case='GG',
+    labels=list(reference='Non-Risk', comparison='Risk')
+    ),
+  GA_No_CNV_Either_Eye = list(
+    covariate_of_interest='GA_No_CNV_Either_Eye',
+    control=0,
+    case=1,
+    labels=list(reference='Healthy', comparison='Disease')
+    ),
+  CNV_Either_Eye = list(
+    covariate_of_interest='CNV_Either_Eye',
+    control=0,
+    case=1,
+    labels=list(reference='Healthy', comparison='Disease')
+    ),
+  Age = list(
+    covariate_of_interest='Age',
+    control='',
+    case=''
+    ),
+  Gender = list(
+    covariate_of_interest='Gender',
+    control='F',
+    case='M',
+    labels=list(reference='F', comparison='M')
+    ),
+  AREDS = list(
+    covariate_of_interest='AREDS',
+    control='N',
+    case='Y',
+    labels=list(reference='N', comparison='Y')
+    )
+  )
+
+all_names = names(variables_of_interest)
+no_case_names = setdiff(all_names, 'CaseString')
+```
+
+### Set Factor Levels
+```{r}
+
+setFactors = function(df)
+{
+  for (var in variables_of_interest)
+  {
+    name = var$covariate_of_interest
+    case = var$case
+    control = var$control
+    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+  
+    if (case != '' & control != '')
+    {
+      # print('ok')
+      df = mutate(df, !!name := factor(!!as.name(name), levels=c(control, case)))
+    }
+  
+  }
+  
+  return(df)
+}
+
+fb_master_table = setFactors(fb_master_table)
+age_lt_90_master_table = setFactors(age_lt_90_master_table)
+amd_only_master_table = setFactors(amd_only_master_table)
+```
+
+## Plots
+
+### All
+#### Abundance
+```{r}
+makeAlphaDivPlot(
+  fb_master_table,
+  indices=c('Firmicutes', 'Bacteroidetes'),
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Firmicutes and Bacteroidetes") +
+  ylab("Value") + 
+  xlab("Abundance")
+```
+
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  fb_master_table,
+  indices=c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index'),
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("FB Indices") +
+  ylab("Value") + 
+  xlab("Index")
+```
+
+#### AMD vs. Control
+```{r}
+makePairPlot(
+  master_table=fb_master_table,
+  indices=c('Firmicutes', 'Bacteroidetes'),
+  var_data=variables_of_interest$CaseString,
+  aesthetics=list(
+    x_var='CaseString', 
+    color_var='CaseString', 
+    facet_var='index'
+    ),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="FB Abundance: "
+)
+
+makePairPlot(
+  master_table=fb_master_table,
+  indices=c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index'),
+  var_data=variables_of_interest$CaseString,
+  aesthetics=list(
+    x_var='CaseString', 
+    color_var='CaseString', 
+    facet_var='index'
+    ),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="FB Index: "
+)
+
+
+```
+
+### Age < 90
+#### Abundance
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=c('Firmicutes', 'Bacteroidetes'),
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Firmicutes and Bacteroidetes") +
+  ylab("Value") + 
+  xlab("Abundance")
+```
+
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index'),
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("FB Indices") +
+  ylab("Value") + 
+  xlab("Index")
+```
+
+#### AMD vs. Control
+```{r}
+makePairPlot(
+  master_table=age_lt_90_master_table,
+  indices=c('Firmicutes', 'Bacteroidetes'),
+  var_data=variables_of_interest$CaseString,
+  aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index'),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="FB Abundance: "
+)
+
+makePairPlot(
+  master_table=age_lt_90_master_table,
+  indices=c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index'),
+  var_data=variables_of_interest$CaseString,
+  aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index'),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="FB Index: "
+)
+
+```
+
+
+### AMD Only
+```{r}
+amd_only_variables = variables_of_interest
+amd_only_variables['Gender'] = NULL
+amd_only_variables['CaseString'] = NULL
+amd_only_variables['Age'] = NULL
+names(amd_only_variables)
+```
+
+#### Abundance
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=c('Firmicutes', 'Bacteroidetes'),
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Firmicutes and Bacteroidetes") +
+  ylab("Value") + 
+  xlab("Abundance")
+```
+
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index'),
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("FB Indices") +
+  ylab("Value") + 
+  xlab("Index")
+```
+
+#### Covariates
+
+##### Abundance
+```{r}
+master_table = fb_master_table
+indices = c('Firmicutes', 'Bacteroidetes')
+annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+title_template="FB Abundance: "
+variables=amd_only_variables
+
+plotPairTests(
+  variables=variables,
+  master_table=master_table,
+  indices=indices,
+  title_template=title_template,
+  annotation_data=annotation_data
+)
+
+```
+
+##### Index
+```{r}
+master_table = fb_master_table
+indices=c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index')
+annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+title_template="FB Abundance: "
+variables=amd_only_variables
+
+plotPairTests(
+  variables=variables,
+  master_table=master_table,
+  indices=indices,
+  title_template=title_template,
+  annotation_data=annotation_data
+)
+
+```
