@@ -811,3 +811,297 @@ filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
   
   return(new_variable_list)
 }
+
+
+
+doMultipleRankRegression = function(
+  var,
+  predictors,
+  master_table
+)
+{
+  print(sprintf('regression for %s', var))
+  
+  formula_rhs = paste0(names(predictors), collapse=' + ')
+  formula = paste0('rank(', var, ')', '~', formula_rhs) %>% as.formula()
+  # print(formula)
+  
+  fit = lm(formula, data=master_table)
+  
+  return(fit)
+}
+
+getRegressionPvals = function(
+  fit,
+  predictors,
+  contrast_names,
+  index_name
+)
+{
+  pvals = sapply(names(predictors), function(name)
+    {
+      # print(name)
+      contrast_name = contrast_names[[name]]
+      # print(contrast_name)
+      summary(fit)[['coefficients']][[contrast_name, 'Pr(>|t|)']]
+      
+    }, 
+    simplify=F, 
+    USE.NAMES=T
+  )
+  
+  pvals = c(list(Index=index_name), pvals)
+  
+  return(pvals)
+}
+
+getRegressionEffectSizes= function(
+  fit,
+  predictors,
+  contrast_names,
+  index_name
+)
+{
+  effect_sizes = sapply(names(predictors), function(name)
+  {
+    # print(name)
+    contrast_name = contrast_names[[name]]
+    # print(contrast_name)
+    summary(fit)[['coefficients']][[contrast_name, 'Estimate']]
+    
+  }, 
+  simplify=F, 
+  USE.NAMES=T
+  )
+  
+  effect_sizes = c(list(Index=index_name), effect_sizes)
+  
+  return(effect_sizes)
+}
+
+
+setFactorsLevels = function(
+  df,
+  variables
+  )
+{
+  for (var in observational_variables)
+  {
+    name = var$covariate_of_interest
+    case = var$case
+    control = var$control
+    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    
+    if (case != '' & control != '')
+    {
+      # print('ok')
+      df = mutate(df, !!name := factor(!!as.name(name), levels=c(control, case)))
+    }
+    
+  }
+  
+  return(df)
+}
+
+
+filterVarsBySampleThreshold = function(
+  master_table,
+  threshold, 
+  variable_list
+  )
+{
+  new_variable_list = list()
+  
+  for (var in variable_list)
+  {
+    name = var$covariate_of_interest
+    case = var$case %>% as.character()
+    control = var$control %>% as.character()
+    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    
+    ### Ignore if not in master table
+    if (!(name %in% colnames(master_table)))
+    {
+      # print("next")
+      next
+    }
+    
+    ### to deal with continuous covariate such as Age
+    if (case=="" & control=="")
+    {
+      ### Always allow
+      # print("got continuous variable")
+      num_case_samples = 99999
+      num_control_samples = 99999
+    } else
+    {
+      count_table = 
+        master_table %>%
+        pull(!!name) %>%
+        table()
+      num_case_samples = count_table[[case]]
+      num_control_samples = count_table[[control]]
+      # print(count_table)
+    }
+    
+    print(sprintf('case samples: %d, control samples: %d', num_case_samples, num_control_samples))
+    
+    if (num_case_samples >= num_samples_threshold & num_control_samples >= num_samples_threshold)
+    {
+      # print("adding var")
+      # print(var)
+      new_variable_list[[name]] = var
+      # print(names(new_variable_list))
+    }
+  }
+  
+  return(new_variable_list)
+}
+
+
+getNumSamplesPerGroup = function(
+    master_table,
+    variable,
+    as_vector=F
+  )
+{
+  name = var$covariate_of_interest
+  case = var$case %>% as.character()
+  control = var$control %>% as.character()
+  print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+  
+  num_samples_per_level = 
+    master_table %>%
+    select(name) %>%
+    table() 
+  
+  if (as_vector)
+  {
+    num_samples_per_level = num_samples_per_level %>% as.vector()
+  } else
+  {
+    num_samples_per_level = num_samples_per_level %>% as.list()
+  }
+  
+  return(num_samples_per_level)
+}
+
+
+makeContrastNames = function(
+  variables
+)
+{
+  contrast_names = lapply(variables, function(x)
+  {
+    contrast_name = paste0(x$covariate_of_interest, x$case)
+  })
+}
+
+
+makeRegressionStatsTemplate = function(variables)
+{
+  regression_stats_template = data.frame(
+    Index=character()
+  )
+  
+  for (var in all_variables)
+  {
+    name = var$covariate_of_interest
+    print(name)
+    regression_stats_template = 
+      regression_stats_template %>% 
+      mutate(!!var$covariate_of_interest := numeric())
+  }
+  
+  return(regression_stats_template)
+}
+
+
+doPairTests = function(
+  exp_vars,
+  test_var,
+  master_table,
+  test_group
+)
+{
+  ### test data
+  # exp_vars = c(raw_exp_vars, calculated_exp_vars)
+  # test_var = amd_only_variables$CNV_Either_Eye
+  # master_table = amd_only_master_table
+  # test_group = 'AMD_Only'
+  
+  name = test_var$covariate_of_interest
+  case = test_var$case
+  control = test_var$control
+  reference = test_var$labels$reference
+  comparison = test_var$labels$comparison
+  
+  # print(sprintf('name %s, ref %s, comp %s', name, reference, comparison))
+
+  pval_list = list(
+    TestGroup=test_group,
+    TestVariable=name,
+    Reference=reference,
+    Comparison=comparison
+  )
+  
+  for (var in exp_vars)
+  {
+
+    # print(sprintf('test_var %s, var %s', name, var))
+    
+    index_name = paste0(test_group, '_', var)
+    # print(index_name)
+    
+    formula = paste0(var, ' ~ ', name) %>% as.formula()
+    
+    temp_master_table = 
+      master_table %>%
+      filter(!!as.name(name) %in% c(control, case))
+    
+    # temp_master_table %>% pull(test_var$covariate_of_interest) %>% levels() %>% print()
+    
+    fit = wilcox.test(
+      formula,
+      data=temp_master_table,
+      alternative='two.sided'
+    )
+    # summary(fit)
+    
+    pval_list[var] = fit$p.value 
+    
+  }
+  
+  return(pval_list)
+}
+
+# exp_vars = c(raw_exp_vars, calculated_exp_vars)
+# test_var = amd_only_variables$GA_No_CNV_Either_Eye
+# master_table = amd_only_master_table
+# test_group = 'AMD_Only'
+# 
+# pval_list = doPairTests(
+#   exp_vars = c(raw_exp_vars, calculated_exp_vars),
+#   test_var = test_var,
+#   master_table = amd_only_master_table,
+#   test_group = 'AMD_Only'
+# )
+# 
+# pval_list
+# 
+# for (test_var in amd_only_variables)
+# {
+# 
+#   name = test_var$covariate_of_interest
+#   print(name)
+# 
+#   pval_list = doPairTests(
+#     exp_vars = c(raw_exp_vars, calculated_exp_vars),
+#     test_var = test_var,
+#     master_table = amd_only_master_table,
+#     test_group = 'AMD_Only'
+#   )
+# 
+#   amd_only_pair_stats %<>%
+#     add_row(!!!pval_list)
+# }

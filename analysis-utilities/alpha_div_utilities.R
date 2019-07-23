@@ -496,7 +496,7 @@ makeAlphaDivPlot = function(
 
 
 
-plotPairTests = function(
+plotAllPairTests = function(
     variables,
     master_table,
     indices,
@@ -506,14 +506,7 @@ plotPairTests = function(
 {
   
   print("plotPairTests")
-  
-  # indices=c('Firmicutes', 'Bacteroidetes')
-  # title_template="Firmicutes and Bacteroidetes: AMD Only"
-  # annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
-  # variables=amd_only_variables
-  # # variables = variables['ARMS2rs10490924']
-  # master_table = amd_only_master_table
-  # 
+
   for (var in variables)
   {
     name = var$covariate_of_interest
@@ -568,8 +561,6 @@ plotPairTests = function(
 
 
 
-
-
 makePairPlot= function(
   master_table,
   indices,
@@ -580,14 +571,32 @@ makePairPlot= function(
 )
 {
   
+  print("makePairPlot")
   
   # print(var_data)
+  # print("annotation_data")
+  # print(annotation_data)
   
   ### Aesthetics
   ### x_var: Which variable defines the groups along the x-axis
   ### color_var: which variable is used for different color groups (legend)
   ### facet_var: which variable is used to group the plots
   ### index: the variable that has a list of alpha diversity indeces (e.g. shannon, ...)
+
+  # master_table = fb_master_table
+  # indices = raw_exp_vars
+  # annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+  # title_template="FB Abundance: "
+  # variables=amd_only_variables
+  # var_data=var_data=variables$AREDS
+  # name = var_data$covariate_of_interest
+  # case = var_data$case
+  # control = var_data$control
+  # aesthetics = list(
+  #   x_var=name,
+  #   color_var=name,
+  #   facet_var='index'
+  # )
   
   x_var = aesthetics$x_var
   color_var = aesthetics$color_var
@@ -596,10 +605,7 @@ makePairPlot= function(
   name = var_data$covariate_of_interest
   case = var_data$case
   control = var_data$control
-  
-  # master_table = 
-  #   master_table %>%
-  #   filter(!!as.name(name) %in% c(case, control))
+
   
   print(sprintf("x_var %s, color_var %s, facet_var %s", x_var, color_var, facet_var))
   print(indices)
@@ -623,9 +629,6 @@ makePairPlot= function(
   ### columns in the input data.
   cols_to_gather = setdiff(cols_to_gather, c('index'))
   
-  print("cols to gather:")
-  print(cols_to_gather)
-  
   plot_data = 
     master_table %>%
     select(!!cols_to_gather) %>%
@@ -636,28 +639,20 @@ makePairPlot= function(
       !!as.name(x_var)==control ~ var_data$labels$reference
     ))
   
-  # print(plot_data %>% select(!!as.name(name), label))
-  
   if (!is.null(annotation_data) && dim(annotation_data)[1] != 0)
   {
     print('filtering annotation data')
-    annotations=annotation_data %>% 
+    annotations=annotation_data %>%
       filter(
-        index %in% indices, 
+        index %in% indices,
         TestVariable==x_var
       )
+    # print(annotations)
   }
   
   print('colnames plot_data')
   print(colnames(plot_data))
-  # print(colnames(annotation_data))
-  print("dim plot data")
-  # print(dim(plot_data))
-  # print("plot data")
-  # print(plot_data)
-  # print(class(plot_data))
-  # print(typeof(plot_data))
-  
+
   plt = 
     plot_data %>%
     ggplot(aes_string(
@@ -684,8 +679,6 @@ makePairPlot= function(
       size=0.5,
       width=0.7
     )
-  
-    # ggtitle(paste('Alpha Diversity:', color_var, '+', x_var, title_template))
   
   if (dim(annotation_data)[1] != 0 && !is.null(annotation_data))
   {
@@ -715,7 +708,6 @@ makePairPlot= function(
       ggtitle(paste(title_template, name))
   }
   
-  # print(var_data$labels)
   legend_labels = 
     sprintf('(%s) %s', c(case, control), c(var_data$labels$comparison, var_data$labels$reference))
   # print(legend_labels)
@@ -736,18 +728,280 @@ makePairPlot= function(
   return(plt)
 }
 
-# master_table = fb_master_table
-# indices=c('Firmicutes', 'Bacteroidetes')
-# var_data=variables_of_interest$CaseString
-# aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index')
-# annotation_data=pval_annotations %>% filter(TestGroup=='All')
-# title_template='title template'
+
+plotPairTest = function(
+  master_table,
+  indices,
+  var_data,
+  aesthetics, ### list(x_var='', color_var='', facet_var='')
+  title_template='',
+  annotation_data=c()
+)
+{
+  
+  print("makePairPlot")
+  
+  # print(var_data)
+  # print("annotation_data")
+  # print(annotation_data)
+  
+  ### Aesthetics
+  ### x_var: Which variable defines the groups along the x-axis
+  ### color_var: which variable is used for different color groups (legend)
+  ### facet_var: which variable is used to group the plots
+  ### index: the variable that has a list of alpha diversity indeces (e.g. shannon, ...)
+  
+  # master_table = fb_master_table
+  # indices = raw_exp_vars
+  # annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+  # title_template="FB Abundance: "
+  # variables=amd_only_variables
+  # var_data=var_data=variables$AREDS
+  # name = var_data$covariate_of_interest
+  # case = var_data$case
+  # control = var_data$control
+  # aesthetics = list(
+  #   x_var=name,
+  #   color_var=name,
+  #   facet_var='index'
+  # )
+  
+  x_var = aesthetics$x_var
+  color_var = aesthetics$color_var
+  facet_var = aesthetics$facet_var
+  
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  
+  
+  print(sprintf("x_var %s, color_var %s, facet_var %s", x_var, color_var, facet_var))
+  print(indices)
+  
+  ### Cols containing data that will be used in the plot
+  ### The data is grouped by these columns and the rest left out.
+  cols_to_gather = c(indices, x_var, color_var)
+  if (facet_var != '')
+  {
+    print("got facet_var")
+    cols_to_gather = c(cols_to_gather, facet_var)
+  }
+  
+  ### Because "index" is always present as a grouping column,
+  ### if it is going to be used in plot aesthetics, that is it is
+  ### one of x_var, color_var, or facet_var, it must be left
+  ### out of the gathered columns.
+  
+  ### NOTE: 'index' is different from the variable `indices` which
+  ### is a list of the alpha diversity indices to plot which are
+  ### columns in the input data.
+  cols_to_gather = setdiff(cols_to_gather, c('index'))
+  
+  plot_data = 
+    master_table %>%
+    select(!!cols_to_gather) %>%
+    # gather(key='index', value='value', -!!cols_to_not_gather) %>%
+    gather(key='index', value='value', indices) %>%
+    mutate(label=case_when(
+      !!as.name(x_var)==case ~ var_data$labels$comparison,
+      !!as.name(x_var)==control ~ var_data$labels$reference
+    ))
+  
+  if (!is.null(annotation_data) && dim(annotation_data)[1] != 0)
+  {
+    print('filtering annotation data')
+    annotations=annotation_data %>%
+      filter(
+        index %in% indices,
+        TestVariable==x_var
+      )
+    # print(annotations)
+  }
+  
+  print('colnames plot_data')
+  print(colnames(plot_data))
+  
+  plt = 
+    plot_data %>%
+    ggplot(aes_string(
+      x='label', 
+      y='value', 
+      color=color_var
+    )) + 
+    geom_quasirandom(
+      width=0.2, 
+      method='smiley', 
+      alpha=0.7, 
+      size=0.8, 
+      dodge.width=1
+    ) +
+    # geom_boxplot(alpha=0.1, fill='black', colour='black', size=0.5, varwidth=T, width=0.7) +
+    geom_boxplot(
+      aes_string(
+        x='label', 
+        y='value', 
+        color=color_var
+      ),
+      alpha=0.1,
+      # color='black',
+      size=0.5,
+      width=0.7
+    )
+  
+  if (dim(annotation_data)[1] != 0 && !is.null(annotation_data))
+  {
+    print("adding geom text")
+    
+    plt = plt + 
+      geom_text(
+        data=annotations,
+        aes(x=xloc, y=yloc, label=pvals, color=index),
+        color='black'
+      )
+  }
+  
+  if (facet_var != '')
+  {
+    print("got facet_var 2")
+    plt = plt + facet_wrap(
+      as.formula(paste('~',facet_var)), 
+      scales='free', 
+      shrink=F
+    )
+  }
+  
+  if (title_template != '')
+  {
+    plt = plt + 
+      ggtitle(paste(title_template, name))
+  }
+  
+  legend_labels = 
+    sprintf('(%s) %s', c(case, control), c(var_data$labels$comparison, var_data$labels$reference))
+  # print(legend_labels)
+  
+  plt = plt +
+    scale_color_discrete(
+      name = name, 
+      breaks=c(case, control),
+      labels=legend_labels
+    ) +
+    ylab("Value") +
+    xlab(NULL)
+  
+  plt
+  
+  # print(plt)
+  
+  return(plt)
+}
+
+
+getPvalAnnotations = function(
+    variables,
+    pval_height_factor,
+    master_table,
+    pair_stats
+  )
+{
+  pval_annotations = data.frame(
+    index = variables,
+    xloc = c(1.5, 1.5, 1.5, 1.5, 1.5),
+    yloc = pval_height_factor*master_table %>% 
+      select(variables) %>% 
+      summarize_all(max) %>% 
+      unlist()
+  )
+  
+  pval_annotations =
+    pair_stats %>% 
+    gather(
+      key="index", 
+      value='pvals', 
+      !!variables
+    ) %>%
+    left_join(pval_annotations, by='index') %>%
+    mutate(pvals = paste0('p = ', round(pvals, 3)))
+}
+
+makePairPlot = plotPairTest
+plotPairTests = plotAllPairTests
+
+
+plotEffectSizes = function(
+  pvals, # rows=variables, cols=response_vars, values=pvals
+  effect_sizes, # rows=variables, cols=response_vars, values=effect_sizes
+  response_var, # Is added to title
+  title_template='',
+  effect_size_template='',
+  category_label=''
+)
+{
+  
+  predictors = pvalues$Predictor
+  
+  plot_data = 
+    inner_join(
+      pvalues %>% select(Predictor, response_var), 
+      effect_sizes %>% select(Predictor, response_var),
+      by='Predictor',
+      suffix=c('.pvalue', '.effect_size')
+      ) %>%
+    select(
+      Predictor,
+      pvalue = !!as.name(paste0(response_var, '.pvalue')),
+      effect_size = !!as.name(paste0(response_var, '.effect_size'))
+    )
+  print(plot_data)
+  
+  title = paste(title_template, response_var)
+  
+  plt = 
+    plot_data %>%
+    ggplot(
+      aes(
+        x=Predictor, 
+        y=effect_size,
+        fill=pvalue
+    )) +
+    geom_bar(stat='identity') +
+    coord_flip() +
+    ggtitle(title) +
+    ylab(paste(effect_size_template, "as Effect Size")) +
+    xlab(category_label) + 
+    theme(
+      axis.text.x = element_text(size=10),
+      axis.text.y = element_text(size=10),
+      plot.title = element_text(size=12)
+    ) 
+  
+  print(plt)
+}
+
+
+# predictors = c('x1', 'x2', 'x3')
+# response_vars = c('A', 'B', 'C')
 # 
-# makePairPlot(
-#   master_table=master_table,
-#   indices=indices,
-#   var_data=var_data,
-#   aesthetics=aesthetics,
-#   annotation_data=annotation_data,
-#   title_template=title_template
+# pvalues = 
+#   matrix(runif(9), nrow=3, ncol=3) %>% 
+#   set_rownames(predictors) %>% 
+#   set_colnames(response_vars) %>%
+#   data.frame() %>%
+#   rownames_to_column('Predictor')
+# 
+# effect_sizes = 
+#   matrix(rnorm(9), nrow=3, ncol=3) %>% 
+#   set_rownames(predictors) %>% 
+#   set_colnames(response_vars) %>%
+#   data.frame() %>%
+#   rownames_to_column('Predictor')
+# 
+# plotEffectSizes(
+#   pvals = pvalues,
+#   effect_sizes = effect_sizes,
+#   response_var = 'C',
+#   title_template='Response Variable:',
+#   effect_size_template='Regression Coefficient',
+#   category_label='Predictor'
 # )
+
