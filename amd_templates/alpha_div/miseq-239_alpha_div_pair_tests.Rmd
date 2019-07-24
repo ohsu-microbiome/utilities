@@ -1,0 +1,270 @@
+---
+title: "MiSeq-239"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+# Alpha Diversity Pair Tests {.tabset}
+
+## Clustering Level
+Data Clustered at the Genus level.
+
+## Setup
+
+### Start Conda ENV
+```{r}
+startCondaEnv('alphadiv')
+```
+
+### Set Knitr Options
+```{r}
+library(rmarkdown)
+library(knitr)
+
+opts_chunk$set(
+  echo=TRUE,
+  dpi=300,
+  fig.width=12
+  )
+```
+
+### Load Libraries
+```{r}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(nlme)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+```
+### Set Paths
+```{r}
+source('./set_paths.R')
+```
+
+### Load Data
+```{r}
+filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_diversity_master_tables.xlsx')
+
+all_master_table = readWorkbook(filename, sheet='All Subgroups')
+age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
+amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
+
+sample_metadata = read.delim(
+  file.path(metadata_dir, 'miseq-239_metadata_CNV_GA.tsv'), 
+  stringsAsFactors=F
+  )
+
+sample_metadata = read.delim(
+  file.path(metadata_dir, 'miseq-239_metadata_CNV_GA.tsv'), 
+  stringsAsFactors=F
+  )
+
+source(file.path(metadata_dir, 'observational_variables.R'))
+```
+
+
+### Variables of interest
+#### All Observational Variables
+```{r}
+# print(observational_variables)
+```
+
+#### AMD Only Observational Variables
+```{r}
+amd_only_variables = observational_variables
+
+amd_only_excluded_variables = c(
+  'Gender',
+  'CaseString',
+  'Age'
+)
+
+for (varname in amd_only_excluded_variables)
+{
+  print(sprintf('Excluding %s', varname))
+  amd_only_variables[varname] = NULL
+}
+
+```
+
+**Excluding: ** `r amd_only_excluded_variables`
+
+
+#### Calculated Experimental Variables
+
+```{r}
+calculated_exp_vars = c('Observed', 'Shannon', 'Simpson')
+```
+**Calculated Experimental Variables: ** `r calculated_exp_vars`
+
+#### Subgroups
+```{r}
+subgroups = list(
+  All=list(name='All Subgroups', prefix='all'),
+  Age_lt_90=list(name='Age < 90', prefix='age_lt_90'),
+  Amd_Only=list(name='AMD Only', prefix='amd_only')
+)
+```
+
+
+### Set Metadata Factor Levels
+```{r}
+all_master_table = setFactorsLevels(
+  all_master_table, 
+  observational_variables
+  )
+age_lt_90_master_table = setFactorsLevels(
+  age_lt_90_master_table, 
+  observational_variables
+  )
+amd_only_master_table = setFactorsLevels(
+  amd_only_master_table, 
+  observational_variables
+  )
+```
+
+
+## Pair Tests
+
+#### Initialize Table
+
+```{r}
+contrast_names = makeContrastNames(observational_variables)
+```
+
+```{r}
+all_pair_stats = data.frame(
+  TestGroup=character(),
+  TestVariable=character(),
+  Reference=character(),
+  Comparison=character(),
+  Observed=numeric(),
+  Shannon=numeric(),
+  Simpson=numeric()
+  )
+
+```
+
+
+#### All
+```{r}
+pval_list = doPairTests(
+  exp_vars = calculated_exp_vars,
+  test_var = observational_variables$CaseString,
+  master_table = all_master_table,
+  test_group = 'All'
+)
+
+all_pair_stats %<>%
+  add_row(!!!pval_list)
+```
+
+#### Age < 90
+```{r}
+pval_list = doPairTests(
+  exp_vars = calculated_exp_vars,
+  test_var = observational_variables$CaseString,
+  master_table = age_lt_90_master_table,
+  test_group = 'Age_lt_90'
+)
+
+all_pair_stats %<>%
+  add_row(!!!pval_list)
+
+```
+``
+
+
+```{r}
+amd_only_pair_stats = data.frame(
+  TestGroup=character(),
+  TestVariable=character(),
+  Reference=character(),
+  Comparison=character(),
+  Observed=numeric(),
+  Shannon=numeric(),
+  Simpson=numeric()
+  )
+
+exp_vars = calculated_exp_vars
+
+# test_var = amd_only_variables$AREDS
+master_table = amd_only_master_table
+test_group = 'AMD_Only'
+  
+for (test_var in amd_only_variables)
+{
+  
+  name = test_var$covariate_of_interest
+  print(name)
+  
+  pval_list = doPairTests(
+    exp_vars = exp_vars,
+    test_var = test_var,
+    master_table = amd_only_master_table,
+    test_group = 'AMD_Only'
+  )
+  
+  amd_only_pair_stats %<>%
+    add_row(!!!pval_list)
+}
+```
+
+```{r}
+all_pair_stats =
+  all_pair_stats %>%
+  add_row(!!!amd_only_pair_stats)
+```
+
+
+
+```{r}
+filename = file.path(tables_dir, 'miseq-239_alpha_div_genus_clust_mann_whitney_unadjusted.xlsx')
+write.xlsx(
+  all_pair_stats,
+  file=filename,
+  quote=F
+)
+```
+

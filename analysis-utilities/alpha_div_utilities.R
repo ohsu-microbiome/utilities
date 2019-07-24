@@ -904,9 +904,11 @@ getPvalAnnotations = function(
     pair_stats
   )
 {
+  num_annotations = length(variables)
+  
   pval_annotations = data.frame(
     index = variables,
-    xloc = c(1.5, 1.5, 1.5, 1.5, 1.5),
+    xloc = rep(1.5, num_annotations),
     yloc = pval_height_factor*master_table %>% 
       select(variables) %>% 
       summarize_all(max) %>% 
@@ -940,31 +942,35 @@ plotEffectSizes = function(
   
   predictors = pvalues$Predictor
   
-  plot_data = 
-    inner_join(
-      pvalues %>% select(Predictor, response_var), 
-      effect_sizes %>% select(Predictor, response_var),
-      by='Predictor',
-      suffix=c('.pvalue', '.effect_size')
-      ) %>%
-    select(
-      Predictor,
-      pvalue = !!as.name(paste0(response_var, '.pvalue')),
-      effect_size = !!as.name(paste0(response_var, '.effect_size'))
-    )
-  print(plot_data)
+  # tall_pvals = pvalues %>% gather(key='response_var', value='pvalue', -Predictor)
+  # tall_effect_sizes = effect_sizes %>% gather(key='response_var', value='effect_size', -Predictor)
+  # plot_data = inner_join(tall_pvals, tall_effect_sizes, by=c('Predictor', 'response_var'))
+  
+  pvalue_df = 
+    pvalues %>% 
+    select(Predictor, response_var) %>%
+    rename(pvalue = !!response_var)
+  
+  effect_size_df = 
+    effect_sizes %>% 
+    select(Predictor, response_var) %>%
+    rename(effect_size = !!response_var)
+  
+  plot_data = inner_join(pvalue_df, effect_size_df, by='Predictor')
   
   title = paste(title_template, response_var)
   
   plt = 
     plot_data %>%
-    ggplot(
+    ggplot() +
+    geom_bar(
       aes(
         x=Predictor, 
-        y=effect_size,
+        y=log(abs(effect_size))*sign(effect_size),
         fill=pvalue
-    )) +
-    geom_bar(stat='identity') +
+      ),
+      stat='identity'
+    ) +
     coord_flip() +
     ggtitle(title) +
     ylab(paste(effect_size_template, "as Effect Size")) +
@@ -982,16 +988,16 @@ plotEffectSizes = function(
 # predictors = c('x1', 'x2', 'x3')
 # response_vars = c('A', 'B', 'C')
 # 
-# pvalues = 
-#   matrix(runif(9), nrow=3, ncol=3) %>% 
-#   set_rownames(predictors) %>% 
+# pvalues =
+#   matrix(runif(9), nrow=3, ncol=3) %>%
+#   set_rownames(predictors) %>%
 #   set_colnames(response_vars) %>%
 #   data.frame() %>%
 #   rownames_to_column('Predictor')
 # 
-# effect_sizes = 
-#   matrix(rnorm(9), nrow=3, ncol=3) %>% 
-#   set_rownames(predictors) %>% 
+# effect_sizes =
+#   matrix(rnorm(9), nrow=3, ncol=3) %>%
+#   set_rownames(predictors) %>%
 #   set_colnames(response_vars) %>%
 #   data.frame() %>%
 #   rownames_to_column('Predictor')
@@ -1004,4 +1010,9 @@ plotEffectSizes = function(
 #   effect_size_template='Regression Coefficient',
 #   category_label='Predictor'
 # )
+
+
+# a = pvalues %>% gather(key='response_var', value='pvalue', -Predictor)
+# b = effect_sizes %>% gather(key='response_var', value='effect_size', -Predictor)
+# c = inner_join(a,b, by=c('Predictor', 'response_var'))
 

@@ -1,0 +1,358 @@
+---
+title: "MiSeq-239"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+# FB Analysis -- Plots {.tabset}
+
+## Setup
+### Start Conda ENV
+```{r}
+startCondaEnv('alphadiv')
+```
+
+### Set Knitr Options
+```{r}
+library(rmarkdown)
+library(knitr)
+
+opts_chunk$set(
+  echo=TRUE,
+  dpi=300,
+  fig.width=12
+  )
+```
+
+### Load Libraries
+```{r}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(nlme)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+```
+
+
+### Set Paths
+```{r}
+project_dir = "~/miseq-239"
+dada2_table_dir = file.path(project_dir, "processed_data")
+metadata_dir = file.path(project_dir, "metadata")
+analysis_dir = file.path(project_dir, 'analysis/f2b_ratio')
+tables_dir = file.path(analysis_dir, 'tables')
+```
+
+### Load Data
+```{r}
+all_master_table = read.xlsx(file.path(tables_dir, 'miseq-239_F_B_master_table.xlsx'))
+age_lt_90_master_table = all_master_table %>% filter(Age<90)
+amd_only_master_table = all_master_table %>% filter(CaseString=='AMD')
+
+source(file.path(metadata_dir, 'observational_variables.R'))
+
+filename = file.path(tables_dir, 'miseq-239_fb_mann_whitney_unadjusted.xlsx')
+pair_stats = read.xlsx(filename)
+```
+
+### Variables of interest
+#### All Observational Variables
+```{r}
+print(observational_variables)
+```
+
+#### AMD Only Observational Variables
+```{r}
+amd_only_variables = observational_variables
+
+amd_only_excluded_variables = c(
+  'Gender',
+  'CaseString',
+  'Age'
+)
+
+for (varname in amd_only_excluded_variables)
+{
+  print(sprintf('Excluding %s', varname))
+  amd_only_variables[varname] = NULL
+}
+
+```
+
+**Excluding: ** `r amd_only_excluded_variables`
+
+#### Raw Experimental Variables
+```{r}
+raw_exp_vars = c('Firmicutes', 'Bacteroidetes')
+```
+
+**Raw Experimental Variables: ** `r raw_exp_vars`
+
+
+#### Calculated Experimental Variables
+
+```{r}
+calculated_exp_vars = c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index')
+```
+**Calculated Experimental Variables: ** `r calculated_exp_vars`
+
+#### Subgroups
+```{r}
+subgroups = list(
+  All=list(name='All Subgroups', prefix='all'),
+  Age_lt_90=list(name='Age < 90', prefix='age_lt_90'),
+  Amd_Only=list(name='AMD Only', prefix='amd_only')
+)
+```
+
+
+### Set Metadata Factor Levels
+```{r}
+
+setFactors = function(df)
+{
+  for (var in observational_variables)
+  {
+    name = var$covariate_of_interest
+    case = var$case
+    control = var$control
+    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+  
+    if (case != '' & control != '')
+    {
+      # print('ok')
+      df = mutate(df, !!name := factor(!!as.name(name), levels=c(control, case)))
+    }
+  
+  }
+  
+  return(df)
+}
+
+all_master_table = setFactors(all_master_table)
+age_lt_90_master_table = setFactors(age_lt_90_master_table)
+amd_only_master_table = setFactors(amd_only_master_table)
+```
+
+### P-Value Annotationas
+```{r}
+pval_annotations = getPvalAnnotations(
+  variables=c(raw_exp_vars, calculated_exp_vars),
+  master_table=all_master_table,
+  pval_height_factor=1.2,
+  pair_stats=pair_stats
+)
+```
+
+
+## Plots
+### All Subgroups
+```{r}
+for (var in raw_exp_vars)
+{
+  makeAlphaDivPlot(
+  all_master_table,
+  indices=raw_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Firmicutes and Bacteroidetes") +
+  ylab("Value") + 
+  xlab("Abundance")
+}
+```
+
+#### Abundance
+```{r}
+makeAlphaDivPlot(
+  all_master_table,
+  indices=raw_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Firmicutes and Bacteroidetes") +
+  ylab("Value") + 
+  xlab("Abundance")
+```
+
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  all_master_table,
+  indices=calculated_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("FB Indices") +
+  ylab("Value") + 
+  xlab("Index")
+```
+
+#### AMD vs. Control
+```{r}
+makePairPlot(
+  master_table=all_master_table,
+  indices=raw_exp_vars,
+  var_data=observational_variables$CaseString,
+  aesthetics=list(
+    x_var='CaseString', 
+    color_var='CaseString', 
+    facet_var='index'
+    ),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="FB Abundance: "
+)
+
+makePairPlot(
+  master_table=all_master_table,
+  indices=calculated_exp_vars,
+  var_data=observational_variables$CaseString,
+  aesthetics=list(
+    x_var='CaseString', 
+    color_var='CaseString', 
+    facet_var='index'
+    ),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="FB Index: "
+)
+
+
+```
+
+### Age < 90
+#### Abundance
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=raw_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Firmicutes and Bacteroidetes") +
+  ylab("Value") + 
+  xlab("Abundance")
+```
+
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=calculated_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("FB Indices") +
+  ylab("Value") + 
+  xlab("Index")
+```
+
+#### AMD vs. Control
+```{r}
+makePairPlot(
+  master_table=age_lt_90_master_table,
+  indices=raw_exp_vars,
+  var_data=observational_variables$CaseString,
+  aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index'),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="FB Abundance: "
+)
+
+makePairPlot(
+  master_table=age_lt_90_master_table,
+  indices=calculated_exp_vars,
+  var_data=observational_variables$CaseString,
+  aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index'),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="FB Index: "
+)
+
+```
+
+
+### AMD Only
+
+#### Abundance
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=raw_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Firmicutes and Bacteroidetes") +
+  ylab("Value") + 
+  xlab("Abundance")
+```
+
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=calculated_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("FB Indices") +
+  ylab("Value") + 
+  xlab("Index")
+```
+
+#### Covariates
+
+##### Abundance
+```{r}
+plotPairTests(
+  variables=amd_only_variables,
+  master_table=all_master_table,
+  indices=raw_exp_vars,
+  title_template="FB Abundance: ",
+  annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+)
+
+```
+
+##### Index
+```{r}
+plotPairTests(
+  variables=amd_only_variables,
+  master_table=all_master_table,
+  indices=calculated_exp_vars,
+  title_template="FB Abundance: ",
+  annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+)
+
+```
