@@ -36,7 +36,10 @@ output:
   
 </style>
 
-# F B Analysis: Regression {.tabset}
+# Alpha Diversity: Regression Analysis {.tabset}
+
+## Clustering Level
+Data Clustered at the Genus level.
 
 ## Setup {.tabset}
 
@@ -80,22 +83,23 @@ source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 
 ### Set Paths
 ```{r}
-project_dir = '~/miseq-239'
-source(file.path(project_dir, 'global', 'set_paths.R'))
+source('./set_paths.R')
 ```
 
 ### Load Data
 ```{r}
-all_master_table = read.xlsx(file.path(tables_dir, 'miseq-239_F_B_master_table.xlsx'))
-age_lt_90_master_table = all_master_table %>% filter(Age<90)
-amd_only_master_table = all_master_table %>% filter(CaseString=='AMD')
+filename = file.path(tables_dir, 'miseq-239_asv_clust_alpha_diversity_master_tables.xlsx')
 
-source(file.path(metadata_dir, 'observational_variables.R'))
+all_master_table = readWorkbook(filename, sheet='All Subgroups')
+age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
+amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
 
 sample_metadata = read.delim(
   file.path(metadata_dir, 'miseq-239_metadata_CNV_GA.tsv'), 
   stringsAsFactors=F
   )
+
+source(file.path(metadata_dir, 'observational_variables.R'))
 ```
 
 ### Variables of interest
@@ -103,6 +107,35 @@ sample_metadata = read.delim(
 ```{r}
 # print(observational_variables)
 ```
+
+#### Filter by Sample Number Threshold
+```{r}
+num_samples_threshold = 5
+
+all_variables = filterVarsBySampleThreshold(
+  all_master_table, 
+  num_samples_threshold,
+  observational_variables
+  )
+
+age_lt_90_variables = filterVarsBySampleThreshold(
+  age_lt_90_master_table, 
+  num_samples_threshold,
+  observational_variables
+  )
+
+amd_only_variables = filterVarsBySampleThreshold(
+  amd_only_master_table %>% select(-CaseString), 
+  num_samples_threshold,
+  observational_variables
+  )
+
+
+all_formula_rhs = paste0(names(all_variables), collapse=' + ')
+age_lt_90_formula_rhs = paste0(names(age_lt_90_variables), collapse=' + ')
+amd_only_formula_rhs = paste0(names(amd_only_variables), collapse=' + ')
+```
+
 
 #### AMD Only Observational Variables
 ```{r}
@@ -124,18 +157,10 @@ for (varname in amd_only_excluded_variables)
 
 **Excluding: ** `r amd_only_excluded_variables`
 
-#### Raw Experimental Variables
-```{r}
-raw_exp_vars = c('Firmicutes', 'Bacteroidetes')
-```
-
-**Raw Experimental Variables: ** `r raw_exp_vars`
-
-
 #### Calculated Experimental Variables
 
 ```{r}
-calculated_exp_vars = c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index')
+calculated_exp_vars = c('Observed', 'Shannon', 'Simpson')
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
@@ -179,19 +204,32 @@ amd_only_variables = filterVarsBySampleThreshold(
   observational_variables
   )
 
-
-all_formula_rhs = paste0(names(all_variables), collapse=' + ')
-age_lt_90_formula_rhs = paste0(names(age_lt_90_variables), collapse=' + ')
-amd_only_formula_rhs = paste0(names(amd_only_variables), collapse=' + ')
 ```
 
 
 ### Create p-val names for contrasts
 
 ```{r}
-contrast_names = makeContrastNames(all_variables)
-```
+all_contrast_names = makeContrastNames(
+  all_variables, 
+  all_master_table
+  )
 
+age_lt_90_contrast_names = makeContrastNames(
+  age_lt_90_variables, 
+  all_master_table
+  )
+
+amd_only_contrast_names = makeContrastNames(
+  amd_only_variables, 
+  all_master_table
+  )
+
+control_only_contrast_names = makeContrastNames(
+  control_only_variables, 
+  all_master_table
+  )
+```
 ### Initialize regression stats table
 
 ```{r}
@@ -204,7 +242,7 @@ regression_effect_sizes = makeRegressionStatsTemplate(all_variables)
 ### All
 
 ```{r}
-exp_vars = c(raw_exp_vars, calculated_exp_vars)
+exp_vars = calculated_exp_vars
 predictors = all_variables
 master_table = all_master_table
 index_name_template = 'All_'
@@ -247,7 +285,7 @@ for (var in exp_vars)
 ### Age < 90
 
 ```{r}
-exp_vars = c(raw_exp_vars, calculated_exp_vars)
+exp_vars = calculated_exp_vars
 predictors = age_lt_90_variables
 master_table = age_lt_90_master_table
 index_name_template = 'Age_lt_90_'
@@ -291,7 +329,7 @@ for (var in exp_vars)
 ### AMD ONly
 
 ```{r}
-exp_vars = c(raw_exp_vars, calculated_exp_vars)
+exp_vars = calculated_exp_vars
 predictors = amd_only_variables
 master_table = amd_only_master_table
 index_name_template = 'AMD_Only_'
@@ -361,7 +399,7 @@ openxlsx::writeData(
 # addWorksheet(regression_pvals, sheetName="Adjusted P-Values")
 # openxlsx::writeData(regression_pvals, sheet="Adjusted P-Values", adjusted_regression_pvals)
 
-filename = file.path(tables_dir, 'miseq-239_FB_rank_regression_stats.xlsx')
+filename = file.path(tables_dir, 'miseq-239_asv_clust_alpha_div_regression_stats.xlsx')
 
 saveWorkbook(regression_stats, file=filename, overwrite=T)
 ```

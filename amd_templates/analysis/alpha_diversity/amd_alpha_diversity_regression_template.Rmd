@@ -36,11 +36,19 @@ output:
   
 </style>
 
-# F B Analysis: Regression {.tabset}
+# Alpha Diversity: Regression Analysis {.tabset}
+
+## Clustering Level
+Data Clustered at the Genus level.
 
 ## Setup {.tabset}
 
 ### [Close]
+
+### Sourcing setup file
+```{r}
+source('setup.R')
+```
 
 ### Start Conda ENV
 ```{r}
@@ -75,6 +83,7 @@ library(nlme)
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+source('~/utilities/analysis-utilities/project_utilities.R')
 ```
 
 
@@ -105,8 +114,25 @@ source(file.path(metadata_dir, 'observational_variables.R'))
 # print(observational_variables)
 ```
 
-#### Filter by Sample Number Threshold
+#### Categorical Variables
 ```{r}
+categorical_variable_names = c(
+  'Gender',
+  'CaseString',
+  'ARMS2rs10490924', 
+  'CFHrs1061170', 
+  'CFHrs10737680', 
+  'SKIV2Lrs429608', 
+  'CNV_Either_Eye', 
+  'GA_No_CNV_Either_Eye', 
+  'AREDS'
+)
+categorical_variables = 
+  observational_variables[categorical_variable_names]
+```
+
+#### Filter by Sample Number Threshold
+```
 num_samples_threshold = 5
 
 all_variables = filterVarsBySampleThreshold(
@@ -173,33 +199,43 @@ subgroups = list(
 
 ### Set Metadata Factor Levels
 ```{r}
-all_master_table = setFactorsLevels(all_master_table, observational_variables)
-age_lt_90_master_table = setFactorsLevels(age_lt_90_master_table, observational_variables)
-amd_only_master_table = setFactorsLevels(amd_only_master_table, observational_variables)
+all_master_table = setFactorsLevels(all_master_table, categorical_variables)
+age_lt_90_master_table = setFactorsLevels(age_lt_90_master_table, categorical_variables)
+amd_only_master_table = setFactorsLevels(amd_only_master_table, categorical_variables)
+sample_metadata = setFactorsLevels(sample_metadata, categorical_variables)
 ```
 
 
 ### Determine which covariates have sufficient samples with each value
 ```{r}
-num_samples_threshold = 5
+num_samples_threshold = 3
 
 all_variables = filterVarsBySampleThreshold(
-  all_master_table, 
+  all_master_table,
   num_samples_threshold,
   observational_variables
   )
 
 age_lt_90_variables = filterVarsBySampleThreshold(
-  age_lt_90_master_table, 
+  age_lt_90_master_table,
   num_samples_threshold,
   observational_variables
   )
 
 amd_only_variables = filterVarsBySampleThreshold(
-  amd_only_master_table %>% select(-CaseString), 
+  amd_only_master_table %>% select(-CaseString),
   num_samples_threshold,
   observational_variables
   )
+
+control_only_variables = filterVarsBySampleThreshold(
+  all_master_table %>% filter(CaseString=='Control') %>% select(-CaseString),
+  num_samples_threshold,
+  observational_variables
+  )
+
+# all_variables = observational_variables
+# age_lt_90_variables = all_variables
 
 ```
 
@@ -207,14 +243,33 @@ amd_only_variables = filterVarsBySampleThreshold(
 ### Create p-val names for contrasts
 
 ```{r}
-contrast_names = makeContrastNames(all_variables)
+all_contrast_names = makeContrastNames(
+  all_variables, 
+  all_master_table
+  )
+
+age_lt_90_contrast_names = makeContrastNames(
+  age_lt_90_variables, 
+  all_master_table
+  )
+
+amd_only_contrast_names = makeContrastNames(
+  amd_only_variables, 
+  all_master_table
+  )
+
+control_only_contrast_names = makeContrastNames(
+  control_only_variables, 
+  all_master_table
+  )
 ```
 
 ### Initialize regression stats table
 
 ```{r}
-regression_pvals = makeRegressionStatsTemplate(all_variables)
-regression_effect_sizes = makeRegressionStatsTemplate(all_variables)
+regression_pvals = makeRegressionStatsContrastTemplate(flatten_chr(all_contrast_names))
+
+regression_effect_sizes = makeRegressionStatsContrastTemplate(flatten_chr(all_contrast_names))
 ```
 
 ## Linear Regression {.tabset}
@@ -223,8 +278,9 @@ regression_effect_sizes = makeRegressionStatsTemplate(all_variables)
 
 ```{r}
 exp_vars = calculated_exp_vars
-predictors = all_variables
+predictors = control_only_variables
 master_table = all_master_table
+contrast_names = control_only_contrast_names %>% flatten_chr()
 index_name_template = 'All_'
 
 # regression_pvals = regression_pvals_template
@@ -241,9 +297,10 @@ for (var in exp_vars)
     master_table
   )
   
+  # print(vif(fit))
+  
   pvals = getRegressionPvals(
     fit,
-    predictors,
     contrast_names,
     index_name
   )
@@ -252,7 +309,6 @@ for (var in exp_vars)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
-    predictors,
     contrast_names,
     index_name
   )
@@ -268,6 +324,7 @@ for (var in exp_vars)
 exp_vars = calculated_exp_vars
 predictors = age_lt_90_variables
 master_table = age_lt_90_master_table
+contrasts = age_lt_90_contrast_names %>% unlist()
 index_name_template = 'Age_lt_90_'
 
 # regression_pvals = regression_pvals_template
@@ -286,8 +343,7 @@ for (var in exp_vars)
   
   pvals = getRegressionPvals(
     fit,
-    predictors,
-    contrast_names,
+    unlist(contrast_names),
     index_name
   )
   
@@ -295,8 +351,7 @@ for (var in exp_vars)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
-    predictors,
-    contrast_names,
+    unlist(contrast_names),
     index_name
   )
 
@@ -306,12 +361,13 @@ for (var in exp_vars)
 ```
 
 
-### AMD ONly
+### AMD Only
 
 ```{r}
 exp_vars = calculated_exp_vars
 predictors = amd_only_variables
 master_table = amd_only_master_table
+contrasts = amd_only_contrast_names %>% unlist()
 index_name_template = 'AMD_Only_'
 
 # regression_pvals = regression_pvals_template
@@ -330,7 +386,6 @@ for (var in exp_vars)
   
   pvals = getRegressionPvals(
     fit,
-    predictors,
     contrast_names,
     index_name
   )
@@ -339,7 +394,6 @@ for (var in exp_vars)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
-    predictors,
     contrast_names,
     index_name
   )
@@ -348,6 +402,13 @@ for (var in exp_vars)
 
 }
 ```
+### Visualize
+```{r}
+pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+
+pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+```
+
 
 
 ### Write Tables
@@ -385,4 +446,53 @@ saveWorkbook(regression_stats, file=filename, overwrite=T)
 ```
 
 
+
+```{r}
+categorical_data = 
+  sample_metadata %>%
+  select(
+    Gender,
+    CaseString,
+    ARMS2rs10490924, 
+    CFHrs1061170, 
+    CFHrs10737680, 
+    SKIV2Lrs429608, 
+    CNV_Either_Eye, 
+    GA_No_CNV_Either_Eye, 
+    AREDS
+  ) 
+
+# %>%
+#   mutate_all(list(~ifelse(is.na(.), 0, 1))) 
+```
+
+
+```{r}
+num_vars = length(categorical_variable_names)
+
+categorical_chisq_pvals = matrix(rep(0, num_vars*num_vars), ncol=num_vars, nrow=num_vars)
+colnames(categorical_chisq_pvals) = categorical_variable_names
+rownames(categorical_chisq_pvals) = categorical_variable_names
+
+for (var in categorical_variable_names)
+{
+  for(other_var in categorical_variable_names)
+  {
+    print(sprintf('var: %s, other_var: %s', var, other_var))
+    
+    if (var != other_var)
+    {
+      test =
+        sample_metadata %>%
+        select(var, other_var) %>%
+        table() %>%
+        chisq.test()
+
+      categorical_chisq_pvals[var, other_var] = round(test$p.value,3)
+    }
+
+  }
+}
+  
+```
 

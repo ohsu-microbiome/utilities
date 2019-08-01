@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-239"
+title: "MiSeq"
 output:
   html_notebook:
     df_print: paged
@@ -36,13 +36,24 @@ output:
   
 </style>
 
-# F B Analysis; Pair Tests {.tabset}
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
+analysis_title = makeAnalysisTitle(analysis_type)
+```
+
+# MiSeq-${miseq_run_number} `r analysis_title` Two Gropu Tests {.tabset}
+## Clustering Level
+Data clustered at the `r toupper(clustering_level)` Level.
 
 ## Setup
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('alphadiv')
+startCondaEnv('${conda_env}')
 ```
 
 ### Set Knitr Options
@@ -50,50 +61,34 @@ startCondaEnv('alphadiv')
 library(rmarkdown)
 library(knitr)
 
-opts_chunk$set(
-  echo=TRUE,
-  dpi=300,
-  fig.width=12
-  )
+${knitr_options}
+
 ```
 
 ### Load Libraries
 ```{r}
 library(tidyverse)
 library(magrittr)
+library(DT)
+library(openxlsx)
 library(ggplot2)
 library(ggbeeswarm)
-library(openxlsx)
-library(DT)
-library(pheatmap)
-library(kableExtra)
-library(vegan)
-library(nlme)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-```
-### Set Paths
-```{r}
-project_dir = "~/miseq-239"
-dada2_table_dir = file.path(project_dir, "processed_data")
-metadata_dir = file.path(project_dir, "metadata")
-analysis_dir = file.path(project_dir, 'analysis/f2b_ratio')
-tables_dir = file.path(analysis_dir, 'tables')
+source('~/utilities/analysis-utilities/project_utilities.R')
 ```
 
 ### Load Data
 ```{r}
-all_master_table = read.xlsx(file.path(tables_dir, 'miseq-239_F_B_master_table.xlsx'))
+filename = makeDataFileName('master_tables.xlsx', tables_dir, analysis_type)
+
+all_master_table = readWorkbook(filename, sheet='All Subgroups')
+age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
+amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
 
 source(file.path(metadata_dir, 'observational_variables.R'))
-
-age_lt_90_master_table = all_master_table %>% filter(Age<90)
-amd_only_master_table = all_master_table %>% filter(CaseString=='AMD')
-
-# grep('ARMS', colnames(sample_metadata), value=T)
-grep('ARMS', colnames(all_master_table), value=T)
 ```
 
 
@@ -123,29 +118,14 @@ for (varname in amd_only_excluded_variables)
 
 **Excluding: ** `r amd_only_excluded_variables`
 
-#### Raw Experimental Variables
+
+#### Raw and Calculated Experimental Variables
+
 ```{r}
 raw_exp_vars = c('Firmicutes', 'Bacteroidetes')
-```
-
-**Raw Experimental Variables: ** `r raw_exp_vars`
-
-
-#### Calculated Experimental Variables
-
-```{r}
-calculated_exp_vars = c('F2B_Ratio', 'LogF2B_Ratio', 'FB_Index')
+calculated_exp_vars = c('Observed', 'Shannon', 'Simpson')
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
-
-#### Subgroups
-```{r}
-subgroups = list(
-  All=list(name='All Subgroups', prefix='all'),
-  Age_lt_90=list(name='Age < 90', prefix='age_lt_90'),
-  Amd_Only=list(name='AMD Only', prefix='amd_only')
-)
-```
 
 
 ### Set Metadata Factor Levels
@@ -165,53 +145,53 @@ amd_only_master_table = setFactorsLevels(
 ```
 
 
-## Pair Tests
+## TwoGroup Tests
 
 #### Initialize Table
 
 ```{r}
-contrast_names = makeContrastNames(observational_variables)
+contrast_names = 
+  makeContrastNames(observational_variables, all_master_table) %>% 
+  unlist() %>%
+  unname()
 ```
 
 ```{r}
-all_pair_stats = data.frame(
+all_two_group_stats = data.frame(
   TestGroup=character(),
   TestVariable=character(),
   Reference=character(),
   Comparison=character(),
-  Firmicutes=numeric(),
-  Bacteroidetes=numeric(),
-  F2B_Ratio=numeric(),
-  LogF2B_Ratio=numeric(),
-  FB_Index=numeric()
+  Observed=numeric(),
+  Shannon=numeric(),
+  Simpson=numeric()
   )
 
 ```
 
-
 #### All
 ```{r}
-pval_list = doPairTests(
-  exp_vars = c(raw_exp_vars, calculated_exp_vars),
+pval_list = doTwoGroupTests(
+  exp_vars = calculated_exp_vars,
   test_var = observational_variables$CaseString,
   master_table = all_master_table,
   test_group = 'All'
 )
 
-all_pair_stats %<>%
+all_two_group_stats %<>%
   add_row(!!!pval_list)
 ```
 
 #### Age < 90
 ```{r}
-pval_list = doPairTests(
-  exp_vars = c(raw_exp_vars, calculated_exp_vars),
+pval_list = doTwoGroupTests(
+  exp_vars = calculated_exp_vars,
   test_var = observational_variables$CaseString,
   master_table = age_lt_90_master_table,
   test_group = 'Age_lt_90'
 )
 
-all_pair_stats %<>%
+all_two_group_stats %<>%
   add_row(!!!pval_list)
 
 ```
@@ -219,19 +199,18 @@ all_pair_stats %<>%
 
 
 ```{r}
-amd_only_pair_stats = data.frame(
+amd_only_two_group_stats = data.frame(
   TestGroup=character(),
   TestVariable=character(),
   Reference=character(),
   Comparison=character(),
-  Firmicutes=numeric(),
-  Bacteroidetes=numeric(),
-  F2B_Ratio=numeric(),
-  LogF2B_Ratio=numeric(),
-  FB_Index=numeric()
+  Observed=numeric(),
+  Shannon=numeric(),
+  Simpson=numeric()
   )
 
-exp_vars = c(raw_exp_vars, calculated_exp_vars)
+exp_vars = calculated_exp_vars
+
 # test_var = amd_only_variables$AREDS
 master_table = amd_only_master_table
 test_group = 'AMD_Only'
@@ -242,30 +221,34 @@ for (test_var in amd_only_variables)
   name = test_var$covariate_of_interest
   print(name)
   
-  pval_list = doPairTests(
-    exp_vars = c(raw_exp_vars, calculated_exp_vars),
+  pval_list = doTwoGroupTests(
+    exp_vars = exp_vars,
     test_var = test_var,
     master_table = amd_only_master_table,
     test_group = 'AMD_Only'
   )
   
-  amd_only_pair_stats %<>%
+  amd_only_two_group_stats %<>%
     add_row(!!!pval_list)
 }
 ```
 
 ```{r}
-all_pair_stats =
-  all_pair_stats %>%
-  add_row(!!!amd_only_pair_stats)
+all_two_group_stats =
+  all_two_group_stats %>%
+  add_row(!!!amd_only_two_group_stats)
 ```
 
 
-
 ```{r}
-filename = file.path(tables_dir, 'miseq-239_fb_mann_whitney_unadjusted.xlsx')
+filename = makeDataFileName(
+  'mann_whitney_unadjusted.xlsx', 
+  tables_dir,
+  analysis_type
+  )
+
 write.xlsx(
-  all_pair_stats,
+  all_two_group_stats,
   file=filename,
   quote=F
 )

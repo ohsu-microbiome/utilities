@@ -36,9 +36,9 @@ output:
   
 </style>
 
-# Alapha Diversity Regression Effect Size Plots {.tabset}
+# FB Analysis: Regression Effect Size Plots {.tabset}
 ## Clustering Level
-Data Clustered at the Genus level.
+Data Clustered at the Genus level for taxa abundances.
 
 ## Setup {.tabset}
 
@@ -87,20 +87,9 @@ source('./set_paths.R')
 
 ### Load Data
 ```{r}
-filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_diversity_master_tables.xlsx')
-
-all_master_table = readWorkbook(filename, sheet='All Subgroups')
-age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
-amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
-
-sample_metadata = read.delim(
-  file.path(metadata_dir, 'miseq-239_metadata_CNV_GA.tsv'), 
-  stringsAsFactors=F
-  )
-
 source(file.path(metadata_dir, 'observational_variables.R'))
 
-filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_div_regression_stats.xlsx')
+filename = file.path(tables_dir, 'miseq-239_FB_rank_regression_stats.xlsx')
 pvalues = readWorkbook(filename, sheet='Unadjusted P-Values')
 effect_sizes = readWorkbook(filename, sheet='Effect Sizes')
 
@@ -139,27 +128,4 @@ for (var in response_vars)
 }
 ```
 
-
-```{r}
-# annotations = data.frame(
-#   xloc = 11,
-#   yloc = -2.5,
-#   text="negative relationship"
-# )
-
-plotEffectSizes(
-  pvals,
-  effect_sizes,
-  response_var='All_Observed',
-  effect_size_template='(log) Regression Cofficient',
-  category_label='Observational Variables'
-) 
-
-# + geom_label(
-#   data=annotations,
-#   aes(x=xloc, y=yloc, label=text),
-#   color='black'
-# )
-
-```
 

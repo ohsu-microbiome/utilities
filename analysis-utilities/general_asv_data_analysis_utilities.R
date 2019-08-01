@@ -493,13 +493,14 @@ getFilteredTaxaCounts = function(
   # print(sprintf("lowest_rank = %s", lowest_rank))
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
 
-  if (is.na(lowest_rank))
+  if (is.na(lowest_rank) | tolower(lowest_rank)=='asv' )
   {
     print("using ASVs")
     use_taxa = F
     lowest_rank = 'Genus'
   } else
   {
+    lowest_rank = tools::toTitleCase(lowest_rank)
     print("using taxa")
     use_taxa = T
   }
@@ -760,30 +761,30 @@ makeColDataPlot = function(
 filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
 {
   new_variable_list = list()
-  
+
   for (var in variable_list)
   {
     name = var$covariate_of_interest
     case = var$case %>% as.character()
     control = var$control %>% as.character()
     print(sprintf('name: %s, case: %s, control: %s', name, case, control))
-    
+
     temp_master_table = master_table %>% filter(!!as.name(name) %in% c(case, control))
-    
+
     ### Ignore if not in master table
     if (!(name %in% colnames(master_table)))
     {
       print("next")
       next
     }
-    
+
     ### Make sure both levels present
     if ((temp_master_table %>% pull(name) %>% unique() %>% length()) < 2)
     {
       print("only one level. skipping...")
       next
     }
-    
+
     ### to deal with continuous covariate such as Age
     if (case=="" & control=="")
     {
@@ -795,7 +796,7 @@ filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
       min_samples = temp_master_table %>% pull(name) %>% table() %>% min(.)
     }
     print(sprintf('min_samples: %d', min_samples))
-    
+
     if (min_samples >= num_samples_threshold)
     {
       print("adding var")
@@ -807,8 +808,8 @@ filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
       print(sprintf('%s has only %d samples', name, min_samples))
     }
   }
-  
-  
+
+
   return(new_variable_list)
 }
 
@@ -821,61 +822,51 @@ doMultipleRankRegression = function(
 )
 {
   print(sprintf('regression for %s', var))
-  
+
   formula_rhs = paste0(names(predictors), collapse=' + ')
   formula = paste0('rank(', var, ')', '~', formula_rhs) %>% as.formula()
   # print(formula)
-  
+
   fit = lm(formula, data=master_table)
-  
+
   return(fit)
 }
 
 getRegressionPvals = function(
   fit,
-  predictors,
   contrast_names,
   index_name
 )
 {
-  pvals = sapply(names(predictors), function(name)
-    {
-      # print(name)
-      contrast_name = contrast_names[[name]]
-      # print(contrast_name)
-      summary(fit)[['coefficients']][[contrast_name, 'Pr(>|t|)']]
-      
-    }, 
-    simplify=F, 
-    USE.NAMES=T
-  )
-  
-  pvals = c(list(Index=index_name), pvals)
-  
+
+  pvals =
+    fit %>%
+    summary() %>%
+    coefficients() %>%
+    .[contrast_names, 'Pr(>|t|)'] %>%
+    as.list()
+
+  pvals$Index=index_name
+
   return(pvals)
 }
 
 getRegressionEffectSizes= function(
   fit,
-  predictors,
   contrast_names,
   index_name
 )
 {
-  effect_sizes = sapply(names(predictors), function(name)
-  {
-    # print(name)
-    contrast_name = contrast_names[[name]]
-    # print(contrast_name)
-    summary(fit)[['coefficients']][[contrast_name, 'Estimate']]
-    
-  }, 
-  simplify=F, 
-  USE.NAMES=T
-  )
-  
-  effect_sizes = c(list(Index=index_name), effect_sizes)
-  
+
+  effect_sizes =
+    fit %>%
+    summary() %>%
+    coefficients() %>%
+    .[contrast_names, 'Estimate'] %>%
+    as.list()
+
+  effect_sizes$Index=index_name
+
   return(effect_sizes)
 }
 
@@ -891,70 +882,69 @@ setFactorsLevels = function(
     case = var$case
     control = var$control
     # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
-    
+
     if (case != '' & control != '')
     {
       # print('ok')
-      df = mutate(df, !!name := factor(!!as.name(name), levels=c(control, case)))
+      other_levels = setdiff(df[[name]], c(case, control))
+      df = mutate(df, !!name := factor(
+        !!as.name(name),
+        levels=c(control, case, other=other_levels))
+        )
     }
-    
+
   }
-  
+
   return(df)
 }
 
 
 filterVarsBySampleThreshold = function(
   master_table,
-  threshold, 
+  threshold,
   variable_list
   )
 {
   new_variable_list = list()
-  
+
   for (var in variable_list)
   {
     name = var$covariate_of_interest
-    case = var$case %>% as.character()
-    control = var$control %>% as.character()
-    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
-    
+
     ### Ignore if not in master table
     if (!(name %in% colnames(master_table)))
     {
+      print(sprintf('%s not in master table. skipping...', name))
       # print("next")
       next
     }
-    
-    ### to deal with continuous covariate such as Age
-    if (case=="" & control=="")
+
+    values = master_table %>% pull(!!name)
+    counts = table(values)
+
+    if (is.factor(values))
     {
-      ### Always allow
-      # print("got continuous variable")
-      num_case_samples = 99999
-      num_control_samples = 99999
-    } else
-    {
-      count_table = 
-        master_table %>%
-        pull(!!name) %>%
-        table()
-      num_case_samples = count_table[[case]]
-      num_control_samples = count_table[[control]]
-      # print(count_table)
+      print(counts)
     }
-    
-    print(sprintf('case samples: %d, control samples: %d', num_case_samples, num_control_samples))
-    
-    if (num_case_samples >= num_samples_threshold & num_control_samples >= num_samples_threshold)
+
+    min_samples = min(counts)
+
+    print(sprintf('min_samples for %s: %d', name, min_samples))
+
+    if (is.factor(values) & min_samples < threshold)
     {
-      # print("adding var")
-      # print(var)
-      new_variable_list[[name]] = var
-      # print(names(new_variable_list))
+      print(sprintf('%s has %d < %d samples. skipping...',
+                    name,
+                    min_samples,
+                    threshold
+                    ))
+      next
     }
+
+
+    new_variable_list[[name]] = var
   }
-  
+
   return(new_variable_list)
 }
 
@@ -969,12 +959,12 @@ getNumSamplesPerGroup = function(
   case = var$case %>% as.character()
   control = var$control %>% as.character()
   print(sprintf('name: %s, case: %s, control: %s', name, case, control))
-  
-  num_samples_per_level = 
+
+  num_samples_per_level =
     master_table %>%
     select(name) %>%
-    table() 
-  
+    table()
+
   if (as_vector)
   {
     num_samples_per_level = num_samples_per_level %>% as.vector()
@@ -982,19 +972,40 @@ getNumSamplesPerGroup = function(
   {
     num_samples_per_level = num_samples_per_level %>% as.list()
   }
-  
+
   return(num_samples_per_level)
 }
 
 
 makeContrastNames = function(
-  variables
+  variables,
+  master_table
 )
 {
-  contrast_names = lapply(variables, function(x)
+  contrast_names = list()
+
+  for (var in variables)
   {
-    contrast_name = paste0(x$covariate_of_interest, x$case)
-  })
+    name = var$covariate_of_interest
+    values = master_table %>% pull(!!name)
+
+    if (is.factor(values))
+    {
+      var_levels = levels(values)
+      ref_level = var$control
+      contrast_levels = var_levels[var_levels != ref_level]
+
+      names_to_add = paste0(name, contrast_levels)
+    } else
+    {
+      names_to_add = name
+    }
+
+    print(names_to_add)
+    contrast_names[[name]] = names_to_add
+  }
+
+  return(contrast_names)
 }
 
 
@@ -1003,21 +1014,40 @@ makeRegressionStatsTemplate = function(variables)
   regression_stats_template = data.frame(
     Index=character()
   )
-  
-  for (var in all_variables)
+
+  for (var in variables)
   {
     name = var$covariate_of_interest
     print(name)
-    regression_stats_template = 
-      regression_stats_template %>% 
+    regression_stats_template =
+      regression_stats_template %>%
       mutate(!!var$covariate_of_interest := numeric())
   }
-  
+
+  return(regression_stats_template)
+}
+
+makeRegressionStatsContrastTemplate = function(
+  contrast_names
+  )
+{
+  regression_stats_template = data.frame(
+    Index=character()
+  )
+
+  for (name in contrast_names)
+  {
+    regression_stats_template =
+      regression_stats_template %>%
+      mutate(!!name := numeric())
+  }
+
   return(regression_stats_template)
 }
 
 
-doPairTests = function(
+
+doTwoGroupTests = function(
   exp_vars,
   test_var,
   master_table,
@@ -1029,13 +1059,13 @@ doPairTests = function(
   # test_var = amd_only_variables$CNV_Either_Eye
   # master_table = amd_only_master_table
   # test_group = 'AMD_Only'
-  
+
   name = test_var$covariate_of_interest
   case = test_var$case
   control = test_var$control
   reference = test_var$labels$reference
   comparison = test_var$labels$comparison
-  
+
   # print(sprintf('name %s, ref %s, comp %s', name, reference, comparison))
 
   pval_list = list(
@@ -1044,64 +1074,445 @@ doPairTests = function(
     Reference=reference,
     Comparison=comparison
   )
-  
+
   for (var in exp_vars)
   {
 
-    # print(sprintf('test_var %s, var %s', name, var))
-    
+    print(sprintf('test_var %s, var %s', name, var))
+
     index_name = paste0(test_group, '_', var)
     # print(index_name)
-    
+
     formula = paste0(var, ' ~ ', name) %>% as.formula()
-    
-    temp_master_table = 
+
+    temp_master_table =
       master_table %>%
-      filter(!!as.name(name) %in% c(control, case))
-    
-    # temp_master_table %>% pull(test_var$covariate_of_interest) %>% levels() %>% print()
-    
-    fit = wilcox.test(
-      formula,
-      data=temp_master_table,
-      alternative='two.sided'
-    )
-    # summary(fit)
-    
-    pval_list[var] = fit$p.value 
-    
+      filter(!!as.name(name) %in% c(control, case)) %>%
+      droplevels()
+
+    count_table =
+      temp_master_table %>%
+      select(name) %>%
+      table()
+    min_samples = min(count_table)
+    num_levels = length(count_table)
+
+    # temp_master_table %>% pull(test_var$covariate_of_interest) %>% table() %>% print()
+
+    if (min_samples < 3)
+    {
+      # pval_list[var] = NA
+      print(sprintf('%s has at least one level with %d < %d samples skipping...',
+                    name,
+                    min_samples,
+                    3
+            ))
+      pval_list[var] = NULL
+    } else
+
+    if (num_levels != 2)
+    {
+      print(sprintf('%s has %d levels, not 2. skipping...',
+                    name,
+                    num_levels
+      ))
+      pval_list[var] = NULL
+    } else
+
+    {
+      fit = wilcox.test(
+        formula,
+        data=temp_master_table,
+        alternative='two.sided'
+      )
+      # summary(fit)
+
+      pval_list[var] = fit$p.value
+    }
+
   }
-  
+
   return(pval_list)
+
 }
 
 # exp_vars = c(raw_exp_vars, calculated_exp_vars)
 # test_var = amd_only_variables$GA_No_CNV_Either_Eye
 # master_table = amd_only_master_table
 # test_group = 'AMD_Only'
-# 
-# pval_list = doPairTests(
+#
+# pval_list = doTwoGroupTests(
 #   exp_vars = c(raw_exp_vars, calculated_exp_vars),
 #   test_var = test_var,
 #   master_table = amd_only_master_table,
 #   test_group = 'AMD_Only'
 # )
-# 
+#
 # pval_list
-# 
+#
 # for (test_var in amd_only_variables)
 # {
-# 
+#
 #   name = test_var$covariate_of_interest
 #   print(name)
-# 
-#   pval_list = doPairTests(
+#
+#   pval_list = doTwoGroupTests(
 #     exp_vars = c(raw_exp_vars, calculated_exp_vars),
 #     test_var = test_var,
 #     master_table = amd_only_master_table,
 #     test_group = 'AMD_Only'
 #   )
-# 
-#   amd_only_pair_stats %<>%
+#
+#   amd_only_two_group_stats %<>%
 #     add_row(!!!pval_list)
 # }
+
+makeBoxAndDotplot = function(
+  master_table,
+  indices,
+  var_data=NULL,
+  aesthetics, ### list(x_var='', color_var='', facet_var='')
+  annotation_data=c(),
+  include=c("dots", "box"),
+  title=NULL,
+  xlabel=NULL,
+  ylabel=NULL
+)
+{
+  if (!is.null(var_data))
+  {
+    name = var_data$covariate_of_interest
+    case = var_data$case
+    control = var_data$control
+  } else
+  {
+    name = ""
+    case = ""
+    control = ""
+  }
+  print(sprintf("name %s, case %s, control %s", name, case, control))
+
+  x_var = aesthetics$x_var
+  color_var = aesthetics$color_var
+  facet_var = aesthetics$facet_var
+
+  print(sprintf("x_var %s, color_var %s, facet_var %s", x_var, color_var, facet_var))
+  print(indices)
+
+  cols_to_gather = c(indices, x_var, color_var)
+  if (facet_var != '')
+  {
+    print("got facet_var")
+    cols_to_gather = c(cols_to_gather, facet_var)
+  }
+
+  ### Because "index" is always present as a grouping column,
+  ### if it is going to be used in plot aesthetics, that is it is
+  ### one of x_var, color_var, or facet_var, it must be left
+  ### out of the gathered columns.
+
+  ### NOTE: 'index' is different from the variable `indices` which
+  ### is a list of the alpha diversity indices to plot which are
+  ### columns in the input data.
+  cols_to_gather = setdiff(cols_to_gather, c('index'))
+
+  print("forming plot data")
+  plot_data =
+    master_table %>%
+    select(!!cols_to_gather) %>%
+    # gather(key='index', value='value', -!!cols_to_not_gather) %>%
+    gather(key='index', value='value', indices) %>%
+    mutate(label=index)
+
+  if (!is.null(var_data))
+  {
+    plot_data =
+      plot_data %>%
+      mutate(label=case_when(
+        !!as.name(x_var)==case ~ var_data$labels$comparison,
+        !!as.name(x_var)==control ~ var_data$labels$reference,
+        TRUE ~ index
+      ))
+  }
+
+
+  print('colnames plot_data')
+  print(colnames(plot_data))
+
+  ### Generate ggplot Object
+  plt = ggplot(
+    data=plot_data,
+    mapping = aes_string(
+      x='label',
+      y='value',
+      color=color_var
+    )
+  )
+
+  ### Add Beeswarm Layer
+  if ("dots" %in% include)
+  {
+    plt = plt +
+      geom_quasirandom(
+        width=0.2,
+        method='smiley',
+        alpha=0.7,
+        size=0.8,
+        dodge.width=1
+      )
+  }
+
+  ### Add Box and Whisker Layer
+  if ("box" %in% include)
+  {
+    # geom_boxplot(alpha=0.1, fill='black', colour='black', size=0.5, varwidth=T, width=0.7) +
+    plt = plt +
+      geom_boxplot(
+        aes_string(
+          x='label',
+          y='value',
+          color=color_var
+        ),
+        alpha=0.1,
+        # color='black',
+        size=0.5,
+        width=0.7
+      )
+  }
+
+  ### Add Annotations
+  if (!is.null(dim(annotation_data)))
+  {
+
+    print('filtering annotation data')
+    annotations=annotation_data %>%
+      filter(
+        index %in% indices,
+        TestVariable==x_var
+      )
+
+    print("adding geom text")
+
+    plt = plt +
+      geom_text(
+        data=annotations,
+        aes(x=xloc, y=yloc, label=pvals, color=index),
+        color='black'
+      )
+  }
+
+  ### Add Facet
+  if (facet_var != '')
+  {
+    print("got facet_var 2")
+    plt = plt + facet_wrap(
+      as.formula(paste('~',facet_var)),
+      scales='free',
+      shrink=F
+    )
+  }
+
+  if (!is.null(var_data))
+  {
+    legend_labels = sprintf(
+      '(%s) %s',
+      c(case, control),
+      c(var_data$labels$comparison,
+        var_data$labels$reference)
+    )
+
+    # print(legend_labels)
+
+    plt = plt +
+      scale_color_discrete(
+        name = name,
+        breaks=c(case, control),
+        labels=legend_labels
+      )
+  }
+
+  plt = plt +
+    labs(
+      title=title,
+      x=xlabel,
+      y=ylabel
+    )
+
+
+  plt
+
+  return(plt)
+}
+
+
+
+plotAllTwoGroupTests = function(
+  variables,
+  master_table,
+  indices,
+  title_template,
+  annotation_data
+)
+{
+
+  print("plotAllTwoGroupTests")
+
+  for (var in variables)
+  {
+    name = var$covariate_of_interest
+    case = var$case
+    control = var$control
+
+    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    print("labels")
+    print(var$labels %>% unlist())
+
+    if (!all(c(case, control) %in% master_table[[name]]))
+    {
+      print("not all levels present. skipping...")
+      next
+    }
+
+    title = paste(title_template, name)
+
+    temp_master_table =
+      master_table %>%
+      filter(!!as.name(name) %in% c(case, control))
+
+    plt = makeBoxAndDotplot(
+      master_table=temp_master_table,
+      indices=indices,
+      var_data=var,
+      aesthetics = list(
+        x_var=name,
+        color_var=name,
+        facet_var='index'
+      ),
+      annotation_data=annotation_data,
+      title=title
+    )
+
+    print(plt)
+  }
+}
+
+
+getPvalAnnotations = function(
+  variables,
+  pval_height_factor,
+  master_table,
+  two_group_stats
+)
+{
+  num_annotations = length(variables)
+
+  pval_annotations = data.frame(
+    index = variables,
+    xloc = rep(1.5, num_annotations),
+    yloc = pval_height_factor*master_table %>%
+      select(variables) %>%
+      summarize_all(max) %>%
+      unlist()
+  )
+
+  pval_annotations =
+    two_group_stats %>%
+    gather(
+      key="index",
+      value='pvals',
+      !!variables
+    ) %>%
+    left_join(pval_annotations, by='index') %>%
+    mutate(pvals = paste0('p = ', round(pvals, 3)))
+}
+
+# makeTwoGroupPlot = plotTwoGroupTest
+# plotTwoGroupTests = plotAllTwoGroupTests
+
+
+plotEffectSizes = function(
+  pvals, # rows=variables, cols=response_vars, values=pvals
+  effect_sizes, # rows=variables, cols=response_vars, values=effect_sizes
+  response_var, # Is added to title
+  title_template='',
+  effect_size_template='',
+  category_label=''
+)
+{
+
+  predictors = pvalues$Predictor
+
+  # tall_pvals = pvalues %>% gather(key='response_var', value='pvalue', -Predictor)
+  # tall_effect_sizes = effect_sizes %>% gather(key='response_var', value='effect_size', -Predictor)
+  # plot_data = inner_join(tall_pvals, tall_effect_sizes, by=c('Predictor', 'response_var'))
+
+  pvalue_df =
+    pvalues %>%
+    select(Predictor, response_var) %>%
+    rename(pvalue = !!response_var)
+
+  effect_size_df =
+    effect_sizes %>%
+    select(Predictor, response_var) %>%
+    rename(effect_size = !!response_var)
+
+  plot_data = inner_join(pvalue_df, effect_size_df, by='Predictor')
+
+  title = paste(title_template, response_var)
+
+  plt =
+    plot_data %>%
+    ggplot() +
+    geom_bar(
+      aes(
+        x=Predictor,
+        y=log(abs(effect_size))*sign(effect_size),
+        fill=pvalue
+      ),
+      stat='identity'
+    ) +
+    coord_flip() +
+    ggtitle(title) +
+    ylab(paste(effect_size_template, "as Effect Size")) +
+    xlab(category_label) +
+    theme(
+      axis.text.x = element_text(size=10),
+      axis.text.y = element_text(size=10),
+      plot.title = element_text(size=12)
+    )
+
+  print(plt)
+}
+
+
+# predictors = c('x1', 'x2', 'x3')
+# response_vars = c('A', 'B', 'C')
+#
+# pvalues =
+#   matrix(runif(9), nrow=3, ncol=3) %>%
+#   set_rownames(predictors) %>%
+#   set_colnames(response_vars) %>%
+#   data.frame() %>%
+#   rownames_to_column('Predictor')
+#
+# effect_sizes =
+#   matrix(rnorm(9), nrow=3, ncol=3) %>%
+#   set_rownames(predictors) %>%
+#   set_colnames(response_vars) %>%
+#   data.frame() %>%
+#   rownames_to_column('Predictor')
+#
+# plotEffectSizes(
+#   pvals = pvalues,
+#   effect_sizes = effect_sizes,
+#   response_var = 'C',
+#   title_template='Response Variable:',
+#   effect_size_template='Regression Coefficient',
+#   category_label='Predictor'
+# )
+
+
+# a = pvalues %>% gather(key='response_var', value='pvalue', -Predictor)
+# b = effect_sizes %>% gather(key='response_var', value='effect_size', -Predictor)
+# c = inner_join(a,b, by=c('Predictor', 'response_var'))
+

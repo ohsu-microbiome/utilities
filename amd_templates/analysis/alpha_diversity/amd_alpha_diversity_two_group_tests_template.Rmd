@@ -1,0 +1,256 @@
+---
+title: "MiSeq"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
+```
+
+# MiSeq-${miseq_run_number} Alpha Diversity Two Gropu Tests {.tabset}
+## Clustering Level
+Data clustered at the `r toupper(clustering_level)` Level.
+
+## Setup
+
+### Start Conda ENV
+```{r}
+startCondaEnv('${conda_env}')
+```
+
+### Set Knitr Options
+```{r}
+library(rmarkdown)
+library(knitr)
+
+${knitr_options}
+
+```
+
+### Load Libraries
+```{r}
+library(tidyverse)
+library(magrittr)
+library(DT)
+library(openxlsx)
+library(ggplot2)
+library(ggbeeswarm)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+source('~/utilities/analysis-utilities/project_utilities.R')
+```
+
+### Load Data
+```{r}
+filename = makeDataFileName('master_tables.xlsx', tables_dir, analysis_type)
+
+all_master_table = readWorkbook(filename, sheet='All Subgroups')
+age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
+amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
+
+source(file.path(metadata_dir, 'observational_variables.R'))
+```
+
+
+### Variables of interest
+#### All Observational Variables
+```{r}
+# print(observational_variables)
+```
+
+#### AMD Only Observational Variables
+```{r}
+amd_only_variables = observational_variables
+
+amd_only_excluded_variables = c(
+  'Gender',
+  'CaseString',
+  'Age'
+)
+
+for (varname in amd_only_excluded_variables)
+{
+  print(sprintf('Excluding %s', varname))
+  amd_only_variables[varname] = NULL
+}
+
+```
+
+**Excluding: ** `r amd_only_excluded_variables`
+
+
+#### Calculated Experimental Variables
+
+```{r}
+calculated_exp_vars = c('Observed', 'Shannon', 'Simpson')
+```
+**Calculated Experimental Variables: ** `r calculated_exp_vars`
+
+
+### Set Metadata Factor Levels
+```{r}
+all_master_table = setFactorsLevels(
+  all_master_table, 
+  observational_variables
+  )
+age_lt_90_master_table = setFactorsLevels(
+  age_lt_90_master_table, 
+  observational_variables
+  )
+amd_only_master_table = setFactorsLevels(
+  amd_only_master_table, 
+  observational_variables
+  )
+```
+
+
+## TwoGroup Tests
+
+#### Initialize Table
+
+```{r}
+contrast_names = 
+  makeContrastNames(observational_variables, all_master_table) %>% 
+  unlist() %>%
+  unname()
+```
+
+```{r}
+all_two_group_stats = data.frame(
+  TestGroup=character(),
+  TestVariable=character(),
+  Reference=character(),
+  Comparison=character(),
+  Observed=numeric(),
+  Shannon=numeric(),
+  Simpson=numeric()
+  )
+
+```
+
+
+#### All
+```{r}
+pval_list = doTwoGroupTests(
+  exp_vars = calculated_exp_vars,
+  test_var = observational_variables$CaseString,
+  master_table = all_master_table,
+  test_group = 'All'
+)
+
+all_two_group_stats %<>%
+  add_row(!!!pval_list)
+```
+
+#### Age < 90
+```{r}
+pval_list = doTwoGroupTests(
+  exp_vars = calculated_exp_vars,
+  test_var = observational_variables$CaseString,
+  master_table = age_lt_90_master_table,
+  test_group = 'Age_lt_90'
+)
+
+all_two_group_stats %<>%
+  add_row(!!!pval_list)
+
+```
+``
+
+
+```{r}
+amd_only_two_group_stats = data.frame(
+  TestGroup=character(),
+  TestVariable=character(),
+  Reference=character(),
+  Comparison=character(),
+  Observed=numeric(),
+  Shannon=numeric(),
+  Simpson=numeric()
+  )
+
+exp_vars = calculated_exp_vars
+
+# test_var = amd_only_variables$AREDS
+master_table = amd_only_master_table
+test_group = 'AMD_Only'
+  
+for (test_var in amd_only_variables)
+{
+  
+  name = test_var$covariate_of_interest
+  print(name)
+  
+  pval_list = doTwoGroupTests(
+    exp_vars = exp_vars,
+    test_var = test_var,
+    master_table = amd_only_master_table,
+    test_group = 'AMD_Only'
+  )
+  
+  amd_only_two_group_stats %<>%
+    add_row(!!!pval_list)
+}
+```
+
+```{r}
+all_two_group_stats =
+  all_two_group_stats %>%
+  add_row(!!!amd_only_two_group_stats)
+```
+
+
+
+```{r}
+filename = makeDataFileName(
+  'mann_whitney_unadjusted.xlsx', 
+  tables_dir,
+  analysis_type
+  )
+
+write.xlsx(
+  all_two_group_stats,
+  file=filename,
+  quote=F
+)
+```
+

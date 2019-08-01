@@ -36,7 +36,9 @@ output:
   
 </style>
 
-# FB Analysis -- Plots {.tabset}
+# FB Analysis -- Pair Plots {.tabset}
+## Clustering Level
+Date clustered at the Genus level for taxa abundances.
 
 ## Setup
 ### Start Conda ENV
@@ -77,7 +79,7 @@ source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 
 ### Set Paths
 ```{r}
-source('./set_paths')
+source('./set_paths.R')
 ```
 
 ### Load Data
@@ -86,7 +88,7 @@ all_master_table = read.xlsx(file.path(tables_dir, 'miseq-239_F_B_master_table.x
 age_lt_90_master_table = all_master_table %>% filter(Age<90)
 amd_only_master_table = all_master_table %>% filter(CaseString=='AMD')
 
-source('./observational_variables.R')
+source(file.path(metadata_dir, 'observational_variables.R'))
 
 filename = file.path(tables_dir, 'miseq-239_fb_mann_whitney_unadjusted.xlsx')
 pair_stats = read.xlsx(filename)
@@ -95,7 +97,7 @@ pair_stats = read.xlsx(filename)
 ### Variables of interest
 #### All Observational Variables
 ```{r}
-print(observational_variables)
+# print(observational_variables)
 ```
 
 #### AMD Only Observational Variables
@@ -122,7 +124,6 @@ for (varname in amd_only_excluded_variables)
 ```{r}
 raw_exp_vars = c('Firmicutes', 'Bacteroidetes')
 ```
-
 **Raw Experimental Variables: ** `r raw_exp_vars`
 
 
@@ -145,42 +146,29 @@ subgroups = list(
 
 ### Set Metadata Factor Levels
 ```{r}
-
-setFactors = function(df)
-{
-  for (var in observational_variables)
-  {
-    name = var$covariate_of_interest
-    case = var$case
-    control = var$control
-    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
-  
-    if (case != '' & control != '')
-    {
-      # print('ok')
-      df = mutate(df, !!name := factor(!!as.name(name), levels=c(control, case)))
-    }
-  
-  }
-  
-  return(df)
-}
-
-all_master_table = setFactors(all_master_table)
-age_lt_90_master_table = setFactors(age_lt_90_master_table)
-amd_only_master_table = setFactors(amd_only_master_table)
+all_master_table = setFactorsLevels(
+  all_master_table, 
+  observational_variables
+  )
+age_lt_90_master_table = setFactorsLevels(
+  age_lt_90_master_table, 
+  observational_variables
+  )
+amd_only_master_table = setFactorsLevels(
+  amd_only_master_table, 
+  observational_variables
+  )
 ```
 
 ### P-Value Annotationas
 ```{r}
 pval_annotations = getPvalAnnotations(
-  variables=c(raw_exp_vars, calculated_exp_vars),
+  variables=c(calculated_exp_vars),
   master_table=all_master_table,
   pval_height_factor=1.2,
   pair_stats=pair_stats
 )
 ```
-
 
 ## Plots
 ### All Subgroups
@@ -249,7 +237,6 @@ makePairPlot(
   annotation_data=pval_annotations %>% filter(TestGroup=='All'),
   title_template="FB Index: "
 )
-
 
 ```
 

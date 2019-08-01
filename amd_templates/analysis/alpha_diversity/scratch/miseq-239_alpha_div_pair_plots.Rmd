@@ -1,0 +1,265 @@
+---
+title: "MiSeq-239"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+    
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+# Alapha Diversity -- Plots {.tabset}
+## Clustering Level
+Data Clustered at the Genus level.
+
+## Setup
+### Start Conda ENV
+```{r}
+startCondaEnv('alphadiv')
+```
+
+### Set Knitr Options
+```{r}
+library(rmarkdown)
+library(knitr)
+
+opts_chunk$set(
+  echo=TRUE,
+  dpi=300,
+  fig.width=12
+  )
+```
+
+### Load Libraries
+```{r}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(nlme)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+```
+
+
+### Set Paths
+```{r}
+source('./set_paths.R')
+```
+
+### Load Data
+```{r}
+filename = file.path(tables_dir, 'miseq-239_asv_clust_alpha_diversity_master_tables.xlsx')
+
+all_master_table = readWorkbook(filename, sheet='All Subgroups')
+age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
+amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
+
+source('./observational_variables.R')
+
+sample_metadata = read.delim(
+  file.path(metadata_dir, 'miseq-239_metadata_CNV_GA.tsv'), 
+  stringsAsFactors=F
+  )
+
+alpha_diversity = 
+  all_master_table %>%
+  select(SampleName, Observed, Shannon, Simpson)
+
+filename = file.path(tables_dir, 'miseq-239_alpha_div_asv_clust_mann_whitney_unadjusted.xlsx')
+
+pair_stats = 
+  read.xlsx(filename)
+
+```
+
+### Variables of interest
+#### All Observational Variables
+```{r}
+# print(observational_variables)
+```
+
+#### AMD Only Observational Variables
+```{r}
+amd_only_variables = observational_variables
+
+amd_only_excluded_variables = c(
+  'Gender',
+  'CaseString',
+  'Age'
+)
+
+for (varname in amd_only_excluded_variables)
+{
+  print(sprintf('Excluding %s', varname))
+  amd_only_variables[varname] = NULL
+}
+
+```
+
+**Excluding: ** `r amd_only_excluded_variables`
+
+
+#### Calculated Experimental Variables
+
+```{r}
+calculated_exp_vars = c('Observed', 'Shannon', 'Simpson')
+```
+**Calculated Experimental Variables: ** `r calculated_exp_vars`
+
+#### Subgroups
+```{r}
+subgroups = list(
+  All=list(name='All Subgroups', prefix='all'),
+  Age_lt_90=list(name='Age < 90', prefix='age_lt_90'),
+  Amd_Only=list(name='AMD Only', prefix='amd_only')
+)
+```
+
+
+### Set Metadata Factor Levels
+```{r}
+all_master_table = setFactorsLevels(
+  all_master_table, 
+  observational_variables
+  )
+age_lt_90_master_table = setFactorsLevels(
+  age_lt_90_master_table, 
+  observational_variables
+  )
+amd_only_master_table = setFactorsLevels(
+  amd_only_master_table, 
+  observational_variables
+  )
+```
+
+### P-Value Annotationas
+```{r}
+pval_annotations = getPvalAnnotations(
+  variables=c(calculated_exp_vars),
+  master_table=all_master_table,
+  pval_height_factor=1.2,
+  pair_stats=pair_stats
+)
+```
+
+
+## Plots
+### All Subgroups
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  all_master_table,
+  indices=calculated_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Alpha Diversity") +
+  ylab("Value")
+```
+
+#### AMD vs. Control
+```{r}
+makePairPlot(
+  master_table=all_master_table,
+  indices=calculated_exp_vars,
+  var_data=observational_variables$CaseString,
+  aesthetics=list(
+    x_var='CaseString', 
+    color_var='CaseString', 
+    facet_var='index'
+    ),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="Alpha Diversity -- All Subgroups: "
+)
+
+
+```
+
+### Age < 90
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=calculated_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Alpha Diversity: Age < 90") +
+  ylab("Value") 
+```
+
+#### AMD vs. Control
+```{r}
+
+makePairPlot(
+  master_table=age_lt_90_master_table,
+  indices=calculated_exp_vars,
+  var_data=observational_variables$CaseString,
+  aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index'),
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
+  title_template="Alpha Diversity -- Age < 90: "
+)
+
+```
+
+
+### AMD Only
+
+#### Indices
+```{r}
+makeAlphaDivPlot(
+  age_lt_90_master_table,
+  indices=calculated_exp_vars,
+  aesthetics = list(x_var='index', color_var='index', facet_var='index')
+) + 
+  ggtitle("Alpha Diversity -- AMD Only") +
+  ylab("Value")
+```
+
+#### Covariates
+
+```{r}
+plotPairTests(
+  variables=amd_only_variables,
+  master_table=all_master_table,
+  indices=calculated_exp_vars,
+  title_template="Alpha Diversity AMD Only: ",
+  annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+)
+
+```

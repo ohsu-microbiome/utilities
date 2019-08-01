@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-239"
+title: "MiSeq"
 output:
   html_notebook:
     df_print: paged
@@ -36,8 +36,14 @@ output:
   
 </style>
 
-# F B Analysis: Data Prep {.tabset}
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+```
 
+# MiSeq-${miseq_run_number} FB Analysis Data Prep{.tabset}
 
 ## Setup 
 
@@ -45,7 +51,7 @@ output:
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('alphadiv')
+startCondaEnv('${conda_env}')
 ```
 
 ### Set Knitr Options
@@ -53,11 +59,7 @@ startCondaEnv('alphadiv')
 library(rmarkdown)
 library(knitr)
 
-opts_chunk$set(
-  echo=TRUE,
-  dpi=300,
-  fig.width=12
-  )
+${knitr_options}
 ```
 
 ### Load Libraries
@@ -70,28 +72,18 @@ library(openxlsx)
 library(DT)
 library(pheatmap)
 library(kableExtra)
-library(vegan)
-library(nlme)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-```
-
-### Set Paths
-```{r}
-project_dir = "~/miseq-239"
-dada2_table_dir = file.path(project_dir, "processed_data")
-metadata_dir = file.path(project_dir, "metadata")
-analysis_dir = file.path(project_dir, "analysis", "f2b_ratio")
-tables_dir = file.path(analysis_dir, 'tables')
+source('~/utilities/analysis-utilities/project_utilities.R')
 ```
 
 ### Load Data
 ```{r}
 asv_table = 
   read.delim(
-    file.path(dada2_table_dir, 'miseq-239_tall_asv_table.tsv'), 
+    '${asv_table_file}', 
     header=T, 
     sep='\t',
     stringsAsFactors=F
@@ -99,41 +91,43 @@ asv_table =
 
 taxonomy_table = 
   read.delim(
-    file.path(dada2_table_dir, 'miseq-239_taxonomy_table.tsv'), 
+    '${taxonomy_table_file}', 
     header=T, 
     sep='\t',
     stringsAsFactors=F
     ) %>%
   mutate_all(as.character())
 
-sample_metadata = 
+sample_data = 
   read.delim(
-    file.path(project_dir, 'metadata', 'miseq-239_metadata_CNV_GA.tsv'), 
+    '${sample_data_file}', 
     header=T, 
     sep='\t',
     stringsAsFactors=F
     ) %>%
   filter(SampleID!='Undetermined')
 
-metadata_columns = colnames(sample_metadata)
-sample_names = sample_metadata$SampleName
+sample_data_columns = colnames(sample_data) %>% setdiff('SampleName')
+sample_names = sample_data$SampleName
 
 asv_table_cols = 
   data.frame(
     SampleID=colnames(asv_table)
   ) %>%
-  inner_join(sample_metadata, by='SampleID') %>%
+  inner_join(sample_data, by='SampleID') %>%
   pull(SampleName)
 
 colnames(asv_table) = c('ASVs', asv_table_cols)
 
-pval_names = list(
-  CaseString='CaseStringAMD',
-  Gender='GenderM',
-  AREDS='AREDSY',
-  Age='Age'
-)
 ```
+
+### Set Filtering
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+```
+**relative abundance cutoff:** `r relative_abundance_cutoff`
+**prevalence cutoff:** `r prevalence_cutoff`
 
 ### Get Filtered Taxa Abundance
 ```{r}
@@ -142,8 +136,8 @@ genus_taxa_abundance = getFilteredTaxaCounts(
   taxonomy_table,
   sample_metadata, 
   lowest_rank='Genus',
-  relative_abundance_cutoff=0.002,
-  prevalence_cutoff=0,
+  relative_abundance_cutoff=relative_abundance_cutoff,
+  prevalence_cutoff=prevalence_cutoff,
   id_col="SampleName",
   normalize=T
   )
@@ -153,8 +147,8 @@ phylum_taxa_abundance = getFilteredTaxaCounts(
   taxonomy_table,
   sample_metadata, 
   lowest_rank='Phylum',
-  relative_abundance_cutoff=0.002,
-  prevalence_cutoff=0,
+  relative_abundance_cutoff=relative_abundance_cutoff,
+  prevalence_cutoff=prevalence_cutoff,
   id_col="SampleName",
   normalize=T
   )
@@ -233,7 +227,11 @@ fb_master_table =
 
 ## Write Table
 ```{r}
-filename = file.path(tables_dir, 'miseq-239_F_B_master_table.xlsx')
+filename = makeDataFileName(
+  'master_tables.xlsx',
+  tables_dir,
+  analysis_type
+)
 
 write.xlsx(
   fb_master_table,

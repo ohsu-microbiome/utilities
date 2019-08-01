@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-239"
+title: "MiSeq"
 output:
   html_notebook:
     df_print: paged
@@ -37,9 +37,12 @@ output:
   
 </style>
 
-# Alapha Diversity -- Plots {.tabset}
-## Clustering Level
-Data Clustered at the Genus level.
+
+```{r}
+source('./load_project_metadata.R')
+```
+
+MiSeq-`r miseq_run_number` Alpha Diversity Analysis: Two Group Plots {.tabset}
 
 ## Setup
 ### Start Conda ENV
@@ -77,32 +80,19 @@ source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 ```
 
-
-### Set Paths
-```{r}
-source('./set_paths.R')
-```
-
 ### Load Data
 ```{r}
-filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_diversity_master_tables.xlsx')
+all_master_table = readWorkbook(alpha_div_asv_clust_master_table, sheet='All Subgroups')
+age_lt_90_master_table = readWorkbook(alpha_div_asv_clust_master_table, sheet='Age < 90')
+amd_only_master_table = readWorkbook(alpha_div_asv_clust_master_table, sheet='AMD Only')
 
-all_master_table = readWorkbook(filename, sheet='All Subgroups')
-age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
-amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
-
-source('./observational_variables.R')
-
-sample_metadata = read.delim(
-  file.path(metadata_dir, 'miseq-239_metadata_CNV_GA.tsv'), 
-  stringsAsFactors=F
-  )
+source(file.path(metadata_dir, 'observational_variables.R'))
 
 alpha_diversity = 
   all_master_table %>%
   select(SampleName, Observed, Shannon, Simpson)
 
-filename = file.path(tables_dir, 'miseq-239_alpha_div_genus_clust_mann_whitney_unadjusted.xlsx')
+filename = file.path(tables_dir, 'miseq-278_alpha_div_genus_clust_mann_whitney_unadjusted.xlsx')
 
 pair_stats = 
   read.xlsx(filename)
@@ -195,7 +185,7 @@ makeAlphaDivPlot(
 
 #### AMD vs. Control
 ```{r}
-makePairPlot(
+plotPairTest(
   master_table=all_master_table,
   indices=calculated_exp_vars,
   var_data=observational_variables$CaseString,
@@ -207,8 +197,6 @@ makePairPlot(
   annotation_data=pval_annotations %>% filter(TestGroup=='All'),
   title_template="Alpha Diversity -- All Subgroups: "
 )
-
-
 ```
 
 ### Age < 90

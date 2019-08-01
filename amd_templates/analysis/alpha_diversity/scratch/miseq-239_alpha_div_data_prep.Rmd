@@ -36,8 +36,10 @@ output:
   
 </style>
 
-# F B Analysis: Data Prep {.tabset}
+# Alpha Diversity: Data Prep {.tabset}
 
+## Clustering Level
+Data Clustered at the Genus level.
 
 ## Setup 
 
@@ -137,7 +139,7 @@ genus_taxa_abundance = getFilteredTaxaCounts(
   asv_table,
   taxonomy_table,
   sample_metadata, 
-  lowest_rank='Genus',
+  lowest_rank=NA,
   relative_abundance_cutoff=0.002,
   prevalence_cutoff=0,
   id_col="SampleName",
@@ -217,7 +219,7 @@ openxlsx::writeData(alpha_div_indices, sheet="Age < 90", age_lt_90_master_table)
 addWorksheet(alpha_div_indices, sheetName="AMD Only")
 openxlsx::writeData(alpha_div_indices, sheet="AMD Only", amd_only_master_table)
 
-filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_diversity_master_tables.xlsx')
+filename = file.path(tables_dir, 'miseq-239_asv_clust_alpha_diversity_master_tables.xlsx')
 
 saveWorkbook(alpha_div_indices, file=filename, overwrite=T)
 

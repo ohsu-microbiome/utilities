@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-239"
+title: "MiSeq"
 output:
   html_notebook:
     df_print: paged
@@ -37,9 +37,23 @@ output:
   
 </style>
 
-# FB Analysis -- Plots {.tabset}
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_title = "${analysis_title}"
+```
+
+
+# MiSeq-`r miseq_run_number` `r analysis_title` Calculated Data Plots {.tabset}
+
+## Clustering Level
+Data clustered at the `r toupper(clustering_level)` Level
 
 ## Setup
+
 ### Start Conda ENV
 ```{r}
 startCondaEnv('alphadiv')
@@ -73,37 +87,22 @@ library(nlme)
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-```
-
-
-### Set Paths
-```{r}
-source('./set_paths.R')
+source('~/utilities/analysis-utilities/project_utilities.R')
 ```
 
 ### Load Data
 ```{r}
-filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_diversity_master_tables.xlsx')
+filename = makeDataFileName(
+  'master_tables.xlsx', 
+  tables_dir, 
+  analysis_type
+  )
 
 all_master_table = readWorkbook(filename, sheet='All Subgroups')
 age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
 amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
 
-source('./observational_variables.R')
-
-sample_metadata = read.delim(
-  file.path(metadata_dir, 'miseq-239_metadata_CNV_GA.tsv'), 
-  stringsAsFactors=F
-  )
-
-alpha_diversity = 
-  all_master_table %>%
-  select(SampleName, Observed, Shannon, Simpson)
-
-filename = file.path(tables_dir, 'miseq-239_alpha_div_genus_clust_mann_whitney_unadjusted.xlsx')
-
-pair_stats = 
-  read.xlsx(filename)
+source(file.path(metadata_dir, 'observational_variables.R'))
 
 ```
 
@@ -141,15 +140,6 @@ calculated_exp_vars = c('Observed', 'Shannon', 'Simpson')
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
-#### Subgroups
-```{r}
-subgroups = list(
-  All=list(name='All Subgroups', prefix='all'),
-  Age_lt_90=list(name='Age < 90', prefix='age_lt_90'),
-  Amd_Only=list(name='AMD Only', prefix='amd_only')
-)
-```
-
 
 ### Set Metadata Factor Levels
 ```{r}
@@ -167,97 +157,46 @@ amd_only_master_table = setFactorsLevels(
   )
 ```
 
-### P-Value Annotationas
-```{r}
-pval_annotations = getPvalAnnotations(
-  variables=c(calculated_exp_vars),
-  master_table=all_master_table,
-  pval_height_factor=1.2,
-  pair_stats=pair_stats
-)
-```
-
-
-## Plots
+## Raw Plots
 ### All Subgroups
-#### Indices
 ```{r}
-makeAlphaDivPlot(
-  all_master_table,
-  indices=calculated_exp_vars,
-  aesthetics = list(x_var='index', color_var='index', facet_var='index')
-) + 
-  ggtitle("Alpha Diversity") +
-  ylab("Value")
-```
-
-#### AMD vs. Control
-```{r}
-makePairPlot(
+makeBoxAndDotplot(
   master_table=all_master_table,
   indices=calculated_exp_vars,
-  var_data=observational_variables$CaseString,
   aesthetics=list(
-    x_var='CaseString', 
-    color_var='CaseString', 
+    x_var='index', 
+    color_var='index', 
     facet_var='index'
     ),
-  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
-  title_template="Alpha Diversity -- All Subgroups: "
+  title=paste(analysis_title, "-- All Subgroups")
 )
-
-
 ```
 
 ### Age < 90
-#### Indices
 ```{r}
-makeAlphaDivPlot(
-  age_lt_90_master_table,
-  indices=calculated_exp_vars,
-  aesthetics = list(x_var='index', color_var='index', facet_var='index')
-) + 
-  ggtitle("Alpha Diversity: Age < 90") +
-  ylab("Value") 
-```
-
-#### AMD vs. Control
-```{r}
-
-makePairPlot(
+makeBoxAndDotplot(
   master_table=age_lt_90_master_table,
   indices=calculated_exp_vars,
-  var_data=observational_variables$CaseString,
-  aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index'),
-  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
-  title_template="Alpha Diversity -- Age < 90: "
+  aesthetics=list(
+    x_var='index', 
+    color_var='index', 
+    facet_var='index'
+    ),
+  title=paste(analysis_title, "-- Age < 90")
 )
-
 ```
-
 
 ### AMD Only
 
-#### Indices
 ```{r}
-makeAlphaDivPlot(
-  age_lt_90_master_table,
+makeBoxAndDotplot(
+  master_table=amd_only_master_table,
   indices=calculated_exp_vars,
-  aesthetics = list(x_var='index', color_var='index', facet_var='index')
-) + 
-  ggtitle("Alpha Diversity -- AMD Only") +
-  ylab("Value")
-```
-
-#### Covariates
-
-```{r}
-plotPairTests(
-  variables=amd_only_variables,
-  master_table=all_master_table,
-  indices=calculated_exp_vars,
-  title_template="Alpha Diversity AMD Only: ",
-  annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+  aesthetics=list(
+    x_var='index', 
+    color_var='index', 
+    facet_var='index'
+    ),
+  title=paste(analysis_title, "--AMD Only")
 )
-
 ```
