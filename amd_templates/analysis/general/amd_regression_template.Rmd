@@ -45,11 +45,20 @@ Data Clustered at the Genus level.
 
 ### [Close]
 
-### Sourcing setup file
+
 ```{r}
-source('setup.R')
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_title = "${analysis_title}"
 ```
 
+# MiSeq-${miseq_run_number} `r analysis_title` Regression Tests {.tabset}
+## Clustering Level
+Data clustered at the 'r toupper('${clustering_level}')` Level.
+
+## Setup
 ### Start Conda ENV
 ```{r}
 startCondaEnv('alphadiv')
@@ -60,11 +69,8 @@ startCondaEnv('alphadiv')
 library(rmarkdown)
 library(knitr)
 
-opts_chunk$set(
-  echo=TRUE,
-  dpi=300,
-  fig.width=12
-  )
+${knitr_options}
+
 ```
 
 ### Load Libraries
@@ -83,29 +89,29 @@ library(nlme)
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-source('~/utilities/analysis-utilities/project_utilities.R')
+source('~/utilities/analysis-utilities/amd_project_utilities.R')
 ```
 
-
-### Set Paths
-```{r}
-source('./set_paths.R')
-```
 
 ### Load Data
 ```{r}
-filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_diversity_master_tables.xlsx')
+filename = makeDataFileName(
+  'master_tables.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
 
 all_master_table = readWorkbook(filename, sheet='All Subgroups')
 age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
 amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
 
-sample_metadata = read.delim(
-  file.path(metadata_dir, 'miseq-239_metadata_CNV_GA.tsv'), 
-  stringsAsFactors=F
-  )
-
-source(file.path(metadata_dir, 'observational_variables.R'))
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
 ```
 
 ### Variables of interest
@@ -129,6 +135,8 @@ categorical_variable_names = c(
 )
 categorical_variables = 
   observational_variables[categorical_variable_names]
+observational_variable_names = observational_variables %>% names() %>% unname()
+
 ```
 
 #### Filter by Sample Number Threshold
@@ -183,7 +191,7 @@ for (varname in amd_only_excluded_variables)
 #### Calculated Experimental Variables
 
 ```{r}
-calculated_exp_vars = c('Observed', 'Shannon', 'Simpson')
+calculated_exp_vars = ${calculated_exp_vars}
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
@@ -196,13 +204,11 @@ subgroups = list(
 )
 ```
 
-
 ### Set Metadata Factor Levels
 ```{r}
-all_master_table = setFactorsLevels(all_master_table, categorical_variables)
-age_lt_90_master_table = setFactorsLevels(age_lt_90_master_table, categorical_variables)
-amd_only_master_table = setFactorsLevels(amd_only_master_table, categorical_variables)
-sample_metadata = setFactorsLevels(sample_metadata, categorical_variables)
+all_master_table = setFactorsLevels(all_master_table, observational_variable_names)
+age_lt_90_master_table = setFactorsLevels(age_lt_90_master_table, observational_variable_names)
+amd_only_master_table = setFactorsLevels(amd_only_master_table, observational_variable_names)
 ```
 
 
@@ -280,7 +286,7 @@ regression_effect_sizes = makeRegressionStatsContrastTemplate(flatten_chr(all_co
 exp_vars = calculated_exp_vars
 predictors = control_only_variables
 master_table = all_master_table
-contrast_names = control_only_contrast_names %>% flatten_chr()
+contrasts = control_only_contrast_names %>% flatten_chr()
 index_name_template = 'All_'
 
 # regression_pvals = regression_pvals_template
@@ -301,7 +307,7 @@ for (var in exp_vars)
   
   pvals = getRegressionPvals(
     fit,
-    contrast_names,
+    contrasts,
     index_name
   )
   
@@ -309,7 +315,7 @@ for (var in exp_vars)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
-    contrast_names,
+    contrasts,
     index_name
   )
 
@@ -343,7 +349,7 @@ for (var in exp_vars)
   
   pvals = getRegressionPvals(
     fit,
-    unlist(contrast_names),
+    contrasts,
     index_name
   )
   
@@ -351,7 +357,7 @@ for (var in exp_vars)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
-    unlist(contrast_names),
+    contrasts,
     index_name
   )
 
@@ -386,7 +392,7 @@ for (var in exp_vars)
   
   pvals = getRegressionPvals(
     fit,
-    contrast_names,
+    contrasts,
     index_name
   )
   
@@ -394,7 +400,7 @@ for (var in exp_vars)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
-    contrast_names,
+    contrasts,
     index_name
   )
 
@@ -442,14 +448,22 @@ openxlsx::writeData(
 
 filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_div_regression_stats.xlsx')
 
+filename = makeDataFileName(
+  'regression_stats.xlsx', 
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+  )
+
 saveWorkbook(regression_stats, file=filename, overwrite=T)
 ```
 
 
 
-```{r}
+```
 categorical_data = 
-  sample_metadata %>%
+  sample_data %>%
   select(
     Gender,
     CaseString,
@@ -467,7 +481,7 @@ categorical_data =
 ```
 
 
-```{r}
+```
 num_vars = length(categorical_variable_names)
 
 categorical_chisq_pvals = matrix(rep(0, num_vars*num_vars), ncol=num_vars, nrow=num_vars)
@@ -483,7 +497,7 @@ for (var in categorical_variable_names)
     if (var != other_var)
     {
       test =
-        sample_metadata %>%
+        sample_data %>%
         select(var, other_var) %>%
         table() %>%
         chisq.test()

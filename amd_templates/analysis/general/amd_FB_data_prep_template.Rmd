@@ -76,7 +76,7 @@ library(kableExtra)
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-source('~/utilities/analysis-utilities/project_utilities.R')
+source('~/utilities/analysis-utilities/amd_project_utilities.R')
 ```
 
 ### Load Data
@@ -107,17 +107,8 @@ sample_data =
     ) %>%
   filter(SampleID!='Undetermined')
 
-sample_data_columns = colnames(sample_data) %>% setdiff('SampleName')
+sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
-
-asv_table_cols = 
-  data.frame(
-    SampleID=colnames(asv_table)
-  ) %>%
-  inner_join(sample_data, by='SampleID') %>%
-  pull(SampleName)
-
-colnames(asv_table) = c('ASVs', asv_table_cols)
 
 ```
 
@@ -141,19 +132,6 @@ genus_taxa_abundance = getFilteredTaxaCounts(
   id_col="SampleName",
   normalize=T
   )
-
-phylum_taxa_abundance = getFilteredTaxaCounts(
-  asv_table,
-  taxonomy_table,
-  sample_data, 
-  lowest_rank='Phylum',
-  relative_abundance_cutoff=relative_abundance_cutoff,
-  prevalence_cutoff=prevalence_cutoff,
-  id_col="SampleName",
-  normalize=T
-  )
-
-filtered_taxa = genus_taxa_abundance$short_glommed_taxa
 
 fb_taxa_abundance = 
   genus_taxa_abundance %>%
@@ -183,13 +161,6 @@ Each row represents a different sample.
 The three measures are different ways of characterize the relationship between Firmicute and Bacteroidetes abundance. The $fbidx$ varies from -1 (only Firmicutes present) to 1 (only Bacteroidetes present) for that sample.
 
 ```{r}
-fb_master_table = getMasterTable(
-  fb_taxa_abundance,
-  sample_data,
-  'SampleName',
-  'Phylum'
-)
-
 genus_master_table = getMasterTable(
   genus_taxa_abundance,
   sample_data,
@@ -197,15 +168,13 @@ genus_master_table = getMasterTable(
   'short_glommed_taxa'
 )
 
-master_table = 
-  fb_master_table %>% 
-  select(SampleName, Firmicutes, Bacteroidetes) %>%
-  inner_join(genus_master_table, by='SampleName')
-
-sample_data_columns = setdiff(sample_data_columns, 'SampleName')
-
 fb_master_table = 
-  master_table %>%
+  fb_taxa_abundance %>% 
+  column_to_rownames('Phylum') %>% 
+  t() %>% 
+  data.frame(stringsAsFactors=F) %>% 
+  rownames_to_column('SampleName') %>%
+  inner_join(genus_master_table, by='SampleName') %>%
   mutate(
     F2B_Ratio = Firmicutes/Bacteroidetes,
     LogF2B_Ratio = log(F2B_Ratio),
@@ -223,20 +192,33 @@ fb_master_table =
     everything()
     )
 
+all_master_table = fb_master_table
+age_lt_90_master_table = all_master_table %>% filter(Age < 90)
+amd_only_master_table = all_master_table %>% filter(CaseString == 'AMD')
+
 ```
 
 ## Write Table
 ```{r}
+FB_indices = createWorkbook()
+
+addWorksheet(FB_indices, sheetName="All Subgroups")
+openxlsx::writeData(FB_indices, sheet="All Subgroups", all_master_table)
+addWorksheet(FB_indices, sheetName="Age < 90")
+openxlsx::writeData(FB_indices, sheet="Age < 90", age_lt_90_master_table)
+addWorksheet(FB_indices, sheetName="AMD Only")
+openxlsx::writeData(FB_indices, sheet="AMD Only", amd_only_master_table)
+
 filename = makeDataFileName(
   'master_tables.xlsx',
   tables_dir,
-  analysis_type
+  analysis_type,
+  "${miseq_project_prefix}",
+  "${clustering_level}"
 )
+print(filename)
 
-write.xlsx(
-  fb_master_table,
-  file=filename,
-  quote=F
-)
+saveWorkbook(FB_indices, file=filename, overwrite=T)
 ```
+
 

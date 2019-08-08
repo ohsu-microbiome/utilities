@@ -44,11 +44,12 @@ analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
 analysis_title = "${analysis_title}"
+
 ```
 
 # MiSeq-${miseq_run_number} `r analysis_title` Data Prep {.tabset}
 ## Clustering Level
-Data clustered at the 'r toupper(clustering_level)` Level.
+Data clustered at the 'r toupper('${clustering_level}')` Level.
 
 ## Setup 
 ### Start Conda ENV
@@ -76,7 +77,7 @@ library(openxlsx)
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-source('~/utilities/analysis-utilities/project_utilities.R')
+source('~/utilities/analysis-utilities/amd_project_utilities.R')
 ```
 
 ### Load Data
@@ -107,17 +108,7 @@ sample_data =
     ) %>%
   filter(SampleID!='Undetermined')
 
-sample_data_columns = colnames(sample_data) %>% setdiff('SampleName')
-sample_names = sample_data$SampleName
-
-asv_table_cols = 
-  data.frame(
-    SampleID=colnames(asv_table)
-  ) %>%
-  inner_join(sample_data, by='SampleID') %>%
-  pull(SampleName)
-
-colnames(asv_table) = c('ASVs', asv_table_cols)
+sample_data_columns = colnames(sample_data)
 
 ```
 
@@ -205,9 +196,12 @@ openxlsx::writeData(alpha_div_indices, sheet="AMD Only", amd_only_master_table)
 
 filename = makeDataFileName(
   'master_tables.xlsx',
-  tables_dir,
-  analysis_type
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
 )
+print(sprintf("master table file: %s", filename))
 
 saveWorkbook(alpha_div_indices, file=filename, overwrite=T)
 ```

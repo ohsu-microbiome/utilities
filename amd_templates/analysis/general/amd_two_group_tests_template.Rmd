@@ -42,12 +42,12 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
-analysis_title = ${analysis_title}
+analysis_title = "${analysis_title}"
 ```
 
 # MiSeq-${miseq_run_number} `r analysis_title` Two Group Tests {.tabset}
 ## Clustering Level
-Data clustered at the `r toupper(clustering_level)` Level.
+Data clustered at the 'r toupper('${clustering_level}')` Level.
 
 ## Setup
 
@@ -77,18 +77,28 @@ library(ggbeeswarm)
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-source('~/utilities/analysis-utilities/project_utilities.R')
+source('~/utilities/analysis-utilities/amd_project_utilities.R')
 ```
 
 ### Load Data
 ```{r}
-filename = makeDataFileName('master_tables.xlsx', tables_dir, analysis_type)
+filename = makeDataFileName(
+  'master_tables.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
 
 all_master_table = readWorkbook(filename, sheet='All Subgroups')
 age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
 amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
 
-source(file.path(metadata_dir, 'observational_variables.R'))
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
 ```
 
 
@@ -122,8 +132,8 @@ for (varname in amd_only_excluded_variables)
 #### Raw and Calculated Experimental Variables
 
 ```{r}
-raw_exp_vars = c('Firmicutes', 'Bacteroidetes')
-calculated_exp_vars = c('Observed', 'Shannon', 'Simpson')
+raw_exp_vars = ${raw_exp_vars}
+calculated_exp_vars = ${calculated_exp_vars}
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
@@ -161,18 +171,23 @@ all_two_group_stats = data.frame(
   TestGroup=character(),
   TestVariable=character(),
   Reference=character(),
-  Comparison=character(),
-  Observed=numeric(),
-  Shannon=numeric(),
-  Simpson=numeric()
+  Comparison=character()
   )
+
+for (var in c(raw_exp_vars, calculated_exp_vars))
+{
+  all_two_group_stats = 
+    all_two_group_stats %>%
+    mutate(!!as.name(var) := numeric())
+}
+
 
 ```
 
 #### All
 ```{r}
 pval_list = doTwoGroupTests(
-  exp_vars = calculated_exp_vars,
+  exp_vars = c(raw_exp_vars, calculated_exp_vars),
   test_var = observational_variables$CaseString,
   master_table = all_master_table,
   test_group = 'All'
@@ -185,7 +200,7 @@ all_two_group_stats %<>%
 #### Age < 90
 ```{r}
 pval_list = doTwoGroupTests(
-  exp_vars = calculated_exp_vars,
+  exp_vars = c(raw_exp_vars, calculated_exp_vars),
   test_var = observational_variables$CaseString,
   master_table = age_lt_90_master_table,
   test_group = 'Age_lt_90'
@@ -205,15 +220,16 @@ amd_only_two_group_stats = data.frame(
   Reference=character(),
   Comparison=character()
   )
-for (var in calculated_exp_vars)
+
+for (var in c(raw_exp_vars, calculated_exp_vars))
 {
   amd_only_two_group_stats = 
     amd_only_two_group_stats %>%
-    mutate(!!as.name(var)=numeric())
+    mutate(!!as.name(var) := numeric())
 }
 
 
-exp_vars = calculated_exp_vars
+exp_vars = c(raw_exp_vars, calculated_exp_vars)
 
 # test_var = amd_only_variables$AREDS
 master_table = amd_only_master_table
@@ -248,9 +264,13 @@ all_two_group_stats =
 ```{r}
 filename = makeDataFileName(
   'mann_whitney_unadjusted.xlsx', 
-  tables_dir,
-  analysis_type
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
   )
+
+print(filename)
 
 write.xlsx(
   all_two_group_stats,

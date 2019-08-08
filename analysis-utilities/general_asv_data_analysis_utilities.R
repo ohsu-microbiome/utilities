@@ -764,9 +764,13 @@ filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
 
   for (var in variable_list)
   {
+
+    print(var)
+
     name = var$covariate_of_interest
     case = var$case %>% as.character()
     control = var$control %>% as.character()
+
     print(sprintf('name: %s, case: %s, control: %s', name, case, control))
 
     temp_master_table = master_table %>% filter(!!as.name(name) %in% c(case, control))
@@ -795,7 +799,7 @@ filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
       temp_master_table %>% pull(name) %>% table() %>% print()
       min_samples = temp_master_table %>% pull(name) %>% table() %>% min(.)
     }
-    print(sprintf('min_samples: %d', min_samples))
+    print(sprintf('min_samples (all levels): %d', min_samples))
 
     if (min_samples >= num_samples_threshold)
     {
@@ -814,17 +818,23 @@ filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
 }
 
 
-
 doMultipleRankRegression = function(
   var,
   predictors,
-  master_table
+  master_table,
+  rank=T
 )
 {
   print(sprintf('regression for %s', var))
 
   formula_rhs = paste0(names(predictors), collapse=' + ')
-  formula = paste0('rank(', var, ')', '~', formula_rhs) %>% as.formula()
+  if (rank==T)
+  {
+    formula = paste0('rank(', var, ')', '~', formula_rhs) %>% as.formula()
+  } else
+  {
+    formula = paste0(var, '~', formula_rhs) %>% as.formula()
+  }
   # print(formula)
 
   fit = lm(formula, data=master_table)
@@ -839,12 +849,23 @@ getRegressionPvals = function(
 )
 {
 
-  pvals =
+  regression_results_table =
     fit %>%
     summary() %>%
-    coefficients() %>%
-    .[contrast_names, 'Pr(>|t|)'] %>%
-    as.list()
+    coefficients()
+  regression_contrasts = rownames(regression_results_table)
+
+  contrasts = intersect(contrast_names, regression_contrasts)
+
+  pvals = regression_results_table[contrasts, 'Pr(>|t|)'] %>% as.list()
+
+  # pvals =
+  #   fit %>%
+  #   summary() %>%
+  #   coefficients() %>%
+  #   .[setdiff(contrast_names,rownames(.)), 'Pr(>|t|)'] %>%
+  #   as.list() %>%
+  #   set_names(c(contrast_names[1], tail(names(.), -1)))
 
   pvals$Index=index_name
 
@@ -858,16 +879,57 @@ getRegressionEffectSizes= function(
 )
 {
 
-  effect_sizes =
+  regression_results_table =
     fit %>%
     summary() %>%
-    coefficients() %>%
-    .[contrast_names, 'Estimate'] %>%
-    as.list()
+    coefficients()
+  regression_contrasts = rownames(regression_results_table)
+
+  contrasts = intersect(contrast_names, regression_contrasts)
+
+  effect_sizes = regression_results_table[contrasts, 'Estimate'] %>% as.list()
+
+  # effect_sizes =
+  #   fit %>%
+  #   summary() %>%
+  #   coefficients() %>%
+  #   .[contrast_names, 'Estimate'] %>%
+  #   as.list() %>%
+  #   set_names(c(contrast_names[1], tail(names(.), -1)))
 
   effect_sizes$Index=index_name
 
   return(effect_sizes)
+}
+
+getRegressionStandardError= function(
+  fit,
+  contrast_names,
+  index_name
+)
+{
+
+  regression_results_table =
+    fit %>%
+    summary() %>%
+    coefficients()
+  regression_contrasts = rownames(regression_results_table)
+
+  contrasts = intersect(contrast_names, regression_contrasts)
+
+  standard_error = regression_results_table[contrasts, 'Std. Error'] %>% as.list()
+
+  # standard_error =
+  #   fit %>%1
+  #   summary() %>%
+  #   coefficients() %>%
+  #   .[contrast_names, 'Std. Error'] %>%
+  #   as.list() %>%
+  #   set_names(c(contrast_names[1], tail(names(.), -1)))
+
+  standard_error$Index=index_name
+
+  return(standard_error)
 }
 
 
@@ -1004,6 +1066,11 @@ makeContrastNames = function(
     print(names_to_add)
     contrast_names[[name]] = names_to_add
   }
+
+  contrast_names =
+    contrast_names %>%
+    unlist() %>%
+    unname()
 
   return(contrast_names)
 }
@@ -1411,6 +1478,7 @@ getPvalAnnotations = function(
     xloc = rep(1.5, num_annotations),
     yloc = pval_height_factor*master_table %>%
       select(variables) %>%
+      drop_na() %>%
       summarize_all(max) %>%
       unlist()
   )
@@ -1483,6 +1551,192 @@ plotEffectSizes = function(
 
   print(plt)
 }
+
+
+getMultipleRegressionStats = function(
+  predictor_vars,
+  response_vars,
+  master_table,
+  stats=c('pvalues', 'effect_sizes', 'std_errors'),
+  response_var_name="",
+  adjustment_method="",
+  parametric=F
+)
+{
+
+  ### Get contrast names
+  contrast_names = makeContrastNames(
+    predictor_vars,
+    master_table
+  ) %>%
+    unlist() %>%
+    unname()
+
+  ### Create stats template
+  regression_stats = list()
+
+  stats_for_contrast_template = data.frame(
+    response_var_name=character(),
+    pvalue=numeric(),
+    # padj=numeric(),
+    effect_size=numeric(),
+    std_error=numeric()
+  )
+
+  for (contrast in contrast_names)
+  {
+    regression_stats[[contrast]] = stats_for_contrast_template
+  }
+
+  ### Perform regression in loop over response vars
+  for (var in response_vars)
+  {
+    # print(sprintf('response var: %s', var))
+
+    ### Build Formula
+    if (parametric)
+    {
+      lhs = var
+    } else
+    {
+      lhs = sprintf('rank(%s)', var)
+    }
+
+    predictor_names = predictor_vars %>% names() %>% unname()
+    rhs = paste(predictor_names, collapse=' + ')
+    formula_string = paste0(lhs, ' ~ ', rhs)
+    formula = as.formula(formula_string)
+
+    # print(sprintf('formula: %s', formula_string))
+
+    ## Peroform Regression
+    # print("peform regression")
+    fit = lm(formula=formula, data=master_table)
+
+    ### Collect pvalues
+    if ('pvalues' %in% stats)
+    {
+      pvalues = getRegressionPvals(
+        fit,
+        contrast_names,
+        index_name=NULL
+      )
+      pvalues['response_var_name'] = var
+      # pvalues$Subgroup = subgroup
+
+      # regression_pvalues = regression_pvalues %>% add_row(!!!pvalues)
+
+    }
+
+    ### Collect effect sizes
+    if ('effect_sizes' %in% stats)
+    {
+
+      effect_sizes = getRegressionEffectSizes(
+        fit,
+        contrast_names,
+        index_name=NULL
+      )
+      effect_sizes['response_var_name'] = var
+      # effect_sizes$Subgroup = subgroup
+
+      # regression_effect_sizes = regression_effect_sizes %>% add_row(!!!effect_sizes)
+    }
+
+    ### Collect Standard Errors
+    if ('std_errors' %in% stats)
+    {
+      std_errors = getRegressionStandardError(
+        fit,
+        contrast_names,
+        index_name=NULL
+      )
+      std_errors['response_var_name'] = var
+      # std_errors$Subgroup = subgroup
+
+      # regression_std_errors = regression_std_errors %>% add_row(!!!std_errors)
+    }
+
+
+    for (contrast in contrast_names)
+    {
+      # print(var)
+      # print(contrast)
+      new_row = list()
+      new_row$response_var_name = var
+
+      if ("pvalues" %in% stats)
+      {
+        new_row$pvalue = pvalues[[contrast]]
+      }
+      if ("effect_sizes" %in% stats)
+      {
+        new_row$effect_size = effect_sizes[[contrast]]
+      }
+      if ("std_errors" %in% stats)
+      {
+        new_row$std_error = std_errors[[contrast]]
+      }
+      # print(new_row)
+      # print(regression_stats[[contrast]] %>% colnames)
+      regression_stats[[contrast]] %<>% add_row(!!!new_row)
+    }
+
+  }
+
+  ### Redefine response var column name
+  for (contrast in contrast_names)
+  {
+    regression_stats[[contrast]] %<>%
+      rename(!!response_var_name := response_var_name) %>%
+      arrange(pvalue)
+  }
+
+  ### Multiple comparison adjustment of pvalues
+  if (adjustment_method != "")
+  {
+    for (contrast in contrast_names)
+    {
+      regression_stats[[contrast]][['padj']] = p.adjust(
+        regression_stats[[contrast]][['pvalue']],
+        method=adjustment_method
+      )
+    }
+  }
+
+  return(regression_stats)
+
+}
+
+
+# predictor_vars=amd_only_variables
+# response_vars=top_n_features
+# master_table=iga_index_master_table
+# stats=c('pvalues', 'effect_sizes', 'std_errors')
+# response_var_name="Taxa"
+# adjustment_method="BH"
+# parametric=F
+#
+# regression_stats = getMultipleRegressionStats(
+#   predictor_vars=amd_only_variables,
+#   response_vars=top_n_features,
+#   master_table=iga_index_master_table,
+#   stats=c('pvalues', 'effect_sizes', 'std_errors'),
+#   response_var_name="Taxa",
+#   adjustment_method="BH",
+#   parametric=F
+# )
+
+# regression_stats = getMultipleRegressionStats(
+#   predictor_vars=amd_only_variables,
+#   response_vars=top_n_features,
+#   master_table=iga_index_master_table,
+#   stats=c('pvals', 'effect_sizes', 'std_errors'),
+#   response_var_name="Taxa",
+#   adjustment_method="BH"
+# )
+
+
 
 
 # predictors = c('x1', 'x2', 'x3')

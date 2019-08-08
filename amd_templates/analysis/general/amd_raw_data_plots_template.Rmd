@@ -46,10 +46,10 @@ tables_dir = "${tables_dir}"
 analysis_title = "${analysis_title}"
 ```
 
-# MiSeq-`r miseq_run_number` `r analysis_title` Raw Data Plots {.tabset}
+# MiSeq-${miseq_run_number} `r analysis_title` Raw Data Plots {.tabset}
 
 ## Clustering Level
-Data clustered at the `r toupper(clustering_level)` Level
+Data clustered at the 'r toupper('${clustering_level}')` Level.
 
 ## Setup
 
@@ -63,11 +63,7 @@ startCondaEnv('alphadiv')
 library(rmarkdown)
 library(knitr)
 
-opts_chunk$set(
-  echo=TRUE,
-  dpi=300,
-  fig.width=12
-  )
+${knitr_options}
 ```
 
 ### Load Libraries
@@ -86,7 +82,7 @@ library(nlme)
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-source('~/utilities/analysis-utilities/project_utilities.R')
+source('~/utilities/analysis-utilities/amd_project_utilities.R')
 ```
 
 ### Load Data
@@ -94,14 +90,20 @@ source('~/utilities/analysis-utilities/project_utilities.R')
 filename = makeDataFileName(
   'master_tables.xlsx', 
   tables_dir, 
-  analysis_type
+  analysis_type,
+  "${miseq_project_prefix}",
+  "${clustering_level}"
   )
 
 all_master_table = readWorkbook(filename, sheet='All Subgroups')
 age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
 amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
 
-source(file.path(metadata_dir, 'observational_variables.R'))
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
 
 ```
 

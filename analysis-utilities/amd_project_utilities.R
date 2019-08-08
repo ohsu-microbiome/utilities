@@ -21,33 +21,41 @@ findProjectRoot = function(starting_dir, target)
 }
 
 
-generateSourceFile = function(template_type = '')
+generateSourceFile = function(
+  template_type = '',
+  analysis_dir='.'
+  )
 {
-  project_root = findProjectRoot(getwd(), '.proj_root')
-  miseq_project_prefix = gsub('.*/', '', project_root)
+  print("generateSourceFile")
 
-  print(miseq_project_prefix)
-  print(clustering_level)
+  # # project_root = findProjectRoot(getwd(), '.proj_root')
+  # miseq_project_prefix = gsub('.*/', '', project_root)
+  #
+  # print(miseq_project_prefix)
+  # print(clustering_level)
+  #
+  # if (clustering_level == '')
+  # {
+  #   analysis_dir = file.path(project_root, 'analysis', analysis_type)
+  # } else
+  # {
+  #   analysis_dir = file.path(project_root, 'analysis', analysis_type, clustering_level)
+  # }
+  #
+  # dir = file.path(analysis_dir, 'src')
 
-  if (clustering_level == '')
-  {
-    analysis_dir = file.path(project_root, 'analysis', analysis_type)
-  } else
-  {
-    analysis_dir = file.path(project_root, 'analysis', analysis_type, clustering_level)
-  }
+  print(sprintf('template_type: %s', template_type))
+  print(sprintf('analysis_dir: %s', analysis_dir))
 
-  src_dir = file.path(analysis_dir, 'src')
-  print(sprintf("analysis dir: %s", analysis_dir))
-  tables_dir = file.path(analysis_dir, 'tables')
+  one_level_up_dir = gsub('(.*/).*$', '\\1', analysis_dir)
+  print(sprintf("one level up dir: %s", one_level_up_dir))
+
+  tables_dir = file.path(one_level_up_dir, 'tables')
   print(sprintf("tables dir: %s", tables_dir))
 
-  project_metadata_file = file.path(project_root, "metadata", "project_metadata.R")
-  print(sprintf("project metadata file: %s", project_metadata_file))
-  source(project_metadata_file)
-
-  current_dir <- getSrcDirectory(function(dummy) {dummy})
-  print(sprintf("current dir: %s", current_dir))
+  # project_metadata_file = file.path(project_root, "metadata", "project_metadata.R")
+  # print(sprintf("project metadata file: %s", project_metadata_file))
+  # source(project_metadata_file)
 
   templates_dir = file.path(utilities_dir, 'amd_templates/analysis', 'general')
   print(sprintf("templates dir: %s", templates_dir))
@@ -65,13 +73,13 @@ generateSourceFile = function(template_type = '')
     str_interp()
 
   new_source_file = file.path(
-    src_dir,
+    analysis_dir,
     paste0(
       miseq_project_prefix, "_",
       gsub("_template", "", template_filename)
     )
   )
-  print(new_source_file)
+  print(sprintf('new source file name: %s',new_source_file))
 
   writeLines(
     template_text,
@@ -82,11 +90,12 @@ generateSourceFile = function(template_type = '')
 }
 
 
-
 makeDataFileName = function(
   table_contents,
   tables_dir,
-  analysis_type
+  analysis_type,
+  miseq_project_prefix,
+  clustering_level
 )
 {
   filename = file.path(

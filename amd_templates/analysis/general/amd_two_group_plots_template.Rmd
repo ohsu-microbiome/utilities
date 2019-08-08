@@ -43,14 +43,14 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-analysis_title = ${analysis_title}
+analysis_title = "${analysis_title}"
 ```
 
 # MiSeq-${miseq_run_number} `r analysis_title` Two Group Plots {.tabset}
 Mann-Whitney Two Group Testing
 
 ## Clustering Level
-Data clustered at the 'r toupper(clustering_level)` Level.
+Data clustered at the 'r toupper('${clustering_level}')` Level.
 
 ## Setup
 
@@ -80,21 +80,40 @@ library(ggbeeswarm)
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-source('~/utilities/analysis-utilities/project_utilities.R')
+source('~/utilities/analysis-utilities/amd_project_utilities.R')
 ```
 
 ### Load Data
 ```{r}
-filename = makeDataFileName('master_tables.xlsx', tables_dir, analysis_type)
+filename = makeDataFileName(
+  'master_tables.xlsx', 
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+  )
+print(sprintf("master file path: %s", filename))
 
 all_master_table = readWorkbook(filename, sheet='All Subgroups')
 age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
 amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
 
-filename = makeDataFileName('mann_whitney_unadjusted.xlsx', tables_dir, analysis_type)
+filename = makeDataFileName(
+  'mann_whitney_unadjusted.xlsx', 
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+  )
+print(sprintf("mann whitney file path: %s", filename))
+
 two_group_stats = read.xlsx(filename)
 
-source(file.path(metadata_dir, 'observational_variables.R'))
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
 ```
 
 ### Variables of interest
@@ -127,6 +146,7 @@ for (varname in amd_only_excluded_variables)
 #### Calculated Experimental Variables
 
 ```{r}
+raw_exp_vars = ${raw_exp_vars}
 calculated_exp_vars = ${calculated_exp_vars}
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
@@ -151,7 +171,7 @@ amd_only_master_table = setFactorsLevels(
 ### P-Value Annotationas
 ```{r}
 pval_annotations = getPvalAnnotations(
-  variables=c(calculated_exp_vars),
+  variables=c(raw_exp_vars, calculated_exp_vars),
   master_table=all_master_table,
   pval_height_factor=1.2,
   two_group_stats=two_group_stats
@@ -165,14 +185,14 @@ pval_annotations = getPvalAnnotations(
 ```{r}
 makeBoxAndDotplot(
   master_table=all_master_table,
-  indices=calculated_exp_vars,
+  indices=c(raw_exp_vars, calculated_exp_vars),
   var_data=observational_variables$CaseString,
   aesthetics=list(
     x_var='CaseString', 
     color_var='CaseString', 
     facet_var='index'
     ),
-  annotation_data=NULL,
+  annotation_data=pval_annotations %>% filter(TestGroup=='All'),
   title=paste(analysis_title, "All Subgroups")
 )
 ```
@@ -181,14 +201,14 @@ makeBoxAndDotplot(
 ```{r}
 makeBoxAndDotplot(
   master_table=age_lt_90_master_table,
-  indices=calculated_exp_vars,
+  indices=c(raw_exp_vars, calculated_exp_vars),
   var_data=observational_variables$CaseString,
   aesthetics=list(
     x_var='CaseString', 
     color_var='CaseString', 
     facet_var='index'
     ),
-  annotation_data=NULL,
+  annotation_data=pval_annotations %>% filter(TestGroup=='Age_lt_90'),
   title=paste(analysis_title, "Age<90")
 )
 ```
@@ -199,7 +219,7 @@ makeBoxAndDotplot(
 plotAllTwoGroupTests(
   variables=amd_only_variables,
   master_table=amd_only_master_table,
-  indices=calculated_exp_vars,
+  indices=c(raw_exp_vars, calculated_exp_vars),
   title_template=paste(analysis_title, "AMD Only: "),
   annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
 )

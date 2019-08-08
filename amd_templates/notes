@@ -1,0 +1,4 @@
+2-8-2019
+* [ ] change setup_source_files to write to the working directory (calling directory). 
+      No longer build path name. Important for IgA Seq which has deeper tree.
+*[ ] change IgA seq to use tables as the others. This requres deeper tree.

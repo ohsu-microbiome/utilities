@@ -1,0 +1,907 @@
+---
+title: "MiSeq"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+```
+
+# `r toupper('${miseq_project_prefix}')` ${analysis_title} Data Prep {.tabset}
+## Clustering Level
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+## Introduction
+Calculate the IgA Index with the following steps:
+
+1. Filter samples so all have total counts > 1000
+1. Filter any ASVs for which Genus is NA  
+1. Sum the ASV counts for all unique taxa at the Genus level
+1. Calculate relative abundance
+1. Select the 40 taxa with the highest mean abundance
+1. Calculate IgA Index using ($iga^{\pm}$ is the relative abundance:
+$$ \textrm{IgA Index} = \frac{\log(iga^-) - \log(iga^+)}{\log(iga^-) + \log(iga^+)}$$
+1. Calculate ICI Score using:
+$$ \textrm{ICI Score} = \frac{iga^+}{iga^-}$$
+1. Calculate Alternative Index using:
+$$ \textrm{IgA Index} = \frac{iga^- - iga^+}{iga^- + iga^+}$$
+The last index attempts to make a more discriminative version of the IgA Index. Taking the log of the abundance compresses the low and middle range of counts. This alternative index shares the feature of being between -1 for taxa only represented in IgA- samples and +1 for taxa only represented in IgA+ samples. However, it has more discrimination in the middle ranges of the abundance distributions.
+
+As we will see later, it also has some advantageous statistical properties.`
+
+
+## Setup 
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('igaseq')
+```
+
+### Set Knitr Options
+```{r}
+library(rmarkdown)
+library(knitr)
+
+${knitr_options}
+```
+
+### Load Libraries
+```{r}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/amd_project_utilities.R')
+```
+
+
+### Load Tables
+* ASV table
+* Taxonomy Table
+* Sample Data
+
+**Sample Data Variables**
+`SubjectID`:  
+
+* Labels a particular patient (subject)  
+* Format: AMDC336, AMDC404, LD517, ...
+
+`SampleID`:  
+
+* Number associated with FASTA file  
+* One for each sample  
+* Format: s001, s002, ...  
+
+`SampleName`:  
+
+* Labels a sample
+* One to one with SampleID
+* Refers to specific subject and IgA Fraction
+* Format: AMDC336_Pos, AMDC404_Neg, LD517_AllBac, LD646_UnSorted
+
+`IGA`:
+
+* IgA Fraction: IgA+ (Pos), IgA- (Neg), tagged but not sorted (UnSorted), pre-tagging (AllBac)  
+
+```{r}
+asv_table = 
+  read.delim(
+    '${asv_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    )
+
+taxonomy_table = 
+  read.delim(
+    '${taxonomy_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  mutate_all(as.character())
+
+sample_data = 
+  read.delim(
+    '${sample_data_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  filter(SampleID!='Undetermined')
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+```
+
+
+## Filter Data {.tabset}
+
+### [Close]
+Close
+
+### Identify Subjects That Have a Sample Below Cutoff
+
+If any sample for that subject (IgA+, IgA-, AllBac) is below cutoff, then we must eliminate that subject.
+
+#### Set Cutoff
+```{r}
+min_sample_count_cutoff = 1000
+```
+
+To remove very noisy samples, we will identify samples that have fewer than `r min_sample_count_cutoff` counts. If any of these samples are in in the Pos, Neg, or AllBac fraction, then we remove all samples for that subject.  We are not concerned with samples in the Unsorted fraction becauase they are not used in the analysis.
+
+Variables created:
+
+`count_filtered_subjects`: subject IDs for all subjects that have Pos, Neg, and AllBac above cutoff  
+
+`count_filtered_samples`: Pos, Neg, and AllBac samples for these subjects
+
+#### Calculate and Plot Sample Sums
+```{r  fig.show='asis', "Filter Counts > 1000"}
+### Caculcate the sample sums
+sample_sums = 
+  asv_table %>%
+  select(-ASVs) %>%
+  colSums()
+
+qplot(
+  sample_sums, 
+  geom="histogram", 
+  bins=100
+) +
+geom_vline(xintercept=min_sample_count_cutoff, colour='red')
+
+```
+
+#### Select Samples Below Cutoff
+```{r}
+### Select the ones below cutoff
+samples_below_cutoff = 
+  sample_sums[sample_sums < min_sample_count_cutoff]
+# print(samples_below_cutoff)
+
+num_samples_below_cutoff = length(samples_below_cutoff)
+
+### List of subjects to remove
+subjects_to_remove = 
+  ### Only need to remove subjects if Pos, Neg, or AllBac
+  ### is below cutoff. Use grep to pull these out.
+  grep("(Pos|Neg|AllBac)", names(samples_below_cutoff), value=T) %>%
+  ### Next need to find just the subjectID part
+  gsub("([A-Z0-9]+)_.*$", "\\1", .)
+# print(subjects_to_remove)
+
+num_subjects_to_remove = length(subjects_to_remove)
+
+### List of subjects to keep
+count_filtered_subjects = 
+  sample_data %>%
+  filter(!(SubjectID %in% subjects_to_remove)) %>%
+  pull(SubjectID) %>%
+  as.character() %>%
+  unique()
+
+### List of samples to use. 
+count_filtered_samples = 
+  sample_data %>% 
+  filter(SubjectID %in% count_filtered_subjects) %>% 
+  pull(SampleName) %>% 
+  as.character()
+
+```
+
+`r ifelse(num_subjects_to_remove>1, 'Subjects', 'Subject')` `r subjects_to_remove` `r ifelse(num_subjects_to_remove>1, 'were', 'was')` removed becuase the `r ifelse(num_samples_below_cutoff>1, 'samples', 'sample')` [`r names(samples_below_cutoff)`] had less then `r min_sample_count_cutoff` total counts.
+
+#### Subset the Tables to Exclude Below-Cutoff Subjects
+```{r}
+asv_table = 
+  asv_table %>%
+  ### SampleNames are columns, so select them
+  select(count_filtered_samples, 'ASVs')
+
+sample_data = 
+  sample_data %>%
+  ### Filter to keep only good samples
+  filter(SampleName %in% count_filtered_samples)
+```
+
+#### Get Count Filtered Sample Names Different IgA Fractions
+This simplifies processing downstream
+```{r "Collect sample names and subjectc names"}
+### Could use `paste0(sample_data$SubjectID, '_Pos')`, but that _assumes_ that
+### the samples exist. The following grabs the _actual_ sample names.
+
+### This step is not entirely necessary. It just makes some downstream code a little
+### cleaner.
+iga_pos_samples = 
+  sample_data %>%
+  filter(IGA=='Pos') %>%
+  filter(SampleName %in% count_filtered_samples) %>%
+  pull(SampleName) %>%
+  as.character()
+
+iga_neg_samples = 
+  sample_data %>%
+  filter(IGA=='Neg') %>%
+  pull(SampleName) %>%
+  as.character()
+
+iga_allbac_samples = 
+  sample_data %>%
+  filter(IGA=='AllBac') %>%
+  pull(SampleName) %>%
+  as.character()
+```
+
+
+## Prepare Abundance Tables {.tabset}
+
+### [Close]
+Close
+
+### Get Genus Counts and Abundance 
+```{r}
+taxa_counts = getFilteredTaxaCounts(
+  asv_table,
+  taxonomy_table,
+  sample_data,
+  lowest_rank='${clustering_level}',
+  relative_abundance_cutoff=0,
+  prevalence_cutoff=0,
+  clean=T,
+  n_max_by_mean=F,
+  id_col="SampleName"
+  )
+
+taxa_abundance = 
+  getRelativeAbundance(taxa_counts) %>%
+  mutate(rowmean = apply(select(.,count_filtered_samples), 1, mean))
+
+### Can do a sanity check on the normalization: 
+taxa_abundance %>% 
+  select_if(is.numeric) %>% 
+  select(-rowmean) %>%
+  colSums() %>%
+  as.numeric() %>%
+  near(1) %>%
+  all()
+```
+
+### Select Top N Features from AllBac
+```{r}
+num_top_features = 40
+
+### Here will use ONLY the rowmeans of the
+### AllBac samples. Sort of repetitive, but seems less
+### confusing than doing it more efficiently.
+top_n_features = 
+  taxa_counts %>%
+  ### Select ONLY AllBac samples
+  select(iga_allbac_samples, short_glommed_taxa) %>%
+  ### remember to avoid non-numeric columns
+  mutate_at(vars(iga_allbac_samples), list(~ ./sum(.))) %>%
+  ### remember to avoid non-numeric columns
+  mutate(rowmean = apply(select(.,iga_allbac_samples), 1, mean)) %>%
+  ### Sort by rowmean
+  arrange(desc(rowmean)) %>%
+  ### Select the top N
+  head(n=num_top_features) %>%
+  pull(short_glommed_taxa) %>%
+  as.character()
+
+printFancyKableTable(top_n_features, caption="Top N Taxa from AllBac by Abundance") 
+```
+
+### Filter tax_abundance to just the top N genera
+```{r}
+taxa_abundance = 
+  taxa_abundance %>%
+  filter(short_glommed_taxa %in% top_n_features)
+
+```
+
+
+## Calculate Iga Index and ICI Score {.tabset}
+
+### [Close]
+Close
+
+### Preliminary
+
+* Make list of non-numeric columns for simpler selecting  
+* Separate IgA+ and IgA- abundance  
+```{r "Get IgA Index"}
+### Strip off some non-numeric columns to be added back on later
+### But leave short_glommed_taxa as a way to align the data back in later
+### by joining on that variable
+non_numeric_cols = 
+  taxa_abundance %>%
+  select(short_glommed_taxa, glommed_taxa, Phylum, Class, Order, Family, Genus)
+
+### Select IgA+ counts
+iga_pos_abundance = 
+  taxa_abundance %>%
+  ### Turn the short_glommed_taxa into rownames so math is ok
+  remove_rownames() %>%
+  column_to_rownames('short_glommed_taxa') %>%
+  ### select only iga pos samples (and no non-numeric columns)
+  select(iga_pos_samples) %>%
+  ### reduce the colnames to just the SubjectID
+  ### This way we are SURE that we have the columns where
+  ### they should be.
+  setNames(gsub("([A-Z0-9]+)_.*$", "\\1", colnames(.)))
+
+### Select IgA- counts
+iga_neg_abundance = 
+  taxa_abundance %>%
+  ### Turn the short_glommed_taxa into rownames so math is ok
+  remove_rownames() %>%
+  column_to_rownames('short_glommed_taxa') %>%
+  ### select only iga_neg_samples
+  select(iga_neg_samples) %>%
+  ### reduce the colnames to just the SubjectID
+  ### This way we are SURE that we have the columns where
+  ### they should be.
+  setNames(gsub("([A-Z0-9]+)_.*$", "\\1", colnames(.)))
+
+### Sanity check colnames
+setdiff(colnames(iga_neg_abundance), colnames(iga_pos_abundance))
+```
+
+### Set Zero Correction to Normalize Logs
+```{r}
+zero_correction = 0.0002
+print("getting corrected logs")
+log_neg = log(iga_neg_abundance + zero_correction)
+log_pos = log(iga_pos_abundance + zero_correction)
+```
+
+### IgA Index
+#### Calculate IgA Index
+```{r}
+  
+print("calculating index")
+iga_index = (log_neg - log_pos)/(log_neg + log_pos)
+
+### Add back in the non-numeric columns by joining to the dataframe
+### of them we pulled out before
+iga_index = 
+  iga_index %>%
+  ### Move the short_glommed_taxa back to being a column
+  ### We will use it for the join.
+  rownames_to_column('short_glommed_taxa') %>%
+  inner_join(non_numeric_cols, by='short_glommed_taxa') %>%
+  ### Select in the order we want
+  select(short_glommed_taxa, count_filtered_subjects, everything())
+```
+
+#### Display IgA Index
+```{r}
+iga_index %>%
+  mutate_if(is.numeric, list(~round(.,3))) %>%
+  datatable(
+    extensions = c('Buttons'), 
+    options = list(
+      paging = F,
+      searching = F,
+      autoWidth = TRUE,
+      ordering = TRUE,
+      dom = 'tB',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+      scrollX=T,
+      scrollY=600
+      ),
+    class="display",
+    caption="IgA Indices"
+  )
+```
+
+### ICI Score
+#### Calculate ICI Scores
+```{r}
+ici_score = 
+  (iga_pos_abundance + zero_correction)/(iga_neg_abundance + zero_correction)
+ici_score = 
+  ici_score %>%
+  ### Move the short_glommed_taxa back to being a column
+  ### We will use it for the join.
+  rownames_to_column('short_glommed_taxa') %>%
+  inner_join(non_numeric_cols, by='short_glommed_taxa') %>%
+  ### Select in the order we want
+  select(short_glommed_taxa, count_filtered_subjects, everything())
+```
+
+
+#### Display ICI Scores
+```{r}
+ici_score %>%
+  mutate_if(is.numeric, list(~round(.,3))) %>%
+  datatable(
+    extensions = c('Buttons'), 
+    options = list(
+      paging = F,
+      searching = F,
+      autoWidth = TRUE,
+      ordering = TRUE,
+      dom = 'tB',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+      scrollX=T,
+      scrollY=600
+      ),
+    class="display",
+    caption="ICI Scores from AB's Workflo"
+  )
+```
+
+### Alternative Index
+#### Calculate Alt Index
+```{r}
+alt_index = 
+  (iga_neg_abundance - iga_pos_abundance)/(iga_neg_abundance + iga_pos_abundance + 0.0002)
+
+alt_index = 
+  alt_index %>%
+  ### Move the short_glommed_taxa back to being a column
+  ### We will use it for the join.
+  rownames_to_column('short_glommed_taxa') %>%
+  inner_join(non_numeric_cols, by='short_glommed_taxa') %>%
+  ### Select in the order we want
+  select(short_glommed_taxa, count_filtered_subjects, everything())
+```
+
+#### Display Alternative Index
+```{r}
+alt_index %>%
+  mutate_if(is.numeric, list(~round(.,3))) %>%
+  datatable(
+    extensions = c('Buttons'), 
+    options = list(
+      paging = F,
+      searching = F,
+      autoWidth = TRUE,
+      ordering = TRUE,
+      dom = 'tB',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+      scrollX=T,
+      scrollY=600
+      ),
+    class="display",
+    caption="Alternative Indices"
+  )
+```
+
+## EDA on Indices and Scores {.tabset}
+
+### [Close]
+Close
+
+### Exploring Distributions
+The basic statistial tests we use test the null hypothesis that the means of the distributions of two or more samples are identical. Many of these only give valid results if the distributions have the same variance.
+
+Sequenced data is notoriously systematically heteroskedastic in that the variance generally increases with the mean in some consistent fashion, for example linearly.
+
+We can get a rough visual idea of whether our samples are homoskedastic by plotting the mean against the standard deviation (or vairance). 
+
+* Plot variance against SD  
+* Display linear fit
+* Display boxplots of distribution
+
+### Heatmaps
+```{r}
+alt_index %>%
+  column_to_rownames('short_glommed_taxa') %>%
+  select(count_filtered_subjects %>% sort()) %>%
+  as.matrix() %>%
+  pheatmap(
+    cluster_rows=T, 
+    cluster_cols=F, 
+    main="My Index",
+    fontsize=6
+    )
+
+iga_index %>%
+  column_to_rownames('short_glommed_taxa') %>%
+  select(count_filtered_subjects %>% sort()) %>%
+  as.matrix() %>%
+  pheatmap(
+    cluster_rows=T, 
+    cluster_cols=F, 
+    main="IgA Index",
+    fontsize=6
+    )
+
+ici_score %>%
+  column_to_rownames('short_glommed_taxa') %>%
+  select(count_filtered_subjects %>% sort()) %>%
+  as.matrix() %>%
+  pheatmap(
+    cluster_rows=T, 
+    cluster_cols=F, 
+    main="ICI Scores",
+    fontsize=8
+    )
+```
+
+### Add stats columns (row mean and row SD)
+```{r}
+iga_index %<>% 
+  mutate(
+    rowmean=select(., count_filtered_subjects) %>% apply(1, mean),
+    rowmedian=select(., count_filtered_subjects) %>% apply(1, median),
+    rowsd=select(., count_filtered_subjects) %>% apply(1, sd)
+  )
+ici_score %<>% 
+  mutate(
+    rowmean=select(., count_filtered_subjects) %>% apply(1, mean),
+    rowmedian=select(., count_filtered_subjects) %>% apply(1, median),
+    rowsd=select(., count_filtered_subjects) %>% apply(1, sd)
+  )
+alt_index %<>% 
+  mutate(
+    rowmean=select(., count_filtered_subjects) %>% apply(1, mean),
+    rowmedian=select(., count_filtered_subjects) %>% apply(1, median),
+    rowsd=select(., count_filtered_subjects) %>% apply(1, sd)
+  )
+```
+
+### IgA Index
+#### Homoskedasticity
+```{r}
+plot(
+  rowsd ~ rowmean,
+  iga_index,
+  xlab='mean',
+  ylab='sd',
+  main='iga indices'
+)
+print('Linear Regression')
+linfit = lm(rowsd~rowmean, data=iga_index)
+summ = summary(linfit)
+rsquared = summ$r.squared
+linfit_coef = coef(linfit)
+slope = linfit_coef[2]
+intercept = linfit_coef[1]
+print(summ)
+lines(iga_index$rowmean, predict(linfit), col = 'blue')
+```
+$R^2$: `r rsquared`  
+Slope: `r slope`  
+Intercept: `r intercept`  
+
+#### Boxplot: Distributions for Subject
+```{r, fig.width=12}
+iga_index %>%
+  select(count_filtered_subjects, short_glommed_taxa) %>%
+  gather(key='key', value='value', count_filtered_subjects) %>%
+  # ggplot(aes(x=reorder(short_glommed_taxa, value, median), y=value)) +
+  ggplot(aes(x=reorder(key, value, median), y=value)) +
+  theme(
+    axis.text.x  = element_text(angle=90)
+  ) +
+  geom_boxplot(alpha=0.2, fill='gray') +
+  xlab('SubjectID') +
+  ylab('IgA Index') +
+  ggtitle('IgA Indices by Subject')
+```
+
+#### Boxplots: Distributions for Taxa
+```{r, fig.width=12, fig.height=12}
+iga_index %>%
+  select(count_filtered_subjects, short_glommed_taxa) %>%
+  gather(key='key', value='value', count_filtered_subjects) %>%
+  ggplot(aes(x=reorder(short_glommed_taxa, value, median), y=value)) +
+  theme(
+    axis.text.x  = element_text(angle=90, size=14)
+  ) +
+  geom_boxplot(alpha=0.2, fill='gray') +
+  xlab('SubjectID') +
+  ylab('IgA Index') +
+  ggtitle('IgA Indices by Taxa')
+```
+
+### ICI Score
+#### Homoskedasticity
+```{r}
+plot(
+  rowsd~rowmean,
+  ici_score,
+  xlab='mean',
+  ylab='sd',
+  main='ici scores'
+)
+
+print('Linear Regression')
+linfit = lm(rowsd~rowmean, data=ici_score)
+summ = summary(linfit)
+rsquared = summ$r.squared
+linfit_coef = coef(linfit)
+slope = linfit_coef[2]
+intercept = linfit_coef[1]
+print(summ)
+lines(ici_score$rowmean, predict(linfit), col = 'blue')
+
+```
+
+$R^2$: `r rsquared`  
+Slope: `r slope`  
+Intercept: `r intercept`  
+
+#### Boxplot: Distributions for Subjects
+```{r, fig.width=12}
+ici_score %>%
+  select(count_filtered_subjects, short_glommed_taxa) %>%
+  gather(key='key', value='value', count_filtered_subjects) %>%
+  ggplot(aes(x=reorder(key, value, median), y=value)) +
+    theme(
+    axis.text.x  = element_text(angle=90)
+  ) +
+  geom_boxplot(alpha=0.2, fill='gray') +
+  xlab('SubjectID') +
+  ylab('ICI Score') +
+  ggtitle('ICI Score by Subject')
+```
+
+#### Log Boxplot: Distributions for Subjects
+```{r}
+ici_score %>%  
+  select_if(is.numeric) %>% 
+  mutate_all(list(~log(.))) %>%
+  gather() %>% 
+  ggplot(aes(x=reorder(key, value, median), y=value)) +
+  theme(
+    axis.text.x  = element_text(angle=90)
+  ) +
+  geom_boxplot(alpha=0.2, fill='gray') +
+  xlab('SubjectID') +
+  ylab('Log ICI Score') +
+  ggtitle('Log ICI Scores by Subject')
+```
+
+#### Boxplots: Distributions for Taxa
+```{r, fig.height=12}
+ici_score %>%
+  select(count_filtered_subjects, short_glommed_taxa) %>%
+  gather(key='key', value='value', count_filtered_subjects) %>%
+  ggplot(aes(x=reorder(short_glommed_taxa, value, median), y=value))+
+  geom_boxplot(alpha=0.2, fill='gray') +
+  theme(
+    axis.text.x  = element_text(angle=90, size=14)
+  ) +
+  xlab('Taxa') +
+  ylab('ICI Score') +
+  ggtitle('ICI Score by Taxa')
+```
+
+#### Log Boxplots: Distributions for Taxa
+```{r, fig.height=12}
+ici_score %>%
+  select(count_filtered_subjects, short_glommed_taxa) %>%
+  mutate_if(is.numeric, list(~log(.))) %>%
+  gather(key='key', value='value', count_filtered_subjects) %>%
+  ggplot(aes(x=reorder(short_glommed_taxa, value, median), y=value)) +
+  geom_boxplot(alpha=0.2, fill='gray') +
+  theme(
+    axis.text.x  = element_text(angle=90, size=14)
+  ) +
+  ggtitle('Log ICI Score by Taxa') +
+  xlab('Taxa') +
+  ylab('Log ICI Score')
+```
+
+### Alt Index
+#### Homoskedasticity
+```{r}
+plot(
+  rowsd ~ rowmean,
+  alt_index,
+  xlab='mean',
+  ylab='sd',
+  main='alt_index'
+)
+print(cor(alt_index$rowmean, alt_index$rowsd))
+linfit = lm(rowsd~rowmean, data=alt_index)
+summ = summary(linfit)
+rsquared = summ$r.squared
+linfit_coef = coef(linfit)
+slope = linfit_coef[2]
+intercept = linfit_coef[1]
+print(summ)
+lines(alt_index$rowmean, predict(linfit), col = 'blue')
+
+```
+$R^2$: `r rsquared`  
+Slope: `r slope`  
+Intercept: `r intercept`  
+
+
+#### Boxplot: Distributions for Subjects
+```{r, fig.width=12}
+alt_index %>%
+  select(count_filtered_subjects, short_glommed_taxa) %>%
+  gather(key='key', value='value', count_filtered_subjects) %>%
+  # ggplot(aes(x=reorder(short_glommed_taxa, value, median), y=value)) +
+  ggplot(aes(x=reorder(key, value, median), y=value)) +
+  geom_boxplot(alpha=0.2, fill='gray') +
+  ggtitle('Alternative Index by Subjects') +
+  xlab('Subject ID') +
+  ylab('Alternative Index') +
+  theme(
+    axis.text.x  = element_text(angle=90, size=14)
+  )
+```
+
+#### Boxplots: Distributions for Taxa
+```{r, fig.height=12}
+alt_index %>%
+  select(count_filtered_subjects, short_glommed_taxa) %>%
+  gather(key='key', value='value', count_filtered_subjects) %>%
+  ggplot(aes(x=reorder(short_glommed_taxa, value, median), y=value)) +
+  geom_boxplot(alpha=0.2, fill='gray') +
+  ggtitle('Alternative Index by Taxa') +
+  xlab('Taxa') +
+  ylab('Alternative Index') +
+  theme(
+    axis.text.x  = element_text(angle=90, size=14)
+  )
+```
+
+
+## Save R Workspace
+```{r}
+# save.image(file=file.path("${dada2_tables_dir}", 'miseq-499_prep_igaseq_data.RData'))
+```
+
+
+## Create Master Tables
+```{r}
+communal_sample_data = 
+  sample_data %>% filter(IGA=='AllBac') %>%
+  mutate(SampleName = SubjectID)
+
+subject_ids = sample_data$SubjectID %>% unique()
+
+makeIGAMasterTable = function(abundance)
+{
+  master_table = 
+    abundance %>% 
+    t() %>% data.frame(stringsAsFactors = F) %>%
+    rownames_to_column('SampleName') %>%
+    inner_join(communal_sample_data, by='SampleName')
+  
+  return(master_table)
+}
+
+iga_pos_master_table = makeIGAMasterTable(iga_pos_abundance)
+iga_neg_master_table = makeIGAMasterTable(iga_neg_abundance)
+# iga_allbac_master_table = makeIGAMasterTable(iga_allbac_abundance)
+# 
+iga_index_master_table = makeIGAMasterTable(
+  iga_index %>%
+  select(short_glommed_taxa, subject_ids) %>%
+  column_to_rownames('short_glommed_taxa')
+)
+ici_score_master_table = makeIGAMasterTable(
+  ici_score %>%
+  select(short_glommed_taxa, subject_ids) %>%
+  column_to_rownames('short_glommed_taxa')
+)
+alt_index_master_table = makeIGAMasterTable(
+  alt_index %>%
+  select(short_glommed_taxa, subject_ids) %>%
+  column_to_rownames('short_glommed_taxa')
+)
+
+```
+
+## Write Index Tables
+```{r}
+index_tables = createWorkbook()
+
+index_table_names = c("iga_index", "ici_score", "alt_index")
+
+for (index_tab_name in index_table_names)
+{
+  print(index_tab_name)
+  sheet_name = 
+    strsplit(index_tab_name, "_")[[1]] %>% 
+    tools::toTitleCase(.) %>% 
+    paste0(collapse=" ")
+  print(sheet_name)
+  addWorksheet(index_tables, sheetName=sheet_name)
+  openxlsx::writeData(index_tables, sheet=sheet_name, get(index_tab_name))
+  
+}
+
+filename = makeDataFileName(
+  'index_tables.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+print(filename)
+
+saveWorkbook(index_tables, file=filename, overwrite=T)
+```
+
+
+## Write Master Tables
+```{r}
+master_tables = createWorkbook()
+
+master_table_names = c("iga_pos", "iga_neg", "iga_index", "ici_score", "alt_index")
+
+for (tab_name in master_table_names)
+{
+  master_table_name = paste0(tab_name, "_master_table")
+  print(master_table_name)
+  sheet_name = strsplit(tab_name, "_")[[1]] %>% tools::toTitleCase(.) %>% paste0(collapse=" ")
+  print(sheet_name)
+  addWorksheet(master_tables, sheetName=sheet_name)
+  openxlsx::writeData(master_tables, sheet=sheet_name, get(master_table_name))
+  
+}
+
+addWorksheet(master_tables, sheetName='Taxa')
+openxlsx::writeData(master_tables, sheet="Taxa", top_n_features, colNames=F)
+
+filename = makeDataFileName(
+  'master_tables.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+print(filename)
+
+saveWorkbook(master_tables, file=filename, overwrite=T)
+```
+
+
