@@ -50,7 +50,7 @@ analysis_title = "${analysis_title}"
 # MiSeq-${miseq_run_number} `r analysis_title` Calculated Data Plots {.tabset}
 
 ## Clustering Level
-Data clustered at the 'r toupper('${clustering_level}')` Level.
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
 ## Setup
 

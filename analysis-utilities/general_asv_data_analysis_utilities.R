@@ -490,6 +490,16 @@ getFilteredTaxaCounts = function(
 {
   print("in getFilteredTaxaCounts")
 
+  # metadata = sample_data %>% filter(IGA=='AllBac')
+  # lowest_rank = 'asv'
+  # relative_abundance_cutoff = 0.002
+  # prevalence_cutoff = 0
+  # clean=T
+  # id_col='SubjectID'
+  # add_glommed_names=T
+  # normalize=T
+  # n_max_by_mean=F
+
   # print(sprintf("lowest_rank = %s", lowest_rank))
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
 
@@ -524,11 +534,13 @@ getFilteredTaxaCounts = function(
     ### if that genus is NA.
     clean_taxonomy_table =
       taxonomy_table %>%
+      filter(Kingdom == 'Bacteria') %>%
+      filter(!is.na(Phylum)) %>%
       # filter(sprintf("!is.na(%s)", lowest_rank))
       filter(!is.na(!!sym(lowest_rank)))
 
-    # print("dim clean tax table")
-    # print(dim(clean_taxonomy_table))
+    print("dim clean tax table")
+    print(dim(clean_taxonomy_table))
   }else
   {
     clean_taxonomy_table = taxonomy_table
@@ -545,6 +557,7 @@ getFilteredTaxaCounts = function(
       counts %>%
       ### Drop the ASVs
       select(!!c(sample_names, ranks_to_glom)) %>%
+      # select(-ASVs) %>%
       ### Group and sum
       group_by(.dots=ranks_to_glom) %>%
       summarize_all(sum) %>%
@@ -593,6 +606,117 @@ getFilteredTaxaCounts = function(
 
 }
 
+getFilteredTaxaCountsDev = function(
+  asv_table,
+  taxonomy_table,
+  metadata,
+  cluster_by=NA,
+  relative_abundance_cutoff=0,
+  prevalence_cutoff=0,
+  min_count_cutoff=0,
+  filter_by='Taxa',
+  clean_taxa=T,  ### remove NAs in lowest rank
+  n_max_by_mean=F,
+  id_col="SampleName", ### metadata column that containes the unique sample IDs
+  add_glommed_names=T,
+  normalize=F
+)
+{
+  print("in getFilteredTaxaCounts")
+
+  # print(sprintf("lowest_rank = %s", lowest_rank))
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+
+  lowest_rank_index = match(lowest_rank, all_ranks)
+  ### get just the ranks that will be used in
+  ### 1. The glommed name
+  ### 2. The step of aggregating sums
+  ranks_to_glom = all_ranks[1:lowest_rank_index]
+  short_ranks = all_ranks[c(1,lowest_rank_index)]
+  print("ranks to glom")
+  print(ranks_to_glom)
+
+  sample_names = as.character(metadata[,id_col])
+  # print(sprintf("length sample_names = %d", length(sample_names)))
+
+  print("creating asv taxa counts table")
+  counts = inner_join(asv_table, clean_taxonomy_table, by="ASVs")
+
+  if (!is.na(cluster_by) & toupper(cluster_by) != 'ASV')
+  {
+    # print("Aggregating by ranks")
+    ### Aggregate counts by ranks being kept
+    counts =
+      counts %>%
+      ### Drop the ASVs
+      select(!!c(sample_names, ranks_to_glom)) %>%
+      # select(-ASVs) %>%
+      ### Group and sum
+      group_by(.dots=ranks_to_glom) %>%
+      summarize_all(sum) %>%
+      ungroup()
+  }
+
+  # print("Filtering taxa")
+  # print("Relative Abundance Filter")
+
+  filtered_counts =
+    counts %>%
+    applyMinCountFilter(min_count_cutoff) %>%
+    applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
+    applyPrevalenceFilter(prevalence_cutoff)
+
+  # # print("current dim")
+  # print(dim(filtered_counts))
+
+  if (normalize)
+  {
+    filtered_counts = getRelativeAbundance(filtered_counts)
+  }
+
+  if (n_max_by_mean != F)
+  {
+    ### Keep only the n_max_by_mean features
+    filtered_counts =
+      filtered_counts %>%
+      ### Create a column of row means
+      mutate(mean=rowMeans(
+        select(., sample_names)/sum(select(., sample_names))
+      )) %>%
+      ### Order by the means (ascending)
+      arrange(mean) %>%
+      ### Take the highest ones (n_max_by_mean)
+      tail(n_max_by_mean) %>%
+      ### Drop the mean column
+      select(-mean)
+  }
+
+  if (add_glommed_names)
+  {
+    filtered_counts = addGlommedTaxaNames(filtered_counts, lowest_rank)
+  }
+
+  if (clean_taxa)
+  {
+    ### Remove any taxa that are NA at the lowest level.
+    ### No point in having ASVs aggregated to the same genus
+    ### if that genus is NA.
+    clean_taxonomy_table =
+      taxonomy_table %>%
+      # filter(sprintf("!is.na(%s)", lowest_rank))
+      filter(!is.na(!!sym(cluster_by)))
+
+    # print("dim clean tax table")
+    # print(dim(clean_taxonomy_table))
+  }else
+  {
+    clean_taxonomy_table = taxonomy_table
+  }
+
+  return(filtered_counts %>% data.frame())
+
+}
+
 getRelAbund = function(
   counts,
   use_cols=c()
@@ -624,6 +748,27 @@ getTopNbyRowMean = function(
   ### Not used I don't think. Seems superfluous
   if (length(use_samples)==0)
   {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     use_samples = everything()
   }
 
@@ -758,7 +903,11 @@ makeColDataPlot = function(
 }
 
 
-filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
+filterVarsBySampleThreshold = function(
+  master_table, 
+  threshold, 
+  variable_list
+  )
 {
   new_variable_list = list()
 
@@ -773,7 +922,9 @@ filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
 
     print(sprintf('name: %s, case: %s, control: %s', name, case, control))
 
-    temp_master_table = master_table %>% filter(!!as.name(name) %in% c(case, control))
+    temp_master_table = 
+      master_table %>% 
+      filter(!!as.name(name) %in% c(case, control))
 
     ### Ignore if not in master table
     if (!(name %in% colnames(master_table)))
@@ -817,6 +968,92 @@ filterVarsBySampleThreshold = function(master_table, threshold, variable_list)
   return(new_variable_list)
 }
 
+filterVarsBySampleThreshold2 = function(
+  master_table, 
+  threshold, 
+  variable_list,
+  covariate=c()
+)
+{
+  
+  master_table = all_master_table
+  threshold = 3
+  variable_list = observational_variables
+  covariate="CaseString"
+  var = observational_variables$ARMS2rs10490924
+  print(names(variable_list))
+  
+  new_variable_list = list()
+  
+  for (var in variable_list)
+  {
+  
+    keep = F
+    # print(var)
+    
+    name = var$covariate_of_interest
+    case = var$case %>% as.character()
+    control = var$control %>% as.character()
+    
+    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    
+    if (case=="" & control=="")
+    {
+      ### Always allow
+      print("continuous variable...keeping")
+      new_variable_list[[name]] = var
+      next
+    } 
+    
+    temp_master_table = 
+      master_table %>% 
+      filter(!!as.name(name) %in% c(case, control)) %>%
+      droplevels()
+    
+    crosstab = 
+      temp_master_table %>%
+      select(c(covariate, name)) %>%
+      table()
+    
+    print(crosstab)
+    min_samples = min(crosstab)
+    print(sprintf("min samples %s", min_samples))
+    
+    ### Ignore if not in master table
+    if (!(name %in% colnames(master_table)))
+    {
+      print("not in master table...skipping")
+      next
+    } 
+    
+    ### Make sure both levels present
+    if ((temp_master_table %>% pull(name) %>% unique() %>% length()) < 2)
+    {
+      print("only one level. skipping...")
+      next
+    }
+    
+    print(sprintf('min_samples (all levels): %d', min_samples))
+    
+    if (min_samples >= num_samples_threshold)
+    {
+      print("enough samples...keeping")
+      new_variable_list[[name]] = var
+      next
+    }else
+    {
+      print(sprintf('%s has only %d samples...skipping', name, min_samples))
+      next
+    }
+
+  }
+  
+  print("retained variables:")
+  print(new_variable_list %>% names())
+  
+  return(new_variable_list)
+}
+
 
 doMultipleRankRegression = function(
   var,
@@ -845,7 +1082,8 @@ doMultipleRankRegression = function(
 getRegressionPvals = function(
   fit,
   contrast_names,
-  index_name
+  index_name,
+  logistic=F
 )
 {
 
@@ -856,8 +1094,16 @@ getRegressionPvals = function(
   regression_contrasts = rownames(regression_results_table)
 
   contrasts = intersect(contrast_names, regression_contrasts)
+  
+  if (logistic)
+  {
+    pval_column = 'Pr(>|z|)'
+  } else
+  {
+    pval_column = 'Pr(>|t|)'
+  }
 
-  pvals = regression_results_table[contrasts, 'Pr(>|t|)'] %>% as.list()
+  pvals = regression_results_table[contrasts, pval_column] %>% as.list()
 
   # pvals =
   #   fit %>%
@@ -1564,6 +1810,14 @@ getMultipleRegressionStats = function(
 )
 {
 
+  # predictor_vars=all_variables
+  # response_vars=calculated_exp_vars
+  # master_table=all_master_table
+  # stats=c('pvalue', 'effect_size', 'std_error')
+  # response_var_name="Index"
+  # adjustment_method="BH"
+  # parametric=T
+
   ### Get contrast names
   contrast_names = makeContrastNames(
     predictor_vars,
@@ -1706,6 +1960,187 @@ getMultipleRegressionStats = function(
 
   return(regression_stats)
 
+}
+
+
+
+getLogisticRegressionStats = function(
+    base_predictor_vars,
+    additional_predictors,
+    logistic_response_var,
+    master_table,
+    stats=c('pvalue', 'effect_size', 'std_error'),
+    response_var_name="",
+    adjustment_method=""
+  )
+{
+  
+  
+  # base_predictor_vars=observational_variables[c('Age', 'Gender', 'Tissue_code')]
+  # additional_predictors=taxa
+  # logistic_response_var='CaseString'
+  # master_table=all_master_table
+  # stats=c('pvalue', 'effect_size', 'std_error')
+  # response_var_name='CaseString'
+  # index_name=NULL
+  # adjustment_method='BH'
+
+  
+  ### Get contrast names
+  base_contrast_names = makeContrastNames(
+    base_predictor_vars,
+    master_table
+  ) %>%
+    unlist() %>%
+    unname()
+  
+  ### Create stats template
+  regression_stats = list()
+  
+  stats_for_contrast_template = data.frame(
+    contrast=character(),
+    pvalue=numeric(),
+    # padj=numeric(),
+    effect_size=numeric(),
+    std_error=numeric()
+  )
+  
+  for (var in additional_predictors)
+  {
+    regression_stats[[var]] = stats_for_contrast_template
+  }
+  
+  
+  ### Perform regression in loop over response vars
+  for (var in additional_predictors)
+  {
+    # print(sprintf('response var: %s', var))
+    
+    ### Build Formula
+    lhs = logistic_response_var
+    
+    predictor_names = base_predictor_vars %>% names() %>% unname()
+    all_predictor_names = c(var, predictor_names)
+    all_contrast_names = c(base_contrast_names, var)
+    
+    rhs = paste(all_predictor_names, collapse=' + ')
+    formula_string = paste0(lhs, ' ~ ', rhs)
+    formula = as.formula(formula_string)
+    
+    # print(sprintf('formula: %s', formula_string))
+    
+    ## Peroform Regression
+    # print("peform regression")
+    fit = glm(
+      formula=formula, 
+      data=master_table,
+      family=binomial(link='logit')
+      )
+    
+    ### Collect pvalues
+    if ('pvalue' %in% stats)
+    {
+      pvalues = getRegressionPvals(
+        fit,
+        contrast_names = all_contrast_names,
+        index_name=NULL,
+        logistic=T
+      )
+      
+      # pvalues[['self']] = pvalues[[var]]
+      # pvalues[[var]] = NULL
+      # pvalues['response_var_name'] = logistic_response_var
+      # pvalues$Subgroup = subgroup
+      
+      # regression_pvalues = regression_pvalues %>% add_row(!!!pvalues)
+      
+    }
+    
+    ### Collect effect sizes
+    if ('effect_size' %in% stats)
+    {
+      
+      effect_sizes = getRegressionEffectSizes(
+        fit,
+        contrast_names = all_contrast_names,
+        index_name=NULL
+      )
+      effect_sizes['response_var_name'] = var
+      # effect_sizes$Subgroup = subgroup
+      
+      # regression_effect_sizes = regression_effect_sizes %>% add_row(!!!effect_sizes)
+    }
+    
+    ### Collect Standard Errors
+    if ('std_error' %in% stats)
+    {
+      std_errors = getRegressionStandardError(
+        fit,
+        contrast_names = all_contrast_names,
+        index_name=NULL
+      )
+      std_errors['response_var_name'] = var
+      # std_errors$Subgroup = subgroup
+      
+      # regression_std_errors = regression_std_errors %>% add_row(!!!std_errors)
+    }
+    
+    
+    stats_df = stats_for_contrast_template
+    
+    for (contrast in all_contrast_names)
+    {
+      # print(var)
+      # print(contrast)
+      new_row = list()
+      new_row$contrast = contrast
+
+      if ("pvalue" %in% stats)
+      {
+        new_row$pvalue = pvalues[[contrast]]
+      }
+      if ("effect_size" %in% stats)
+      {
+        new_row$effect_size = effect_sizes[[contrast]]
+      }
+      if ("std_error" %in% stats)
+      {
+        new_row$std_error = std_errors[[contrast]]
+      }
+      # print(new_row)
+      # print(regression_stats[[contrast]] %>% colnames)
+      stats_df %<>% add_row(!!!new_row)
+    }
+    
+    regression_stats[[var]] = stats_df
+    
+  }
+  
+  ### Redefine response var column name
+  # for (contrast in contrast_names)
+  # {
+  #   regression_stats[[contrast]] %<>%
+  #     rename(!!response_var_name := response_var_name) %>%
+  #     arrange(pvalue)
+  # }
+  
+  ### Multiple comparison adjustment of pvalues
+  # if (adjustment_method != "")
+  # {
+  #   
+  #   pvalues = lapply(regression_stats, function(x) x$pvalue)
+  #   
+  #   for (contrast in contrast_names)
+  #   {
+  #     regression_stats[[contrast]][['padj']] = p.adjust(
+  #       regression_stats[[contrast]][['pvalue']],
+  #       method=adjustment_method
+  #     )
+  #   }
+  # }
+  
+  return(regression_stats)
+  
 }
 
 

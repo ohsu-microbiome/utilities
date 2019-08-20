@@ -47,7 +47,7 @@ tables_dir = "${tables_dir}"
 Regression coefficients as effect size.
 
 ## Clustering Level
-Data clustered at the 'r toupper(clustering_level)` Level.
+Data clustered at the `r toupper(clustering_level)` Level.
 
 ## Setup {.tabset}
 
@@ -95,13 +95,6 @@ filename = makeDataFileName(
   "${clustering_level}"
 )
 
-filename = makeDataFileName(
-  'master_tables.xlsx',
-  tables_dir,
-  analysis_type,
-  "miseq-0278",
-  ""
-)
 print(filename)
 
 
@@ -133,7 +126,9 @@ effect_sizes = readWorkbook(filename, sheet='Effect Sizes')
 
 ```
 
-
+## Plots {.tabset}
+### [ ] Close
+### Gather Stats
 ```{r}
 pvalues = 
   pvalues %>%
@@ -150,7 +145,7 @@ effect_sizes =
   rownames_to_column('Predictor')
 ```
 
-
+### Plot Effect Size
 ```{r}
 response_vars = colnames(pvalues) %>% setdiff('Predictor')
 

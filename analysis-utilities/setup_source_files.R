@@ -24,6 +24,7 @@ getCurrentFileLocation <-  function()
   return(dirname(this_file))
 }
 
+print("getting location of setup_source_file.R (this file)")
 setup_script_dir = getCurrentFileLocation()
 print(sprintf("this script dir: %s", setup_script_dir))
 utilities_dir = '~/utilities'

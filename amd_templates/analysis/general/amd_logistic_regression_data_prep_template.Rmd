@@ -36,29 +36,24 @@ output:
   
 </style>
 
-
-
 ```{r}
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-analysis_title = "${analysis_title}"
 use_allbac = ${use_allbac}
-
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_title` Data Prep {.tabset}
-## Clustering Level
-Data clustered at the `r toupper('${clustering_level}')` Level.
+# MiSeq-${miseq_run_number} FB Analysis Data Prep{.tabset}
 
 ## Setup 
-### Start Conda ENV
-```{r}
-startCondaEnv('alphadiv')
-```
 
 ### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('${conda_env}')
+```
 
 ### Set Knitr Options
 ```{r}
@@ -72,8 +67,12 @@ ${knitr_options}
 ```{r}
 library(tidyverse)
 library(magrittr)
-library(DT)
+library(ggplot2)
+library(ggbeeswarm)
 library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
@@ -109,6 +108,7 @@ sample_data =
     ) %>%
   filter(SampleID!='Undetermined')
 
+
 if ("IGA" %in% colnames(sample_data) & use_allbac)
 {
   sample_data = 
@@ -123,6 +123,7 @@ if ("IGA" %in% colnames(sample_data) & use_allbac)
 }
 
 sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
 
 ```
 
@@ -140,18 +141,19 @@ genus_taxa_abundance = getFilteredTaxaCounts(
   asv_table,
   taxonomy_table,
   sample_data, 
-  lowest_rank="${clustering_level}",
+  lowest_rank='Genus',
   relative_abundance_cutoff=relative_abundance_cutoff,
   prevalence_cutoff=prevalence_cutoff,
   id_col="SampleName",
   normalize=T
   )
+
+filtered_taxa = genus_taxa_abundance$short_glommed_taxa
 ```
 
-### Create Master Table
-
+## Create Master Table
 ```{r}
-master_table = getMasterTable(
+genus_master_table = getMasterTable(
   genus_taxa_abundance,
   sample_data,
   'SampleName',
@@ -159,65 +161,44 @@ master_table = getMasterTable(
 )
 ```
 
-## Calculate Alpha Diversity {.tabset}
 
-### [Close]  
-
-### Subgroups
+## Write Table
 ```{r}
-all_alpha_diversity = calculateAlphaDiversity2(
-  master_table,
-  genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
-)
+logistic_regression_prep = createWorkbook()
 
-amd_only_alpha_diversity = calculateAlphaDiversity2(
-  master_table %>% filter(CaseString=='AMD'),
-  genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
-)
+addWorksheet(
+  wb=logistic_regression_prep, 
+  sheetName="Master Table"
+  )
 
-age_lt_90_alpha_diversity = calculateAlphaDiversity2(
-  master_table %>% filter(Age<90),
-  genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
-)
+openxlsx::writeData(
+  wb=logistic_regression_prep, 
+  sheet="Master Table", 
+  x=genus_master_table
+  )
 
-all_master_table =
-  inner_join(all_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
+addWorksheet(
+  wb=logistic_regression_prep, 
+  sheetName="Filtered Taxa"
+  )
 
-amd_only_master_table =
-  inner_join(amd_only_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
-
-
-age_lt_90_master_table =
-  inner_join(age_lt_90_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
-```
-
-### Write Alpha Diversity Tables
-```{r}
-alpha_div_indices = createWorkbook()
-
-addWorksheet(alpha_div_indices, sheetName="All Subgroups")
-openxlsx::writeData(alpha_div_indices, sheet="All Subgroups", all_master_table)
-addWorksheet(alpha_div_indices, sheetName="Age < 90")
-openxlsx::writeData(alpha_div_indices, sheet="Age < 90", age_lt_90_master_table)
-addWorksheet(alpha_div_indices, sheetName="AMD Only")
-openxlsx::writeData(alpha_div_indices, sheet="AMD Only", amd_only_master_table)
-addWorksheet(alpha_div_indices, sheetName="Taxa")
-openxlsx::writeData(alpha_div_indices, sheet="Taxa", genus_taxa_abundance$short_glommed_taxa)
+openxlsx::writeData(
+  wb=logistic_regression_prep,
+  sheet="Filtered Taxa", 
+  x=filtered_taxa
+  )
 
 filename = makeDataFileName(
-  'master_tables.xlsx',
+  'master_table.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
   "${clustering_level}"
 )
-print(sprintf("master table file: %s", filename))
 
-saveWorkbook(alpha_div_indices, file=filename, overwrite=T)
+print(filename)
+
+saveWorkbook(logistic_regression_prep, file=filename, overwrite=T)
 ```
+
+

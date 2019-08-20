@@ -41,6 +41,7 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
 ```
 
 # MiSeq-${miseq_run_number} FB Analysis Data Prep{.tabset}
@@ -107,6 +108,20 @@ sample_data =
     ) %>%
   filter(SampleID!='Undetermined')
 
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='AllBac')
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %>%
+    select('ASVs', ends_with('AllBac'))
+}
+
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
 
@@ -139,6 +154,17 @@ fb_taxa_abundance =
   filter(Phylum %in% c('Bacteroidetes', 'Firmicutes')) %>%
   group_by(Phylum) %>%
   summarise_all(sum)
+
+phyla_abundance = getFilteredTaxaCounts(
+  asv_table,
+  taxonomy_table,
+  sample_data,
+  lowest_rank='Phylum',
+  relative_abundance_cutoff=relative_abundance_cutoff,
+  prevalence_cutoff=prevalence_cutoff,
+  id_col="SampleName",
+  normalize=T
+  )
 ```
 
 # Firmicute and Bacteroidetes Table
@@ -192,7 +218,30 @@ fb_master_table =
     everything()
     )
 
-all_master_table = fb_master_table
+phylum_master_table = getMasterTable(
+  phyla_abundance,
+  sample_data,
+  key_column='SampleName',
+  taxa_colnames='short_glommed_taxa'
+  ) %>%
+  mutate(
+    F2B_Ratio = Firmicutes/Bacteroidetes,
+    LogF2B_Ratio = log(F2B_Ratio),
+    FB_Index = (Firmicutes - Bacteroidetes)/(Firmicutes + Bacteroidetes),
+    FxB = Firmicutes*Bacteroidetes
+  ) %>%
+  select(
+    SampleName, 
+    Firmicutes, 
+    Bacteroidetes, 
+    F2B_Ratio, 
+    LogF2B_Ratio, 
+    FB_Index, 
+    sample_data_columns,
+    everything()
+    )
+
+all_master_table = phylum_master_table
 age_lt_90_master_table = all_master_table %>% filter(Age < 90)
 amd_only_master_table = all_master_table %>% filter(CaseString == 'AMD')
 
@@ -208,11 +257,13 @@ addWorksheet(FB_indices, sheetName="Age < 90")
 openxlsx::writeData(FB_indices, sheet="Age < 90", age_lt_90_master_table)
 addWorksheet(FB_indices, sheetName="AMD Only")
 openxlsx::writeData(FB_indices, sheet="AMD Only", amd_only_master_table)
+addWorksheet(FB_indices, sheetName="Taxa")
+openxlsx::writeData(FB_indices, sheet="Taxa", phyla_abundance$short_glommed_taxa)
 
 filename = makeDataFileName(
   'master_tables.xlsx',
-  tables_dir,
-  analysis_type,
+  "${tables_dir}",
+  "${analysis_type}",
   "${miseq_project_prefix}",
   "${clustering_level}"
 )

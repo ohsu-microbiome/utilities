@@ -480,6 +480,44 @@ ici_score %>%
   )
 ```
 
+### Log ICI Score
+#### Calculate Alt Index
+```{r}
+log_ici_score = 
+  log(iga_pos_abundance + 0.0002) - log(iga_neg_abundance + 0.0002)
+
+
+log_ici_score = 
+  log_ici_score %>%
+  ### Move the short_glommed_taxa back to being a column
+  ### We will use it for the join.
+  rownames_to_column('short_glommed_taxa') %>%
+  inner_join(non_numeric_cols, by='short_glommed_taxa') %>%
+  ### Select in the order we want
+  select(short_glommed_taxa, count_filtered_subjects, everything())
+```
+
+#### Display Log ICI Score
+```{r}
+log_ici_score %>%
+  mutate_if(is.numeric, list(~round(.,3))) %>%
+  datatable(
+    extensions = c('Buttons'), 
+    options = list(
+      paging = F,
+      searching = F,
+      autoWidth = TRUE,
+      ordering = TRUE,
+      dom = 'tB',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+      scrollX=T,
+      scrollY=600
+      ),
+    class="display",
+    caption="Log ICI Score"
+  )
+```
+
 ### Alternative Index
 #### Calculate Alt Index
 ```{r}
@@ -578,6 +616,12 @@ iga_index %<>%
     rowsd=select(., count_filtered_subjects) %>% apply(1, sd)
   )
 ici_score %<>% 
+  mutate(
+    rowmean=select(., count_filtered_subjects) %>% apply(1, mean),
+    rowmedian=select(., count_filtered_subjects) %>% apply(1, median),
+    rowsd=select(., count_filtered_subjects) %>% apply(1, sd)
+  )
+log_ici_score %<>% 
   mutate(
     rowmean=select(., count_filtered_subjects) %>% apply(1, mean),
     rowmedian=select(., count_filtered_subjects) %>% apply(1, median),
@@ -688,21 +732,6 @@ ici_score %>%
   ggtitle('ICI Score by Subject')
 ```
 
-#### Log Boxplot: Distributions for Subjects
-```{r}
-ici_score %>%  
-  select_if(is.numeric) %>% 
-  mutate_all(list(~log(.))) %>%
-  gather() %>% 
-  ggplot(aes(x=reorder(key, value, median), y=value)) +
-  theme(
-    axis.text.x  = element_text(angle=90)
-  ) +
-  geom_boxplot(alpha=0.2, fill='gray') +
-  xlab('SubjectID') +
-  ylab('Log ICI Score') +
-  ggtitle('Log ICI Scores by Subject')
-```
 
 #### Boxplots: Distributions for Taxa
 ```{r, fig.height=12}
@@ -719,11 +748,53 @@ ici_score %>%
   ggtitle('ICI Score by Taxa')
 ```
 
-#### Log Boxplots: Distributions for Taxa
-```{r, fig.height=12}
-ici_score %>%
+### log ICI Score
+#### Homoskedasticity
+```{r}
+plot(
+  rowsd~rowmean,
+  log_ici_score,
+  xlab='mean',
+  ylab='sd',
+  main='log ici scores'
+)
+
+print('Linear Regression')
+linfit = lm(rowsd~rowmean, data=log_ici_score)
+summ = summary(linfit)
+rsquared = summ$r.squared
+linfit_coef = coef(linfit)
+slope = linfit_coef[2]
+intercept = linfit_coef[1]
+print(summ)
+lines(log_ici_score$rowmean, predict(linfit), col = 'blue')
+
+```
+
+$R^2$: `r rsquared`  
+Slope: `r slope`  
+Intercept: `r intercept`  
+
+#### Boxplot: Distributions for Subjects
+```{r, fig.width=12}
+log_ici_score %>%
   select(count_filtered_subjects, short_glommed_taxa) %>%
-  mutate_if(is.numeric, list(~log(.))) %>%
+  gather(key='key', value='value', count_filtered_subjects) %>%
+  ggplot(aes(x=reorder(key, value, median), y=value)) +
+    theme(
+    axis.text.x  = element_text(angle=90)
+  ) +
+  geom_boxplot(alpha=0.2, fill='gray') +
+  xlab('SubjectID') +
+  ylab('Log ICI Score') +
+  ggtitle('Log ICI Score by Subject')
+```
+
+
+#### Boxplots: Distributions for Taxa
+```{r, fig.height=12}
+log_ici_score %>%
+  select(count_filtered_subjects, short_glommed_taxa) %>%
   gather(key='key', value='value', count_filtered_subjects) %>%
   ggplot(aes(x=reorder(short_glommed_taxa, value, median), y=value)) +
   geom_boxplot(alpha=0.2, fill='gray') +
@@ -734,6 +805,7 @@ ici_score %>%
   xlab('Taxa') +
   ylab('Log ICI Score')
 ```
+
 
 ### Alt Index
 #### Homoskedasticity
@@ -832,6 +904,11 @@ ici_score_master_table = makeIGAMasterTable(
   select(short_glommed_taxa, subject_ids) %>%
   column_to_rownames('short_glommed_taxa')
 )
+log_ici_score_master_table = makeIGAMasterTable(
+  log_ici_score %>%
+  select(short_glommed_taxa, subject_ids) %>%
+  column_to_rownames('short_glommed_taxa')
+)
 alt_index_master_table = makeIGAMasterTable(
   alt_index %>%
   select(short_glommed_taxa, subject_ids) %>%
@@ -844,7 +921,7 @@ alt_index_master_table = makeIGAMasterTable(
 ```{r}
 index_tables = createWorkbook()
 
-index_table_names = c("iga_index", "ici_score", "alt_index")
+index_table_names = c("iga_index", "ici_score", "log_ici_score", "alt_index")
 
 for (index_tab_name in index_table_names)
 {
@@ -876,7 +953,7 @@ saveWorkbook(index_tables, file=filename, overwrite=T)
 ```{r}
 master_tables = createWorkbook()
 
-master_table_names = c("iga_pos", "iga_neg", "iga_index", "ici_score", "alt_index")
+master_table_names = c("iga_pos", "iga_neg", "iga_index", "ici_score", "log_ici_score", "alt_index")
 
 for (tab_name in master_table_names)
 {

@@ -1,0 +1,425 @@
+---
+title: "MiSeq"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+    
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_title = "${analysis_title}"
+```
+
+# MiSeq-${miseq_run_number} `r analysis_title` Two Group Plots {.tabset}
+Mann-Whitney Two Group Testing
+
+## Clustering Level
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+## Setup
+
+### Start Conda ENV
+```{r}
+startCondaEnv('${conda_env}')
+```
+
+### Set Knitr Options
+```{r}
+library(rmarkdown)
+library(knitr)
+
+${knitr_options}
+
+```
+
+### Load Libraries
+```{r}
+library(tidyverse)
+library(magrittr)
+library(DT)
+library(openxlsx)
+library(ggplot2)
+library(ggbeeswarm)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/igaseq_utilities.R')
+source('~/utilities/analysis-utilities/amd_project_utilities.R')
+```
+
+### Load Data
+```{r}
+filename = makeDataFileName(
+  'master_tables.xlsx', 
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+  )
+print(sprintf("master file path: %s", filename))
+
+short_glommed_taxa = readWorkbook(filename, "Taxa", colNames=F) %>% pull(1)
+ici_score_master_table = readWorkbook(filename, sheet='Ici Score') 
+log_ici_score_master_table = readWorkbook(filename, sheet='log Ici Score') 
+iga_index_master_table = readWorkbook(filename, sheet='Iga Index')
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+```
+
+### Variables of interest
+#### All Observational Variables
+```{r}
+# print(observational_variables)
+```
+
+### Set Metadata Factor Levels
+```{r}
+iga_index_master_table = setFactorsLevels(
+  iga_index_master_table, 
+  observational_variables
+  )
+ici_score_master_table = setFactorsLevels(
+  ici_score_master_table, 
+  observational_variables
+  )
+log_ici_score_master_table = setFactorsLevels(
+  log_ici_score_master_table, 
+  observational_variables
+  )
+```
+
+## ICI Score 
+
+### Setup data with pvals
+```{r}
+ici_score_data = ici_score_master_table %>%
+  select(short_glommed_taxa, CaseString, SubjectID)
+
+
+pvals = sapply(short_glommed_taxa, function(taxon)
+{
+  formula = paste(taxon, '~ CaseString') %>% as.formula()
+  data = ici_score_data
+  test = wilcox.test(formula, data)
+  # test = t.test(formula, data)
+  return(test$p.value)
+}, USE.NAMES=T)
+
+
+ici_score_with_pvals = 
+  data.frame(
+    short_glommed_taxa=names(pvals), 
+    Pval=pvals, 
+    Padj=p.adjust(pvals, method='BH'),
+    stringsAsFactors=T) %>%
+  inner_join(
+    ici_score_data %>%
+      column_to_rownames('SubjectID') %>%
+      select(short_glommed_taxa) %>%
+      t() %>%
+      data.frame(stringsAsFactors=F) %>%
+      rownames_to_column('short_glommed_taxa'),
+    by='short_glommed_taxa'
+  )
+
+```
+
+### Dotplots with pvals
+```{r}
+data_for_pval_plots = 
+  ici_score_with_pvals %>%
+  ### Filter by pval
+  filter(Pval <= 0.2) %>%
+  arrange(Pval)
+
+for (rowname in data_for_pval_plots$short_glommed_taxa)
+{
+  # row = data_for_pval_plots[rowname,]
+  row = data_for_pval_plots %>% filter(short_glommed_taxa == rowname)
+  print(rowname)
+  # print(row)
+  
+  makePvalPlot(
+    data_with_metadata=ici_score_master_table,
+    data_name='ICI Score', ### for title
+    data_col=row$short_glommed_taxa, ### e.g. taxon
+    variable_data=observational_variables$CaseString,
+    p_value=list(type='Undjusted', value=row$Pval)
+  )
+}
+
+```
+### Index Barplot
+```{r, fig.width=12, fig.height=10}
+  makeIndexBarPlot(
+    data_with_pvals=ici_score_with_pvals,
+    sample_metadata=ici_score_master_table,
+    variable_data=observational_variables$CaseString,
+    data_name='ICI Score',
+    pval_colname='Pval',
+    pval_name='Undjusted P-Values'
+    ) # + scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
+```
+
+## Log ICI Score 
+
+### Setup data with pvals
+```{r}
+log_ici_score_data = log_ici_score_master_table %>%
+  select(short_glommed_taxa, CaseString, SubjectID)
+
+
+pvals = sapply(short_glommed_taxa, function(taxon)
+{
+  formula = paste(taxon, '~ CaseString') %>% as.formula()
+  data = log_ici_score_data
+  test = wilcox.test(formula, data)
+  # test = t.test(formula, data)
+  return(test$p.value)
+}, USE.NAMES=T)
+
+
+log_ici_score_with_pvals = 
+  data.frame(
+    short_glommed_taxa=names(pvals), 
+    Pval=pvals, 
+    Padj=p.adjust(pvals, method='BH'),
+    stringsAsFactors=T) %>%
+  inner_join(
+    log_ici_score_data %>%
+      column_to_rownames('SubjectID') %>%
+      select(short_glommed_taxa) %>%
+      t() %>%
+      data.frame(stringsAsFactors=F) %>%
+      rownames_to_column('short_glommed_taxa'),
+    by='short_glommed_taxa'
+  )
+
+```
+
+### Dotplots with pvals
+```{r}
+data_for_pval_plots = 
+  log_ici_score_with_pvals %>%
+  ### Filter by pval
+  filter(Pval <= 0.2) %>%
+  arrange(Pval)
+
+for (rowname in data_for_pval_plots$short_glommed_taxa)
+{
+  # row = data_for_pval_plots[rowname,]
+  row = data_for_pval_plots %>% filter(short_glommed_taxa == rowname)
+  print(rowname)
+  # print(row)
+  
+  makePvalPlot(
+    data_with_metadata=log_ici_score_master_table,
+    data_name='Log ICI Score', ### for title
+    data_col=row$short_glommed_taxa, ### e.g. taxon
+    variable_data=observational_variables$CaseString,
+    p_value=list(type='Undjusted', value=row$Pval)
+  )
+}
+
+```
+### Index Barplot
+```{r, fig.width=12, fig.height=10}
+  makeIndexBarPlot(
+    data_with_pvals=log_ici_score_with_pvals,
+    sample_metadata=log_ici_score_master_table,
+    variable_data=observational_variables$CaseString,
+    data_name='Log ICI Score',
+    pval_colname='Pval',
+    pval_name='Undjusted P-Values'
+    ) # + scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
+```
+
+
+## IgA Index
+
+### Setup data with pvals
+```{r}
+iga_index_data = iga_index_master_table %>%
+  select(short_glommed_taxa, CaseString, SubjectID)
+
+
+pvals = sapply(short_glommed_taxa, function(taxon)
+{
+  formula = paste(taxon, '~ CaseString') %>% as.formula()
+  data = ici_score_data
+  test = wilcox.test(formula, data)
+  # test = t.test(formula, data)
+  return(test$p.value)
+}, USE.NAMES=T)
+
+
+iga_index_with_pvals = 
+  data.frame(
+    short_glommed_taxa=names(pvals), 
+    Pval=pvals, 
+    Padj=p.adjust(pvals, method='BH'),
+    stringsAsFactors=T) %>%
+  inner_join(
+    iga_index_data %>%
+      column_to_rownames('SubjectID') %>%
+      select(short_glommed_taxa) %>%
+      t() %>%
+      data.frame(stringsAsFactors=F) %>%
+      rownames_to_column('short_glommed_taxa'),
+    by='short_glommed_taxa'
+  )
+
+```
+
+### Dotplots with pvals
+```{r}
+data_for_pval_plots = 
+  ici_score_with_pvals %>%
+  ### Filter by pval
+  filter(Pval <= 0.2) %>%
+  arrange(Pval)
+
+for (rowname in data_for_pval_plots$short_glommed_taxa)
+{
+  # row = data_for_pval_plots[rowname,]
+  row = data_for_pval_plots %>% filter(short_glommed_taxa == rowname)
+  print(rowname)
+  # print(row)
+  
+  makePvalPlot(
+    data_with_metadata=iga_index_master_table,
+    data_name='IgA Index', ### for title
+    data_col=row$short_glommed_taxa, ### e.g. taxon
+    variable_data=observational_variables$CaseString,
+    p_value=list(type='Undjusted', value=row$Pval)
+  )
+}
+
+```
+
+### Index Barplot
+```{r, fig.width=12, fig.height=10}
+  makeIndexBarPlot(
+    data_with_pvals=iga_index_with_pvals,
+    sample_metadata=iga_index_master_table,
+    variable_data=observational_variables$CaseString,
+    data_name='IgA Index',
+    pval_colname='Pval',
+    pval_name='Undjusted P-Values'
+    ) # + scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
+```
+
+
+## Log ICI Score 
+
+### Setup data with pvals
+```{r}
+log_ici_score_data = log_ici_score_master_table %>%
+  select(short_glommed_taxa, CaseString, SubjectID)
+
+
+pvals = sapply(short_glommed_taxa, function(taxon)
+{
+  formula = paste(taxon, '~ CaseString') %>% as.formula()
+  data = log_ici_score_data
+  test = wilcox.test(formula, data)
+  # test = t.test(formula, data)
+  return(test$p.value)
+}, USE.NAMES=T)
+
+
+log_ici_score_with_pvals = 
+  data.frame(
+    short_glommed_taxa=names(pvals), 
+    Pval=pvals, 
+    Padj=p.adjust(pvals, method='BH'),
+    stringsAsFactors=T) %>%
+  inner_join(
+    log_ici_score_data %>%
+      column_to_rownames('SubjectID') %>%
+      select(short_glommed_taxa) %>%
+      t() %>%
+      data.frame(stringsAsFactors=F) %>%
+      rownames_to_column('short_glommed_taxa'),
+    by='short_glommed_taxa'
+  )
+
+```
+
+### Dotplots with pvals
+```{r}
+data_for_pval_plots = 
+  log_ici_score_with_pvals %>%
+  ### Filter by pval
+  filter(Pval <= 0.2) %>%
+  arrange(Pval)
+
+for (rowname in data_for_pval_plots$short_glommed_taxa)
+{
+  # row = data_for_pval_plots[rowname,]
+  row = data_for_pval_plots %>% filter(short_glommed_taxa == rowname)
+  print(rowname)
+  # print(row)
+  
+  makePvalPlot(
+    data_with_metadata=log_ici_score_master_table,
+    data_name='ICI Score', ### for title
+    data_col=row$short_glommed_taxa, ### e.g. taxon
+    variable_data=observational_variables$CaseString,
+    p_value=list(type='Undjusted', value=row$Pval)
+  )
+}
+
+```
+### Index Barplot
+```{r, fig.width=12, fig.height=10}
+  makeIndexBarPlot(
+    data_with_pvals=log_ici_score_with_pvals,
+    sample_metadata=log_ici_score_master_table,
+    variable_data=observational_variables$CaseString,
+    data_name='ICI Score',
+    pval_colname='Pval',
+    pval_name='Undjusted P-Values'
+    ) # + scale_fill_gradient2(low='#000000', mid='#222222', high='#FFFFFF')
+```
+

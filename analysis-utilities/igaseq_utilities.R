@@ -1,7 +1,6 @@
 library(dplyr)
 library(tidyr)
 library(magrittr)
-library(DESeq2)
 library(ggplot2)
 library(ggbeeswarm)
 library(pwr)
@@ -210,17 +209,20 @@ makePvalPlot = function(
   ### Risk/"Non-Risk" that may be different than case/control.
 
   ### Data for testing
-  # data_with_metadata=iga_index_and_sample_metadata
-  # data_name='IgA Index'
+  # data_with_metadata=ici_score_master_table
+  # data_name='ICI Score'
   # data_col=data_for_pval_plots$short_glommed_taxa[[1]]
-  # grouping_col=list(name='CNV_Either_Eye', values=c(0,1))
-  # grouping_col=list(name='CFH_rs1061170', values=c('TT', 'CC'))
-  # p_value=list(type='Unadjusted', value=data_for_pval_plots %>% pull(pvals) %>% .[[1]])
-  # variable_data = list(
-  #   covariate_of_interest='ARMS2_rs10490924',
-  #   control='GG',
-  #   case='TT'
-  # )
+  # # grouping_col=list(name='CNV_Either_Eye', values=c(0,1))
+  # # grouping_col=list(name='CFH_rs1061170', values=c('TT', 'CC'))
+  # row = data_for_pval_plots %>% filter(short_glommed_taxa == rowname)
+  #
+  # p_value=list(type='Unadjusted', value=data_for_pval_plots %>% pull(Pval) %>% .[[1]])
+  # variable_data = observational_variables$CaseString
+  # # variable_data = list(
+  # # #   covariate_of_interest='ARMS2_rs10490924',
+  # # #   control='GG',
+  # # #   case='TT'
+  # # # )
 
   variable_name=variable_data$covariate_of_interest
   case = variable_data$case
@@ -280,11 +282,12 @@ makePvalPlot = function(
 
   # print(sprintf('variable_name=%s', variable_name))
 
+  labels = variable_data$labels
   ### Allow for labels other than Case/Control
   if (length(labels) != 0)
   {
-    case_label = paste0(case, ' (', labels$case, ')')
-    control_label = paste0(control, ' (', labels$control, ')')
+    case_label = paste0(case, ' (', labels$reference, ')')
+    control_label = paste0(control, ' (', labels$comparison, ')')
     # print(sprintf('control_label=%s, case_label=%s', control_label, case_label))
 
     plot_data =

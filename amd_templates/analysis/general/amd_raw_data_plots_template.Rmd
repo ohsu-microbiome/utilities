@@ -49,7 +49,7 @@ analysis_title = "${analysis_title}"
 # MiSeq-${miseq_run_number} `r analysis_title` Raw Data Plots {.tabset}
 
 ## Clustering Level
-Data clustered at the 'r toupper('${clustering_level}')` Level.
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
 ## Setup
 
@@ -98,6 +98,7 @@ filename = makeDataFileName(
 all_master_table = readWorkbook(filename, sheet='All Subgroups')
 age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
 amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
+filtered_taxa = readWorkbook(filename, sheet='Taxa', colNames=F) %>% pull(1)
 
 source(file.path(
   "${project_root}", 

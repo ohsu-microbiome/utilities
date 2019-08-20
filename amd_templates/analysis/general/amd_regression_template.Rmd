@@ -56,7 +56,7 @@ analysis_title = "${analysis_title}"
 
 # MiSeq-${miseq_run_number} `r analysis_title` Regression Tests {.tabset}
 ## Clustering Level
-Data clustered at the 'r toupper('${clustering_level}')` Level.
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
 ## Setup
 ### Start Conda ENV
@@ -106,6 +106,7 @@ filename = makeDataFileName(
 all_master_table = readWorkbook(filename, sheet='All Subgroups')
 age_lt_90_master_table = readWorkbook(filename, sheet='Age < 90')
 amd_only_master_table = readWorkbook(filename, sheet='AMD Only')
+filtered_taxa = readWorkbook(filename, sheet='Taxa', colNames=F) %>% pull(1)
 
 source(file.path(
   "${project_root}", 
@@ -119,54 +120,6 @@ source(file.path(
 ```{r}
 # print(observational_variables)
 ```
-
-#### Categorical Variables
-```{r}
-categorical_variable_names = c(
-  'Gender',
-  'CaseString',
-  'ARMS2rs10490924', 
-  'CFHrs1061170', 
-  'CFHrs10737680', 
-  'SKIV2Lrs429608', 
-  'CNV_Either_Eye', 
-  'GA_No_CNV_Either_Eye', 
-  'AREDS'
-)
-categorical_variables = 
-  observational_variables[categorical_variable_names]
-observational_variable_names = observational_variables %>% names() %>% unname()
-
-```
-
-#### Filter by Sample Number Threshold
-```
-num_samples_threshold = 5
-
-all_variables = filterVarsBySampleThreshold(
-  all_master_table, 
-  num_samples_threshold,
-  observational_variables
-  )
-
-age_lt_90_variables = filterVarsBySampleThreshold(
-  age_lt_90_master_table, 
-  num_samples_threshold,
-  observational_variables
-  )
-
-amd_only_variables = filterVarsBySampleThreshold(
-  amd_only_master_table %>% select(-CaseString), 
-  num_samples_threshold,
-  observational_variables
-  )
-
-
-all_formula_rhs = paste0(names(all_variables), collapse=' + ')
-age_lt_90_formula_rhs = paste0(names(age_lt_90_variables), collapse=' + ')
-amd_only_formula_rhs = paste0(names(amd_only_variables), collapse=' + ')
-```
-
 
 #### AMD Only Observational Variables
 ```{r}
@@ -191,6 +144,7 @@ for (varname in amd_only_excluded_variables)
 #### Calculated Experimental Variables
 
 ```{r}
+raw_exp_vars = ${raw_exp_vars}
 calculated_exp_vars = ${calculated_exp_vars}
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
@@ -214,7 +168,7 @@ amd_only_master_table = setFactorsLevels(amd_only_master_table, observational_va
 
 ### Determine which covariates have sufficient samples with each value
 ```{r}
-num_samples_threshold = 3
+num_samples_threshold = 5
 
 all_variables = filterVarsBySampleThreshold(
   all_master_table,
@@ -273,9 +227,9 @@ control_only_contrast_names = makeContrastNames(
 ### Initialize regression stats table
 
 ```{r}
-regression_pvals = makeRegressionStatsContrastTemplate(flatten_chr(all_contrast_names))
+regression_pvals = makeRegressionStatsContrastTemplate(all_contrast_names)
 
-regression_effect_sizes = makeRegressionStatsContrastTemplate(flatten_chr(all_contrast_names))
+regression_effect_sizes = makeRegressionStatsContrastTemplate(all_contrast_names)
 ```
 
 ## Linear Regression {.tabset}
@@ -283,10 +237,10 @@ regression_effect_sizes = makeRegressionStatsContrastTemplate(flatten_chr(all_co
 ### All
 
 ```{r}
-exp_vars = calculated_exp_vars
-predictors = control_only_variables
+exp_vars = c(raw_exp_vars, calculated_exp_vars)
+predictors = all_variables
 master_table = all_master_table
-contrasts = control_only_contrast_names %>% flatten_chr()
+contrasts = all_contrast_names
 index_name_template = 'All_'
 
 # regression_pvals = regression_pvals_template
@@ -327,7 +281,7 @@ for (var in exp_vars)
 ### Age < 90
 
 ```{r}
-exp_vars = calculated_exp_vars
+exp_vars = c(raw_exp_vars, calculated_exp_vars)
 predictors = age_lt_90_variables
 master_table = age_lt_90_master_table
 contrasts = age_lt_90_contrast_names %>% unlist()
@@ -370,7 +324,7 @@ for (var in exp_vars)
 ### AMD Only
 
 ```{r}
-exp_vars = calculated_exp_vars
+exp_vars = c(raw_exp_vars, calculated_exp_vars)
 predictors = amd_only_variables
 master_table = amd_only_master_table
 contrasts = amd_only_contrast_names %>% unlist()
@@ -408,57 +362,123 @@ for (var in exp_vars)
 
 }
 ```
-### Visualize
+## Visualize
 ```{r}
 pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
 
 pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
 ```
 
-
-
-### Write Tables
+## Logistic Regression
 ```{r}
-regression_stats = createWorkbook()
+vars = setdiff(all_variables %>% names(), 'CaseString')
+
+all_logistic_regression_stats = getLogisticRegressionStats(
+  base_predictor_vars=observational_variables[vars],
+  additional_predictors=c(raw_exp_vars, calculated_exp_vars),
+  logistic_response_var='CaseString',
+  master_table=all_master_table,
+  stats=c('pvalue', 'effect_size', 'std_error'),
+  response_var_name='Index'
+)
+
+contrasts = makeContrastNames(observational_variables[vars], all_master_table)
+
+logistic_regression_stats = data.frame(ResponseVar=character())
+for (contrast in contrasts)
+{
+  logistic_regression_stats %<>% mutate(!!contrast := numeric())
+}
+for (var in c(raw_exp_vars, calculated_exp_vars))
+{
+  logistic_regression_stats %<>% mutate(!!var := numeric())
+}
+
+logistic_regression_pvalues = logistic_regression_stats
+logistic_regression_odds_ratios = logistic_regression_stats
+
+for(var in names(all_logistic_regression_stats))
+{
+  
+  temp = 
+    all_logistic_regression_stats[[var]] %>%
+    select(contrast, pvalue, effect_size) %>%
+    column_to_rownames('contrast') %>%
+    t() %>%
+    data.frame() %>%
+    rownames_to_column('stat') %>%
+    mutate(ResponseVar='CaseString')
+  
+  pvalues = temp %>% filter(stat=='pvalue') %>% select(-stat)
+  odds_ratios = temp %>% filter(stat=='effect_size') %>% select(-stat)
+    
+  logistic_regression_pvalues %<>% add_row(!!!pvalues)
+  logistic_regression_odds_ratios %<>% add_row(!!!odds_ratios)
+}
+
+```
+
+## Write Tables
+```{r}
+regression_pvalues = createWorkbook()
 
 addWorksheet(
-  regression_stats, 
+  regression_pvalues, 
   sheetName="Unadjusted P-Values"
   )
 
 openxlsx::writeData(
-  regression_stats, 
+  regression_pvalues, 
   sheet="Unadjusted P-Values", 
   regression_pvals
   )
 
 addWorksheet(
-  regression_stats, 
+  regression_pvalues, 
   sheetName="Effect Sizes"
   )
 
 openxlsx::writeData(
-  regression_stats,
+  regression_pvalues,
   sheet="Effect Sizes", 
   regression_effect_sizes
+  )
+
+addWorksheet(
+  regression_pvalues, 
+  sheetName="Logistic P-Values"
+  )
+
+openxlsx::writeData(
+  regression_pvalues,
+  sheet="Logistic P-Values", 
+  logistic_regression_pvalues
+  )
+
+addWorksheet(
+  regression_pvalues, 
+  sheetName="Logistic Odds Ratios"
+  )
+
+openxlsx::writeData(
+  regression_pvalues,
+  sheet="Logistic Odds Ratios", 
+  logistic_regression_odds_ratios
   )
 
 # addWorksheet(regression_pvals, sheetName="Adjusted P-Values")
 # openxlsx::writeData(regression_pvals, sheet="Adjusted P-Values", adjusted_regression_pvals)
 
-filename = file.path(tables_dir, 'miseq-239_genus_clust_alpha_div_regression_stats.xlsx')
-
 filename = makeDataFileName(
-  'regression_stats.xlsx', 
+  'regression_stats.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
   "${clustering_level}"
-  )
+)
 
-saveWorkbook(regression_stats, file=filename, overwrite=T)
+saveWorkbook(regression_pvalues, file=filename, overwrite=T)
 ```
-
 
 
 ```

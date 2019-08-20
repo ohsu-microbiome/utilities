@@ -131,9 +131,8 @@ alt_index_master_table = setFactorsLevels(
 
 ## Preditor Variables (observational)
 ```{r}
-# print(observational_variables)
+print(observational_variables)
 ```
-**Observational Variables of Interest:** `r observational_variables`
 
 
 ### Categorical Variables
@@ -183,30 +182,6 @@ control_only_variables = filterVarsBySampleThreshold(
   )
 
 ```
-
-
-```
-#### AMD Only Observational Variables
-
-
-amd_only_variables = observational_variables
-
-amd_only_excluded_variables = c(
-  'Gender',
-  'CaseString',
-  'Age'
-)
-
-for (varname in amd_only_excluded_variables)
-{
-  print(sprintf('Excluding %s', varname))
-  amd_only_variables[varname] = NULL
-}
-
-
-**Excluding: ** `r amd_only_excluded_variables`
-```
-
 
 ## Response Variables
 
@@ -316,6 +291,11 @@ regression_stats_table_names = c(
   "amd_only_ici_score"
   )
 
+
+contrast_names = makeContrastNames(
+  observational_variables,
+  iga_index_master_table
+)
 
 for (tab_name in regression_stats_table_names)
 {
