@@ -1,0 +1,180 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_type_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+```
+
+# MiSeq-${miseq_run_number} `r analysis_type` Differential Abundance Plots{.tabset}
+Regression coefficients as effect size.
+
+
+## Clustering Level
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+## Setup {.tabset}
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('deseq', lib="~/R35")
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+# library(vegan)
+library(nlme)
+library(tools)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/deseq_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+sample_data = read.delim(
+  '${sample_data_file}', 
+  stringsAsFactors=F
+  )
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+```
+
+```{r}
+all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+```
+
+## Plots {.tabset}
+### [ ] Close
+
+### All Subgroups
+```{r}
+wb_filename = makeDataFileName(
+  'all_deseq_results.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(wb_filename)
+
+for (rank in all_ranks)
+{
+  # rank = 'Genus'
+  data = 
+    readWorkbook(wb_filename, sheet=rank) 
+  
+  
+  plotEffectSize2(
+    data=data %>%
+      filter(CaseString_AMD_vs_Control.padj <= 0.2),
+    effect_size_col="CaseString_AMD_vs_Control.L2FC",
+    effect_size_legend_title="Abundance in AMD",
+    feature_col="Taxon",
+    alpha_col='CaseString_AMD_vs_Control.padj',
+    alpha_legend_title="Adjusted P-Values",
+    plot_title=paste0(rank,": AMD/Control Log2 Fold Change")
+  )
+}
+```
+
+
+### Age < 90
+```{r}
+wb_filename = makeDataFileName(
+  'age_lt_90_deseq_results.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(wb_filename)
+
+for (rank in all_ranks)
+{
+  # rank = 'Genus'
+  data = 
+    readWorkbook(wb_filename, sheet=rank) 
+  
+  
+  plotEffectSize2(
+    data=data %>%
+      filter(CaseString_AMD_vs_Control.padj <= 0.2),
+    effect_size_col="CaseString_AMD_vs_Control.L2FC",
+    effect_size_legend_title="Abundance in AMD",
+    feature_col="Taxon",
+    alpha_col='CaseString_AMD_vs_Control.padj',
+    alpha_legend_title="Adjusted P-Values",
+    plot_title=paste0(rank,": AMD/Control Log2 Fold Change")
+  )
+}
+```
+

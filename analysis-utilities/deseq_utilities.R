@@ -1,7 +1,8 @@
-library(dplyr)
 library(DESeq2)
 library(ggplot2)
-library(tidyr)
+library(tidyverse)
+library(magrittr)
+rename = dplyr::rename
 
 
 
@@ -9,7 +10,7 @@ runDeseq = function(
   aggregated_counts, # table with columns for taxa names, agglommerated taxa names, and counts for each sample.
   metadata, # sample metadata
   lowest_rank='Phylum',
-  design,  # design formulat or matrix
+  design,  # design formula or matrix
   return_obj='df' # Whether to return dataframe (default 'df') or 'raw' deseq results object
 )
 {
@@ -897,8 +898,8 @@ runDeseqFromTables = function(
   # print(setdiff(colnames(asv_table), metadata[['SampleID']]))
   
   aggregated_counts = getAggregatedTaxaRankCounts(
-    taxonomy_table=taxonomy_table, 
-    asv_table=asv_table, 
+    taxonomy_table=taxonomy_table,
+    asv_table=asv_table,
     metadata=metadata,
     lowest_rank=lowest_rank,
     clean=T
@@ -1048,6 +1049,133 @@ runDeseqFromTables = function(
     taxa_counts=taxa_counts,
     sampleIDs=sampleIDs
   ))
+}
+
+
+runDeseqFromTables_dev = function(
+    asv_table,
+    taxonomy_table,
+    sample_data,
+    variables,
+    lowest_rank='Genus',
+    relative_abundance_cutoff = 0.002,
+    prevalence_cutoff = 0.1,
+    include_covariates='All'
+  )
+{
+  
+  print(sprintf('**** LOWEST RANK: %s *****', lowest_rank))
+  
+  ### Data for testing
+  # asv_table = asv_table
+  # taxonomy_table = taxonomy_table
+  # sample_data = sample_data
+  # variables = observational_variables[c('CaseString', 'Gender')]
+  # lowest_rank = 'Phylum'
+  # relative_abundance_cutoff = 0.002
+  # prevalence_cutoff = 0.1
+
+  sample_names = sample_data$SampleName
+  
+  sample_data = setFactorsLevels(
+    sample_data,
+    variables
+  )
+  
+  # taxa_counts = getFilteredTaxaCounts(
+  #   asv_table,
+  #   taxonomy_table,
+  #   sample_data, 
+  #   lowest_rank=lowest_rank,
+  #   relative_abundance_cutoff=relative_abundance_cutoff,
+  #   prevalence_cutoff=prevalence_cutoff,
+  #   id_col="SampleName",
+  #   normalize=F
+  # )
+  
+  taxa_counts = getFilteredTaxaCountsDev(
+    asv_table=asv_table,
+    taxonomy_table=taxonomy_table,
+    sample_data=sample_data,
+    cluster_by=lowest_rank,
+    relative_abundance_cutoff=0,
+    prevalence_cutoff=0,
+    min_count_cutoff=0,
+    filter_by='Taxa',
+    clean_taxa=T,  ### remove NAs in lowest rank
+    n_max_by_mean=F,
+    id_col="SampleName", ### metadata column that containes the unique sample IDs
+    add_glommed_names=T,
+    normalize=F
+  )
+  
+  taxa_counts %<>%
+    mutate_at(sample_names, list(function(x){x = x + 1}))
+  
+  filtered_taxa = taxa_counts$short_glommed_taxa
+  
+  design_formula = 
+    variables %>%
+    names() %>%
+    paste(., collapse=' + ') %>%
+    paste('~', .) %>%
+    as.formula()
+  
+  dds = DESeqDataSetFromMatrix(
+    countData=
+      taxa_counts %>% 
+      select(sample_names, short_glommed_taxa) %>% 
+      column_to_rownames('short_glommed_taxa'),
+    colData=sample_data,
+    design=design_formula
+  )
+  
+  deseq_obj = DESeq(
+    dds,
+    test='Wald',
+    fitType='mean'
+  )
+
+  contrast_names = resultsNames(deseq_obj)[-1]
+  
+  if (include_covariates != 'All')
+  {
+    contrast_names_to_use = sapply(
+      include_covariates, 
+      function(x)
+      {
+        pattern = paste0('^', x)
+        grep(pattern, contrast_names, value=T)
+      },  
+      USE.NAMES = F
+    )
+  } else
+  {
+    contrast_names_to_use = contrast_names
+  }
+
+  deseq_results_df = data.frame(Taxon=filtered_taxa, stringsAsFactors=F)
+  
+  for (name in contrast_names_to_use)
+  {
+    print(name)
+    
+    name_results = results(
+        deseq_obj,
+        name=name,
+        format='DataFrame'
+      ) %>%
+      data.frame(stringsAsFactors=F) %>%
+      rownames_to_column('Taxon') %>%
+      arrange(padj) %>%
+      # rename(L2FC=log2FoldChange) %>%
+      select(Taxon, padj, L2FC=log2FoldChange, pvalue, everything()) %>%
+      rename_at(setdiff(names(.), 'Taxon'), function(x){paste0(name,'.',x)})
+      
+    deseq_results_df = inner_join(deseq_results_df, name_results, by='Taxon')
+  }
+  
+  return(deseq_results_df)
 }
 
 

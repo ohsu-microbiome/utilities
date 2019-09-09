@@ -1,0 +1,168 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+```
+
+# MiSeq-${miseq_run_number} ${analysis_title} Linear Regression Plots{.tabset}
+Regression coefficients as effect size.
+
+## Clustering Level
+Data clustered at the `r toupper(clustering_level)` Level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+## Setup {.tabset}
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('base', lib="~/R35")
+```
+
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+# library(vegan)
+# library(nlme)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+filename = makeDataFileName(
+  'master_table.xlsx',
+  tables_dir,
+  analysis_type,
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(filename)
+
+all_master_table = readWorkbook(filename, sheet='Master Table')
+age_lt_90_master_table = all_master_table %>% filter(Age < 90)
+amd_only_master_table = all_master_table %>% filter(CaseString == 'AMD')
+filtered_taxa = readWorkbook(filename, sheet="${tools::toTitleCase(clustering_level)}") %>% pull("short_glommed_taxa")
+
+
+sample_data = read.delim(
+  '${sample_data_file}', 
+  stringsAsFactors=F
+  )
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+filename = makeDataFileName(
+  'linear_regression.xlsx',
+  tables_dir,
+  analysis_type,
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+pvalues = readWorkbook(filename, sheet='Unadjusted P-Values')
+effect_sizes = readWorkbook(filename, sheet='Effect Sizes')
+
+```
+
+## Plots {.tabset}
+### [ ] Close
+### Gather Stats
+```{r}
+pvalues = 
+  pvalues %>%
+  remove_rownames() %>%
+  column_to_rownames('Index') %>%
+  t() %>% data.frame() %>%
+  rownames_to_column('Predictor')
+
+effect_sizes = 
+  effect_sizes  %>%
+  remove_rownames() %>%
+  column_to_rownames('Index') %>%
+  t() %>% data.frame() %>%
+  rownames_to_column('Predictor')
+```
+
+### Plot Effect Size
+```{r}
+response_vars = colnames(pvalues) %>% setdiff('Predictor')
+
+for (var in response_vars)
+{
+  plotEffectSizes(
+    pvals,
+    effect_sizes,
+    response_var=var,
+    effect_size_template='(log) Regression Cofficient',
+    category_label='Observational Variables'
+  ) 
+}
+```
+
+

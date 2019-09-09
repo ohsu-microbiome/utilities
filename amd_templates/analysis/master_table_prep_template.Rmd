@@ -1,0 +1,248 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
+```
+
+# MiSeq-${miseq_run_number} Master Table Prep{.tabset}
+## Clustering
+Data clustered at the `r toupper("${clustering_level}")` level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+
+## Setup 
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('${conda_env}')
+```
+
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(knitr)
+
+library(tidyverse)
+library(magrittr)
+# library(ggplot2)
+# library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+# library(pheatmap)
+library(kableExtra)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+
+### Set Knitr Options
+```{r}
+
+${knitr_options}
+```
+
+### Load Data
+```{r}
+asv_table = 
+  read.delim(
+    '${asv_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    )
+
+taxonomy_table = 
+  read.delim(
+    '${taxonomy_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  mutate_all(as.character())
+
+sample_data = 
+  read.delim(
+    '${sample_data_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  filter(SampleID!='Undetermined')
+
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='AllBac')
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %>%
+    select('ASVs', ends_with('AllBac'))
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+```
+
+### Set Filtering
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+```
+**relative abundance cutoff:** `r relative_abundance_cutoff`
+**prevalence cutoff:** `r prevalence_cutoff`
+
+### Get Filtered Taxa Abundance
+```{r}
+
+all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+
+
+for (cluster_by in rev(c(all_ranks, 'ASV')))
+{
+  if (cluster_by == 'ASV')
+  {
+    ranks_to_keep = c(all_ranks, 'ASVs')
+  } else
+  {
+    ranks_to_keep = all_ranks[1:match(clustering_level, all_ranks)]
+  }
+  
+  wb = createWorkbook()
+  
+  raw_abundance = getFilteredTaxaCountsDev(
+    asv_table,
+    taxonomy_table,
+    sample_data, 
+    cluster_by=cluster_by,
+    relative_abundance_cutoff=relative_abundance_cutoff,
+    prevalence_cutoff=prevalence_cutoff,
+    id_col="SampleName",
+    normalize=F
+    )
+  
+  addWorksheet(wb, sheetName="Raw Abundance")
+  openxlsx::writeData(wb, sheet="Raw Abundance", raw_abundance)
+  
+  raw_master_table = getMasterTable(
+    raw_abundance,
+    sample_data,
+    key_column='SampleName',
+    taxa_colnames='short_glommed_taxa'
+    )
+  
+  addWorksheet(wb, sheetName="Raw Master Table")
+  openxlsx::writeData(wb, sheet="Raw Master Table", raw_master_table)
+  
+    
+  raw_taxa = 
+    raw_abundance %>% 
+    select(ranks_to_keep, glommed_taxa, short_glommed_taxa)
+  
+  addWorksheet(wb, sheetName="Raw Taxa")
+  openxlsx::writeData(wb, sheet="Raw Taxa", raw_taxa)
+  
+  
+  normalized_abundance = getFilteredTaxaCountsDev(
+    asv_table,
+    taxonomy_table,
+    sample_data, 
+    cluster_by=cluster_by,
+    relative_abundance_cutoff=relative_abundance_cutoff,
+    prevalence_cutoff=prevalence_cutoff,
+    min_count_cutoff=0,
+    id_col="SampleName",
+    normalize=T
+    )
+  
+  addWorksheet(wb, sheetName="Normalized Abundance")
+  openxlsx::writeData(wb, sheet="Normalized Abundance", normalized_abundance)
+
+  normalized_master_table = getMasterTable(
+    normalized_abundance,
+    sample_data,
+    key_column='SampleName',
+    taxa_colnames='short_glommed_taxa'
+    )
+  
+  addWorksheet(wb, sheetName="Normalized Master Table")
+  openxlsx::writeData(wb, sheet="Normalized Master Table", normalized_master_table)
+    
+    
+  normalized_taxa = 
+    normalized_abundance %>% 
+    select(ranks_to_keep, glommed_taxa, short_glommed_taxa)
+  
+  addWorksheet(wb, sheetName="Normalized Taxa")
+  openxlsx::writeData(wb, sheet="Normalized Taxa", raw_taxa)
+  
+  
+  filename = makeDataFileName(
+    'master_tables.xlsx',
+    "${tables_dir}",
+    NULL,
+    "${miseq_project_prefix}",
+    tolower(cluster_by)
+    )
+  
+  print(filename)
+  
+  saveWorkbook(wb, file=filename, overwrite=T)
+}
+
+
+```
+

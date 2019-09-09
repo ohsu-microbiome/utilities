@@ -1,0 +1,303 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
+```
+
+# MiSeq-${miseq_run_number} FB Analysis Data Prep{.tabset}
+
+## Setup 
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('${conda_env}')
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+sample_data = 
+  read.delim(
+    '${sample_data_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  filter(SampleID!='Undetermined')
+
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='Pos')
+
+  sample_names = sample_data$SampleName
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+```
+
+## Distribution
+```{r}
+hist(samle_data$Pct_Iga_Pos)
+```
+
+```{r}
+all_master_table = setFactorsLevels(
+  all_master_table, 
+  observational_variables
+  )
+age_lt_90_master_table = setFactorsLevels(
+  age_lt_90_master_table, 
+  observational_variables
+  )
+amd_only_master_table = setFactorsLevels(
+  amd_only_master_table, 
+  observational_variables
+  )
+```
+
+## TwoGroup Tests
+
+#### Initialize Table
+
+```{r}
+contrast_names = 
+  makeContrastNames(observational_variables, all_master_table) %>% 
+  unlist() %>%
+  unname()
+```
+
+```{r}
+all_two_group_stats = data.frame(
+  TestGroup=character(),
+  TestVariable=character(),
+  Reference=character(),
+  Comparison=character()
+  )
+
+for (var in c(raw_exp_vars, calculated_exp_vars))
+{
+  all_two_group_stats = 
+    all_two_group_stats %>%
+    mutate(!!as.name(var) := numeric())
+}
+
+
+```
+
+#### All
+```{r}
+pval_list = doTwoGroupTests(
+  exp_vars = c(raw_exp_vars, calculated_exp_vars),
+  test_var = observational_variables$CaseString,
+  master_table = all_master_table,
+  test_group = 'All'
+)
+
+all_two_group_stats %<>%
+  add_row(!!!pval_list)
+```
+
+#### Age < 90
+```{r}
+pval_list = doTwoGroupTests(
+  exp_vars = c(raw_exp_vars, calculated_exp_vars),
+  test_var = observational_variables$CaseString,
+  master_table = age_lt_90_master_table,
+  test_group = 'Age_lt_90'
+)
+
+all_two_group_stats %<>%
+  add_row(!!!pval_list)
+
+```
+
+
+#### AMD Only + Covariates
+```{r}
+amd_only_two_group_stats = data.frame(
+  TestGroup=character(),
+  TestVariable=character(),
+  Reference=character(),
+  Comparison=character()
+  )
+
+for (var in c(raw_exp_vars, calculated_exp_vars))
+{
+  amd_only_two_group_stats = 
+    amd_only_two_group_stats %>%
+    mutate(!!as.name(var) := numeric())
+}
+
+
+exp_vars = c(raw_exp_vars, calculated_exp_vars)
+
+# test_var = amd_only_variables$AREDS
+master_table = amd_only_master_table
+test_group = 'AMD_Only'
+  
+for (test_var in amd_only_variables)
+{
+  
+  name = test_var$covariate_of_interest
+  print(name)
+  
+  pval_list = doTwoGroupTests(
+    exp_vars = exp_vars,
+    test_var = test_var,
+    master_table = amd_only_master_table,
+    test_group = 'AMD_Only'
+  )
+  
+  amd_only_two_group_stats %<>%
+    add_row(!!!pval_list)
+}
+```
+
+## Assemble Stats Table
+```{r}
+all_two_group_stats =
+  all_two_group_stats %>%
+  add_row(!!!amd_only_two_group_stats)
+```
+
+## Write Stats Table
+```{r}
+filename = makeDataFileName(
+  'mann_whitney_unadjusted.xlsx', 
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+  )
+
+print(filename)
+
+write.xlsx(
+  all_two_group_stats,
+  file=filename,
+  quote=F
+)
+```
+
+## Linear Regression
+```{r}
+
+```
+
+## Logistic Regression
+```{r}
+
+```
+
+
+## Write Table
+```{r}
+wb = createWorkbook()
+
+all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+
+if (clustering_level == 'ASV')
+{
+  ranks_to_keep = c(all_ranks, 'ASVs')
+} else
+{
+  ranks_to_keep = all_ranks[1:match(clustering_level, all_ranks)]
+}
+
+addWorksheet(wb, sheetName="Master Table")
+openxlsx::writeData(wb, sheet="Master Table", all_master_table)
+
+just_taxa = abundance %>% select(ranks_to_keep, glommed_taxa, short_glommed_taxa)
+addWorksheet(wb, sheetName="${tools::toTitleCase(clustering_level)}")
+openxlsx::writeData(wb, sheet="${tools::toTitleCase(clustering_level)}", just_taxa)
+
+filename = makeDataFileName(
+  'master_table.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+print(filename)
+
+saveWorkbook(wb, file=filename, overwrite=T)
+```
+
+

@@ -1,0 +1,444 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+  df_print: paged
+number_sections: yes
+theme: lumen
+toc: yes
+code_folding: hide
+---
+
+  <style>
+  html {
+    font-size: 16pt;
+  }
+
+body {
+  font-size: 16pt;
+}
+
+h1 {
+  font-size: 2.2rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.8rem;
+}
+
+h4 {
+  font-size: 1.4rem;
+}
+
+</style>
+
+
+```{r}
+source('/home/balter/miseq-0278/metadata/project_metadata.R')
+analysis_type = "igaseq"
+clustering_level = "asv"
+tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
+analysis_title = "IgA-Seq"
+```
+
+# MiSeq-0278 `r analysis_title` Two Group Tests {.tabset}
+## Clustering Level
+Data clustered at the `r toupper(clustering_level)` Level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+
+## Setup
+
+### Start Conda ENV
+```{r}
+startCondaEnv('alphadiv')
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(knitr)
+
+library(tidyverse)
+library(magrittr)
+library(DT)
+library(openxlsx)
+library(ggplot2)
+library(ggbeeswarm)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+
+```
+
+### Load Data
+```{r}
+filename = makeDataFileName(
+  'master_tables.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+iga_pos_master_table = readWorkbook(filename, sheet='Iga Pos')
+iga_neg_master_table = readWorkbook(filename, sheet='Iga Neg')
+iga_index_master_table = readWorkbook(filename, sheet='Iga Index')
+ici_score_master_table = readWorkbook(filename, sheet='Ici Score')
+log_ici_score_master_table = readWorkbook(filename, sheet='log Ici Score')
+alt_index_master_table = readWorkbook(filename, sheet='Alt Index')
+top_n_features = readWorkbook(filename, sheet='Taxa') %>%
+  unlist() %>%
+  unname()
+
+filename = file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  )
+source(filename)
+```
+
+**Included Taxa: `print(top_n_features)`
+
+
+### Set Factor Levels
+```{r}
+iga_index_master_table = setFactorsLevels(
+  iga_index_master_table, 
+  observational_variables
+  )
+ici_score_master_table = setFactorsLevels(
+  ici_score_master_table, 
+  observational_variables
+  )
+log_ici_score_master_table = setFactorsLevels(
+  log_ici_score_master_table, 
+  observational_variables
+  )
+alt_index_master_table = setFactorsLevels(
+  alt_index_master_table, 
+  observational_variables
+  )
+# sample_metadata = setFactorsLevels(sample_metadata, categorical_variables)
+```
+
+
+
+## Preditor Variables (observational)
+```{r}
+print(observational_variables)
+```
+
+
+### Determine which covariates have sufficient samples for each value
+```{r}
+num_samples_threshold = 5
+
+all_variables = filterVarsBySampleThreshold(
+  iga_index_master_table,
+  num_samples_threshold,
+  observational_variables
+  )
+
+age_lt_90_variables = filterVarsBySampleThreshold(
+  iga_index_master_table,
+  num_samples_threshold,
+  observational_variables
+  )
+
+amd_only_variables = filterVarsBySampleThreshold(
+  iga_index_master_table %>% select(-CaseString),
+  num_samples_threshold,
+  observational_variables
+  )
+
+control_only_variables = filterVarsBySampleThreshold(
+  iga_index_master_table %>% filter(CaseString=='Control') %>% select(-CaseString),
+  num_samples_threshold,
+  observational_variables
+  )
+
+```
+
+## Response Variables
+
+```{r}
+raw_exp_vars = ${raw_exp_vars}
+calculated_exp_vars = ${calculated_exp_vars}
+all_experimental_variables = c(raw_exp_vars, calculated_exp_vars)
+```
+**Raw Experimental Variables: ** `r raw_exp_vars`
+**Calculated Experimental Variables: ** `r calculated_exp_vars`
+
+## Regression analysis
+
+### General Parameters
+```{r}
+stats = ${stats}
+use_parametric = ${use_parametric}
+adjustment_method = "${adjustment_method}"
+response_var_name = "${response_var_name}"
+```
+
+
+### All
+
+```{r}
+all_iga_index_regression_stats = getMultipleRegressionStats(
+  predictor_vars=all_variables,
+  response_vars=top_n_features,
+  master_table=iga_index_master_table,
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric
+)
+
+all_ici_score_regression_stats = getMultipleRegressionStats(
+  predictor_vars=all_variables,
+  response_vars=top_n_features,
+  master_table=ici_score_master_table,
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric 
+)
+
+all_log_ici_score_regression_stats = getMultipleRegressionStats(
+  predictor_vars=all_variables,
+  response_vars=top_n_features,
+  master_table=log_ici_score_master_table,
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric 
+)
+
+```
+
+
+### Age < 90
+```{r}
+age_lt_90_iga_index_regression_stats = getMultipleRegressionStats(
+  predictor_vars=age_lt_90_variables,
+  response_vars=top_n_features,
+  master_table=iga_index_master_table %>% filter(Age < 90),
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric
+)
+
+age_lt_90_ici_score_regression_stats = getMultipleRegressionStats(
+  predictor_vars=age_lt_90_variables,
+  response_vars=top_n_features,
+  master_table=ici_score_master_table %>% filter(Age < 90),
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric 
+)
+
+age_lt_90_log_ici_score_regression_stats = getMultipleRegressionStats(
+  predictor_vars=age_lt_90_variables,
+  response_vars=top_n_features,
+  master_table=log_ici_score_master_table %>% filter(Age < 90),
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric 
+)
+
+```
+
+### AMD Only
+```{r}
+amd_only_iga_index_regression_stats = getMultipleRegressionStats(
+  predictor_vars=amd_only_variables,
+  response_vars=top_n_features,
+  master_table=iga_index_master_table %>% filter(CaseString=='AMD'),
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric
+)
+
+amd_only_ici_score_regression_stats = getMultipleRegressionStats(
+  predictor_vars=amd_only_variables,
+  response_vars=top_n_features,
+  master_table=ici_score_master_table %>% filter(CaseString=='AMD'),
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric 
+)
+
+amd_only_log_ici_score_regression_stats = getMultipleRegressionStats(
+  predictor_vars=amd_only_variables,
+  response_vars=top_n_features,
+  master_table=log_ici_score_master_table %>% filter(CaseString=='AMD'),
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  parametric=use_parametric 
+)
+
+```
+
+## Logistic Regression
+### Logistic Predictor Vars
+```{r}
+num_samples_threshold = 5
+
+all_variables = filterVarsBySampleThreshold2(
+  all_master_table,
+  num_samples_threshold,
+  observational_variables
+  )
+
+vars = setdiff(all_variables %>% names(), c('CaseString', 'AREDS'))
+```
+
+```
+### Run Regression
+
+all_logistic_regression_stats = getLogisticRegressionStats(
+  base_predictor_vars=observational_variables[vars],
+  additional_predictors=c(raw_exp_vars, calculated_exp_vars),
+  logistic_response_var='CaseString',
+  master_table=all_master_table,
+  stats=c('pvalue', 'effect_size', 'std_error'),
+  response_var_name='Index'
+)
+
+contrasts = makeContrastNames(observational_variables[vars], all_master_table)
+
+logistic_regression_stats = data.frame(ResponseVar=character())
+for (contrast in contrasts)
+{
+  logistic_regression_stats %<>% mutate(!!contrast := numeric())
+}
+for (var in c(raw_exp_vars, calculated_exp_vars))
+{
+  logistic_regression_stats %<>% mutate(!!var := numeric())
+}
+
+logistic_regression_pvalues = logistic_regression_stats
+logistic_regression_odds_ratios = logistic_regression_stats
+
+for(var in names(all_logistic_regression_stats))
+{
+  
+  temp = 
+    all_logistic_regression_stats[[var]] %>%
+    select(contrast, pvalue, effect_size) %>%
+    column_to_rownames('contrast') %>%
+    t() %>%
+    data.frame() %>%
+    rownames_to_column('stat') %>%
+    mutate(ResponseVar='CaseString')
+  
+  pvalues = temp %>% filter(stat=='pvalue') %>% select(-stat)
+  odds_ratios = temp %>% filter(stat=='effect_size') %>% select(-stat)
+    
+  logistic_regression_pvalues %<>% add_row(!!!pvalues)
+  logistic_regression_odds_ratios %<>% add_row(!!!odds_ratios)
+}
+
+```
+
+## Write Regression Stats
+```{r}
+
+regression_stats_table_names = c(
+  "all_iga_index", 
+  "age_lt_90_iga_index",
+  "amd_only_iga_index",
+  "all_ici_score",
+  "age_lt_90_ici_score",
+  "amd_only_ici_score",
+  "all_log_ici_score",
+  "age_lt_90_log_ici_score",
+  "amd_only_log_ici_score"
+  )
+
+
+contrast_names = makeContrastNames(
+  observational_variables,
+  iga_index_master_table
+)
+
+for (tab_name in regression_stats_table_names)
+{
+  contrast_regression_stats = createWorkbook()
+  
+  print(tab_name)
+  stats_table_name = paste0(tab_name, "_regression_stats")
+  print(stats_table_name)
+  stats_table = get(stats_table_name)
+  for (contrast in contrast_names)
+  {
+    print(contrast)
+    addWorksheet(contrast_regression_stats, sheetName=contrast)
+    openxlsx::writeData(
+    wb=contrast_regression_stats, 
+    sheet=contrast, 
+    x=stats_table[[contrast]]
+    )
+  }
+  
+  filename = makeDataFileName(
+    paste0(stats_table_name, '_regression_stats_tables.xlsx'),
+    "${tables_dir}",
+    "${analysis_type}",
+    "${miseq_project_prefix}",
+    "${clustering_level}"
+  )
+  print(filename)
+  
+  saveWorkbook(contrast_regression_stats, file=filename, overwrite=T)
+  
+}
+
+```
+
+```{r}
+addWorksheet(
+  regression_pvalues, 
+  sheetName="Logistic P-Values"
+  )
+
+openxlsx::writeData(
+  regression_pvalues,
+  sheet="Logistic P-Values", 
+  logistic_regression_pvalues
+  )
+
+addWorksheet(
+  regression_pvalues, 
+  sheetName="Logistic Odds Ratios"
+  )
+
+openxlsx::writeData(
+  regression_pvalues,
+  sheet="Logistic Odds Ratios", 
+  logistic_regression_odds_ratios
+  )
+```
+

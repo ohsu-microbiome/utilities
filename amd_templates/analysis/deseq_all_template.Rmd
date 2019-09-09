@@ -1,0 +1,286 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+  .dataTable {
+    font-size: 9pt;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
+analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+```
+
+# MiSeq-${miseq_run_number} DESeq2 Analysis {.tabset}
+
+## Clustering
+Data clustered at the `r toupper("${clustering_level}")` level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+
+## Setup 
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('deseq', lib='~/R35')
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(openxlsx)
+library(DT)
+library(kableExtra)
+library(DESeq2)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/deseq_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+asv_table = 
+  read.delim(
+    '${asv_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    )
+
+taxonomy_table = 
+  read.delim(
+    '${taxonomy_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  mutate_all(as.character())
+
+sample_data = 
+  read.delim(
+    '${sample_data_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  filter(SampleID!='Undetermined')
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='AllBac')
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %>%
+    select('ASVs', ends_with('AllBac'))
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+```
+
+## Covariates
+
+### All and Age < 90 Observational variables
+```{r}
+# all_variable_names = setdiff(
+#   observational_variables %>% names(),
+#   c('ARMS2rs10490924', 'CFHrs1061170', 'CFHrs10737680', 'SKIV2rs429608', 'Pct_IgA_Pos')
+# )
+# 
+# ### All samples from stool--no swabs
+# 
+# all_variable_names = c('CaseString', 'Age', 'Gender', 'AREDS')
+# 
+# all_variables = observational_variables[all_variable_names]
+# print(all_variable_names)
+# 
+# age_lt_90_variables = all_variables
+
+### Deal with NA values for AREDS
+sample_data %<>%
+  mutate(AREDS=
+    ifelse(is.na(AREDS), "MISSING", AREDS) %>%
+    factor(levels=c('N', 'Y', 'MISSING'))
+  )
+
+all_covaraites = ${all_covariates}
+```
+
+### Set Filtering
+```{r}
+relative_abundance_cutoff=${relative_abundance_cutoff}
+prevalence_cutoff=${relative_abundance_cutoff}
+```
+
+## DESeq2 {.tabset}
+```{r}
+all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+```
+
+### All Subgroups
+#### Create Workbook
+```{r}
+deseq_results_wb = createWorkbook()
+```
+
+#### Run and add worksheets
+```{r}
+for (lowest_rank in all_ranks)
+{
+  results_df = runDeseqFromTables_dev(
+    asv_table,
+    taxonomy_table,
+    sample_data,
+    observational_variables[all_covaraites],
+    lowest_rank=lowest_rank,
+    relative_abundance_cutoff=relative_abundance_cutoff,
+    prevalence_cutoff=prevalence_cutoff,
+    include_covariates = 'CaseString'
+    )
+  
+  addWorksheet(
+    wb=deseq_results_wb, 
+    sheetName=lowest_rank
+    )
+  
+  openxlsx::writeData(
+    wb=deseq_results_wb, 
+    sheet=lowest_rank, 
+    x=results_df
+    )
+}
+```
+
+#### Save Workbook
+```{r}
+filename = makeDataFileName(
+  'all_deseq_results.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(filename)
+
+saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
+```
+
+
+### Age < 90
+```{r}
+age_lt_90_covariates = ${age_lt_90_covariates}
+```
+
+#### Create Workbook
+```{r}
+deseq_results_wb = createWorkbook()
+```
+
+#### Run and add worksheets
+```{r}
+for (lowest_rank in all_ranks)
+{
+  results_df = runDeseqFromTables_dev(
+    asv_table,
+    taxonomy_table,
+    sample_data %>% filter(Age < 90),
+    observational_variables[age_lt_90_covariates],
+    lowest_rank=lowest_rank,
+    relative_abundance_cutoff=relative_abundance_cutoff,
+    prevalence_cutoff=prevalence_cutoff,
+    include_covariates = 'CaseString'
+    )
+  
+  addWorksheet(
+    wb=deseq_results_wb, 
+    sheetName=lowest_rank
+    )
+  
+  openxlsx::writeData(
+    wb=deseq_results_wb, 
+    sheet=lowest_rank, 
+    x=results_df
+    )
+}
+```
+
+#### Save Workbook
+```{r}
+filename = makeDataFileName(
+  'age_lt_90_deseq_results.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(filename)
+
+saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
+```

@@ -1,0 +1,287 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
+```
+
+# MiSeq-${miseq_run_number} Prevotella Analysis {.tabset}
+
+## Setup 
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('${conda_env}')
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+asv_table = 
+  read.delim(
+    '${asv_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    )
+
+taxonomy_table = 
+  read.delim(
+    '${taxonomy_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  mutate_all(as.character())
+
+sample_data = 
+  read.delim(
+    '${sample_data_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  filter(SampleID!='Undetermined')
+
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='AllBac')
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %>%
+    select('ASVs', ends_with('AllBac'))
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+```
+
+### Set Filtering
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+```
+**relative abundance cutoff:** `r relative_abundance_cutoff`
+**prevalence cutoff:** `r prevalence_cutoff`
+
+
+### Get Filtered Taxa Abundance
+```{r}
+taxa_abundance = getFilteredTaxaCountsDev(
+  asv_table,
+  taxonomy_table,
+  sample_data, 
+  cluster_by="${clustering_level}",
+  relative_abundance_cutoff=relative_abundance_cutoff,
+  prevalence_cutoff=prevalence_cutoff,
+  id_col="SampleName",
+  normalize=T
+  )
+
+filtered_taxa = taxa_counts$short_glommed_taxa
+
+```
+
+
+## Prevotella Analysis
+
+### Build Master Table with Stats
+```{r}
+master_table = getMasterTable(
+  taxa_abundance %>% filter(Genus == 'Prevotella'),
+  sample_metadata,
+  'SampleName',
+  'short_glommed_taxa'
+  ) %>%
+  mutate(prevotella_gt_5pct = ifelse(pct_prevotella > 0.05, 'Y', 'N'))
+  
+master_table %>%
+  select(prevotella, prevotella_gt_5pct) %>%
+  kable() %>%
+  kable_styling(fixed_thead = T, font_size=10) %>%
+  scroll_box(width = "800px", height = "400px")
+```
+
+### Cross Tab
+```{r}
+cross_tab = master_table %>% select(CaseString, prevotella_gt_5pct) %>% table()
+print(cross_tab)
+
+cross_tab_df = 
+  master_table %>% 
+  select(CaseString, prevotella_gt_5pct) %>% 
+  group_by(CaseString, prevotella_gt_5pct) %>% 
+  summarise(n=n()) %>% 
+  spread(prevotella_gt_5pct, n) %>%
+  data.frame() %>%
+  mutate(RowSum = select(., Y, N) %>% rowSums()) %>%
+  rename(Prev_lt_5pct=N, Prev_gt_5pct=Y) %>%
+  add_row(
+    CaseString='ColSum', 
+    Prev_lt_5pct=sum(.$Prev_lt_5pct), 
+    Prev_gt_5pct=sum(.$Prev_gt_5pct), 
+    RowSum=sum(.$RowSum))
+
+kable(cross_tab_df, caption='Count Table') %>%
+  kable_styling(font_size=12) %>%
+  column_spec(2:3, bold=T, color='#000000') %>%
+  column_spec(c(1), bold=F, color='#aaaaaa') %>%
+  row_spec(1:2, bold = T, color='#000000') %>%
+  row_spec(3, bold=F, color='#aaaaaa') %>%
+  column_spec(c(4), bold=F, color='#aaaaaa')
+
+```
+
+### Percentages
+```{r}
+total_counts = 134
+
+pcts_df = 
+  cross_tab_df %>% 
+  mutate_if(is.numeric, list(~./total_counts))
+
+kable(pcts_df, caption='Percentage Table') %>%
+  kable_styling(font_size=12) %>%
+  column_spec(2:3, bold=T, color='#000000') %>%
+  column_spec(c(1), bold=F, color='#aaaaaa') %>%
+  row_spec(1:2, bold = T, color='#000000') %>%
+  row_spec(3, bold=F, color='#aaaaaa') %>%
+  column_spec(c(4), bold=F, color='#aaaaaa')
+
+```
+
+
+### $\chi^2$ Test
+
+```{r}
+cs_test = chisq.test(cross_tab)
+
+print(cs_test)
+```
+**$\chi^2$ P Value = `r cs_test$p.value`**
+
+### Welch's t
+```{r}
+pair_test = t.test(
+  pct_prevotella ~ CaseString,
+  data=master_table,
+  two.sided=T
+)
+print(pair_test)
+```
+
+### Mann-Whitney U
+```{r}
+pair_test = wilcox.test(
+  pct_prevotella ~ CaseString,
+  data=master_table,
+  two.sided=T
+)
+print(pair_test)
+```
+
+### Pair Plot
+```{r}
+pval_annotation = data.frame(
+  TestVariable=c('CaseString'),
+  index=c('pct_prevotella'),
+  xloc=c(1.5),
+  yloc=1.3*max(master_table$pct_prevotella),
+  pvals=c(paste0('p = ', round(pair_test$p.value, 3)))
+)
+
+plotPairTest(
+  master_table,
+  indices=c('pct_prevotella'),
+  var_data=observational_variables$CaseString,
+  aesthetics = list(x_var='CaseString', color_var='CaseString', facet_var='index'),
+  title_template='Prevotella Pct. AMD vs Control',
+  annotation_data=pval_annotation
+) +
+  ylab("Pct. Prevotella")
+```
+
+### OLS Linear Regression
+```{r}
+linfit = lm(pct_prevotella ~ CaseString + Age + Gender, data=master_table)
+print(summary(linfit))
+```
+
+### Rank OLS Regression
+```{r}
+rank_linfit = lm(rank(pct_prevotella) ~ CaseString + Age + Gender, data=master_table)
+print(summary(rank_linfit))
+```
+```
+
+

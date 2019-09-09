@@ -362,6 +362,10 @@ addGlommedTaxaNames = function(
 {
   print("in addGlommedTaxaNames")
 
+  if (lowest_rank == 'ASV')
+  {
+    lowest_rank = 'Genus'
+  }
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
   lowest_rank_index = match(lowest_rank, all_ranks)
   ### get just the ranks that will be used in
@@ -460,6 +464,18 @@ applyRelativeAbundanceFilter = function(
   print(paste('Num count filtered taxa dropped:', num_taxa_frequency_dropped))
 
   return(relative_abundance_filtered_counts)
+}
+
+applyMinCountFilter = function(
+  feature_abundance,
+  min_counts
+)
+{
+  feature_abundance = 
+    feature_abundance %>%
+    mutate_if(is.numeric, ~ifelse(. < min_counts, 0, .))
+  
+  return(feature_abundance)
 }
 
 getRelativeAbundance = function(counts)
@@ -609,7 +625,7 @@ getFilteredTaxaCounts = function(
 getFilteredTaxaCountsDev = function(
   asv_table,
   taxonomy_table,
-  metadata,
+  sample_data,
   cluster_by=NA,
   relative_abundance_cutoff=0,
   prevalence_cutoff=0,
@@ -617,17 +633,56 @@ getFilteredTaxaCountsDev = function(
   filter_by='Taxa',
   clean_taxa=T,  ### remove NAs in lowest rank
   n_max_by_mean=F,
-  id_col="SampleName", ### metadata column that containes the unique sample IDs
+  id_col="SampleName", ### sample_data column that containes the unique sample IDs
   add_glommed_names=T,
   normalize=F
 )
 {
   print("in getFilteredTaxaCounts")
+  
+  ### Data for testing
+  # cluster_by = 'Phylum'
+  # relative_abundance_cutoff = 0.002
+  # prevalence_cutoff = 0.1
+  # min_count_cutoff = 10
+  # filter_by = 'Taxa'
+  # clean_taxa = T
+  # id_col = 'SampleName'
+  # add_glommed_names=T
+  # normalize=F
+  # n_max_by_mean=F
+  
+  sample_names = as.character(sample_data[,id_col])
+  asv_table = asv_table %>% select('ASVs', sample_names)
 
+  if (normalize)
+  {
+    asv_table =
+      asv_table %>%
+      mutate_at(sample_names, ~./sum(.))
+  }
+
+  if (clean_taxa & cluster_by != 'ASV')
+  {
+    ### Remove any taxa that are NA at the lowest level.
+    ### No point in having ASVs aggregated to the same genus
+    ### if that genus is NA.
+    clean_taxonomy_table =
+      taxonomy_table %>%
+      # filter(sprintf("!is.na(%s)", lowest_rank))
+      filter(!is.na(!!sym(cluster_by)))
+    
+    # print("dim clean tax table")
+    # print(dim(clean_taxonomy_table))
+  } else
+  {
+    clean_taxonomy_table = taxonomy_table
+  }
+  
   # print(sprintf("lowest_rank = %s", lowest_rank))
-  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus', 'ASV')
 
-  lowest_rank_index = match(lowest_rank, all_ranks)
+  lowest_rank_index = match(cluster_by, all_ranks)
   ### get just the ranks that will be used in
   ### 1. The glommed name
   ### 2. The step of aggregating sums
@@ -636,7 +691,7 @@ getFilteredTaxaCountsDev = function(
   print("ranks to glom")
   print(ranks_to_glom)
 
-  sample_names = as.character(metadata[,id_col])
+  sample_names = as.character(sample_data[,id_col])
   # print(sprintf("length sample_names = %d", length(sample_names)))
 
   print("creating asv taxa counts table")
@@ -644,7 +699,7 @@ getFilteredTaxaCountsDev = function(
 
   if (!is.na(cluster_by) & toupper(cluster_by) != 'ASV')
   {
-    # print("Aggregating by ranks")
+    print("Aggregating by ranks")
     ### Aggregate counts by ranks being kept
     counts =
       counts %>%
@@ -655,18 +710,38 @@ getFilteredTaxaCountsDev = function(
       group_by(.dots=ranks_to_glom) %>%
       summarize_all(sum) %>%
       ungroup()
-  }
+  } 
+  
+  # else 
+  # {
+  #   print("Aggregating by ASVs")
+  #   print(colnames(counts))
+  #   counts =
+  #     counts %>%
+  #     ### Drop the ASVs
+  #     # select(!!c(sample_names, all_ranks)) %>%
+  #     # select(-ASVs) %>%
+  #     ### Group and sum
+  #     group_by('ASVs') %>%
+  #     summarize_all(sum) %>%
+  #     ungroup() %>%
+  #     select(sample_names, all_ranks, everything())
+  # }
 
+  # print('dim counts')
+  # print(dim(counts))
   # print("Filtering taxa")
   # print("Relative Abundance Filter")
 
   filtered_counts =
     counts %>%
-    applyMinCountFilter(min_count_cutoff) %>%
+    applyMinCountFilter(min_count_cutoff)%>%
     applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
     applyPrevalenceFilter(prevalence_cutoff)
+  
+  print(sprintf('filtered_counts exists: %s', 'filtered_counts' %in% ls()))
 
-  # # print("current dim")
+  # print("current dim")
   # print(dim(filtered_counts))
 
   if (normalize)
@@ -693,24 +768,8 @@ getFilteredTaxaCountsDev = function(
 
   if (add_glommed_names)
   {
-    filtered_counts = addGlommedTaxaNames(filtered_counts, lowest_rank)
-  }
-
-  if (clean_taxa)
-  {
-    ### Remove any taxa that are NA at the lowest level.
-    ### No point in having ASVs aggregated to the same genus
-    ### if that genus is NA.
-    clean_taxonomy_table =
-      taxonomy_table %>%
-      # filter(sprintf("!is.na(%s)", lowest_rank))
-      filter(!is.na(!!sym(cluster_by)))
-
-    # print("dim clean tax table")
-    # print(dim(clean_taxonomy_table))
-  }else
-  {
-    clean_taxonomy_table = taxonomy_table
+    filtered_counts = addGlommedTaxaNames(filtered_counts, cluster_by)
+    # print('glommed taxa names')
   }
 
   return(filtered_counts %>% data.frame())
@@ -976,12 +1035,12 @@ filterVarsBySampleThreshold2 = function(
 )
 {
   
-  master_table = all_master_table
-  threshold = 3
-  variable_list = observational_variables
-  covariate="CaseString"
-  var = observational_variables$ARMS2rs10490924
-  print(names(variable_list))
+  # master_table = all_master_table
+  # threshold = 3
+  # variable_list = observational_variables
+  # covariate="CaseString"
+  # var = observational_variables$ARMS2rs10490924
+  # print(names(variable_list))
   
   new_variable_list = list()
   
@@ -1055,6 +1114,96 @@ filterVarsBySampleThreshold2 = function(
 }
 
 
+filterVarsBySampleThreshold3 = function(
+  master_table, 
+  variable_list,
+  factor_threshold, 
+  continuous_threshold, 
+  na_threshold,
+  keep_levels=T,
+  covariate=c()
+)
+{
+  
+  master_table = all_master_table
+  threshold = 3
+  variable_list = observational_variables
+  covariate="CaseString"
+  var = observational_variables$ARMS2rs10490924
+  print(names(variable_list))
+  
+  new_variable_list = list()
+  
+  for (var in variable_list)
+  {
+    
+    keep = F
+    # print(var)
+    
+    name = var$covariate_of_interest
+    case = var$case %>% as.character()
+    control = var$control %>% as.character()
+    
+    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    
+    if (case=="" & control=="")
+    {
+      print("continuous variable")
+      new_variable_list[[name]] = var
+      next
+    }
+    
+    temp_master_table = 
+      master_table %>% 
+      filter(!!as.name(name) %in% c(case, control)) %>%
+      droplevels()
+    
+    crosstab = 
+      temp_master_table %>%
+      select(c(covariate, name)) %>%
+      table()
+    
+    print(crosstab)
+    min_samples = min(crosstab)
+    print(sprintf("min samples %s", min_samples))
+    
+    ### Ignore if not in master table
+    if (!(name %in% colnames(master_table)))
+    {
+      print("not in master table...skipping")
+      next
+    } 
+    
+    ### Make sure both levels present
+    if ((temp_master_table %>% pull(name) %>% unique() %>% length()) < 2)
+    {
+      print("only one level. skipping...")
+      next
+    }
+    
+    print(sprintf('min_samples (all levels): %d', min_samples))
+    
+    if (min_samples >= num_samples_threshold)
+    {
+      print("enough samples...keeping")
+      new_variable_list[[name]] = var
+      next
+    }else
+    {
+      print(sprintf('%s has only %d samples...skipping', name, min_samples))
+      next
+    }
+    
+  }
+  
+  print("retained variables:")
+  print(new_variable_list %>% names())
+  
+  return(new_variable_list)
+}
+
+
+
 doMultipleRankRegression = function(
   var,
   predictors,
@@ -1065,14 +1214,19 @@ doMultipleRankRegression = function(
   print(sprintf('regression for %s', var))
 
   formula_rhs = paste0(names(predictors), collapse=' + ')
+  # print(formula_rhs)
+  # print(var)
+  # print(paste0('rank(', var, ')', '~', formula_rhs))
   if (rank==T)
   {
-    formula = paste0('rank(', var, ')', '~', formula_rhs) %>% as.formula()
+    # print("rank = T")
+    formula = paste0('rank(', var, ')', ' ~ ', formula_rhs) %>% as.formula()
+    # print(formula)
   } else
   {
     formula = paste0(var, '~', formula_rhs) %>% as.formula()
   }
-  # print(formula)
+  print(formula)
 
   fit = lm(formula, data=master_table)
 
@@ -1184,7 +1338,10 @@ setFactorsLevels = function(
   variables
   )
 {
-  for (var in observational_variables)
+  # df = sample_data
+  # variables = variables = observational_variables[c('CaseString', 'Gender',  'Age')]
+  
+  for (var in variables)
   {
     name = var$covariate_of_interest
     case = var$case
@@ -1806,7 +1963,8 @@ getMultipleRegressionStats = function(
   stats=c('pvalues', 'effect_sizes', 'std_errors'),
   response_var_name="",
   adjustment_method="",
-  parametric=F
+  transformation="rank",
+  log_regularizer=0.002
 )
 {
 
@@ -1848,13 +2006,16 @@ getMultipleRegressionStats = function(
     # print(sprintf('response var: %s', var))
 
     ### Build Formula
-    if (parametric)
+    if (transformation=='log')
     {
-      lhs = var
-    } else
+      lhs = hs = sprintf('log(%s + %s)', var, log_regularizer)
+    } else if (transformation=='rank')
     {
       lhs = sprintf('rank(%s)', var)
-    }
+    } else
+    {
+      lhs = var
+    } 
 
     predictor_names = predictor_vars %>% names() %>% unname()
     rhs = paste(predictor_names, collapse=' + ')
@@ -1975,15 +2136,14 @@ getLogisticRegressionStats = function(
   )
 {
   
-  
-  # base_predictor_vars=observational_variables[c('Age', 'Gender', 'Tissue_code')]
-  # additional_predictors=taxa
-  # logistic_response_var='CaseString'
-  # master_table=all_master_table
-  # stats=c('pvalue', 'effect_size', 'std_error')
-  # response_var_name='CaseString'
-  # index_name=NULL
-  # adjustment_method='BH'
+  base_predictor_vars=observational_variables[c('Age', 'Gender', 'Tissue_code')]
+  additional_predictors=c(raw_exp_vars, calculated_exp_vars)
+  logistic_response_var='CaseString'
+  master_table=all_master_table
+  stats=c('pvalue', 'effect_size', 'std_error')
+  response_var_name='CaseString'
+  index_name=NULL
+  adjustment_method='BH'
 
   
   ### Get contrast names
@@ -2014,32 +2174,35 @@ getLogisticRegressionStats = function(
   ### Perform regression in loop over response vars
   for (var in additional_predictors)
   {
-    # print(sprintf('response var: %s', var))
+    print(sprintf('additional predictor: %s', var))
     
     ### Build Formula
     lhs = logistic_response_var
     
     predictor_names = base_predictor_vars %>% names() %>% unname()
     all_predictor_names = c(var, predictor_names)
+    print(all_predictor_names)
     all_contrast_names = c(base_contrast_names, var)
     
     rhs = paste(all_predictor_names, collapse=' + ')
     formula_string = paste0(lhs, ' ~ ', rhs)
     formula = as.formula(formula_string)
     
-    # print(sprintf('formula: %s', formula_string))
+    print(sprintf('formula: %s', formula_string))
     
     ## Peroform Regression
-    # print("peform regression")
+    print("perform regression")
     fit = glm(
       formula=formula, 
-      data=master_table,
-      family=binomial(link='logit')
+      data=all_master_table,
+      family=binomial(link='logit'),
+      na.action=na.omit
       )
     
     ### Collect pvalues
     if ('pvalue' %in% stats)
     {
+      print('getting pvalues')
       pvalues = getRegressionPvals(
         fit,
         contrast_names = all_contrast_names,
@@ -2059,7 +2222,7 @@ getLogisticRegressionStats = function(
     ### Collect effect sizes
     if ('effect_size' %in% stats)
     {
-      
+      print('getting effect size')
       effect_sizes = getRegressionEffectSizes(
         fit,
         contrast_names = all_contrast_names,
@@ -2074,6 +2237,7 @@ getLogisticRegressionStats = function(
     ### Collect Standard Errors
     if ('std_error' %in% stats)
     {
+      print('getting std err')
       std_errors = getRegressionStandardError(
         fit,
         contrast_names = all_contrast_names,
@@ -2091,7 +2255,7 @@ getLogisticRegressionStats = function(
     for (contrast in all_contrast_names)
     {
       # print(var)
-      # print(contrast)
+      print(contrast)
       new_row = list()
       new_row$contrast = contrast
 
@@ -2141,6 +2305,76 @@ getLogisticRegressionStats = function(
   
   return(regression_stats)
   
+}
+
+
+plotEffectSize2 = function(
+    data,
+    effect_size_col,
+    effect_size_legend_title="",
+    feature_col,
+    feature_axis_title="",
+    alpha_col,
+    alpha_legend_title="",
+    plot_title=""
+  )
+{
+  # 
+  # data=df
+  # effect_size_col="log2FoldChange"
+  # effect_size_legend_title="Abundance in Case"
+  # feature_col="Genus"
+  # alpha_col='pvals'
+  # alpha_legend_title="Adjusted P-Values"
+  # plot_title="Case/Control Log2 Fold Change"
+  
+  if (effect_size_legend_title == "")
+  {
+    effect_size_legend_title = effect_size_col
+  }
+  
+  if (feature_axis_title == "")
+  {
+    feature_axis_title = feature_col
+  }
+  
+  if (alpha_legend_title == "")
+  {
+    alpha_legend_title = alpha_col
+  }
+  
+  plt = 
+    data %>%
+    arrange(!!as.name(effect_size_col)) %>%
+    mutate(
+      enhanced = factor(
+        ifelse(!!as.name(effect_size_col)<=0, 'Reduced', 'Enhanced'), 
+        levels=c('Reduced', 'Enhanced')
+      ),
+      !!feature_col := factor(!!as.name(feature_col), levels=!!as.name(feature_col))
+    ) %>%
+    ggplot() +
+    geom_col(aes_string(
+        x=feature_col, 
+        y=effect_size_col, 
+        fill="enhanced", 
+        alpha=alpha_col
+      )
+    ) +
+    coord_flip() + 
+    scale_fill_manual(values=c('#FF0000', '#0000FF'), name=effect_size_legend_title) +
+    scale_alpha_continuous(
+      range=c(1,0), 
+      limits=c(0,1),
+      breaks=seq(0, 1, length=5),
+      # labels=as.character(seq(0, 1, length=5)),
+      name=alpha_legend_title
+    ) +
+    ggtitle(plot_title)
+  
+  print(p)
+  
+  return(plt)
 }
 
 
