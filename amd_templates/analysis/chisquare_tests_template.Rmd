@@ -28,7 +28,6 @@ output:
   
   h3 {
     font-size: 1.8rem;
-    
   }
   
   h4 {
@@ -42,12 +41,11 @@ output:
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
-tables_dir = "${tables_dir}"
+tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
 analysis_title = "${analysis_title}"
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_title` Raw Data Plots {.tabset}
-
+# MiSeq-${miseq_run_number} Pearson's $\Chi^2$ Test for Independence {.tabset}
 ## Clustering Level
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
@@ -56,6 +54,20 @@ Data clustered at the `r toupper('${clustering_level}')` Level.
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
+
+## Categorical Variables Included
+```{r}
+test_categorical_variables = ${test_categorical_variables}
+num_test_vars = length(test_categorical_variables)
+reference_categorical_variables = ${reference_categorical_variables}
+num_ref_vars = length(reference_categorical_variables)
+```
+
+Using the following variables:
+
+* **Reference Variables:** `r reference_categorical_variables`
+* **Test Variables:** `r test_categorical_variables`
+
 ## Setup
 
 ### Start Conda ENV
@@ -63,41 +75,41 @@ Data clustered at the `r toupper('${clustering_level}')` Level.
 startCondaEnv('base')
 ```
 
+
 ### Load Libraries
 ```{r}
 library(rmarkdown)
-library(knitr)
+# library(knitr)
 
 library(tidyverse)
 library(magrittr)
+library(DT)
+library(openxlsx)
 library(ggplot2)
 library(ggbeeswarm)
-library(openxlsx)
-library(DT)
 library(pheatmap)
-library(kableExtra)
+library(vcd)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 
-
 ### Set Knitr Options
 ```{r}
 ${knitr_options}
-```
 
+```
 
 ### Load Data
 ```{r}
 filename = makeDataFileName(
-  'master_table.xlsx', 
-  tables_dir, 
-  analysis_type,
+  'master_table.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
   "${miseq_project_prefix}",
   "${clustering_level}"
-  )
+)
 
 all_master_table = readWorkbook(filename, sheet='Master Table')
 age_lt_90_master_table = all_master_table %>% filter(Age < 90)
@@ -109,43 +121,7 @@ source(file.path(
   "${metadata_dir}", 
   'observational_variables.R'
   ))
-
 ```
-
-### Variables of interest
-#### All Observational Variables
-```{r}
-# print(observational_variables)
-```
-
-#### AMD Only Observational Variables
-```{r}
-amd_only_variables = observational_variables
-
-amd_only_excluded_variables = c(
-  'Gender',
-  'CaseString',
-  'Age'
-)
-
-for (varname in amd_only_excluded_variables)
-{
-  print(sprintf('Excluding %s', varname))
-  amd_only_variables[varname] = NULL
-}
-
-```
-
-**Excluding: ** `r amd_only_excluded_variables`
-
-
-#### Raw Experimental Variables
-
-```{r}
-raw_exp_vars = ${raw_exp_vars}
-```
-**Raw Experimental Variables: ** `r raw_exp_vars`
-
 
 ### Set Metadata Factor Levels
 ```{r}
@@ -163,46 +139,65 @@ amd_only_master_table = setFactorsLevels(
   )
 ```
 
-## Raw Plots
-### All Subgroups
+
+## All Subgroups
+### Run Pearson's $\Chi^2$ Test for Independence
 ```{r}
-makeBoxAndDotplot(
-  master_table=all_master_table,
-  indices=raw_exp_vars,
-  aesthetics=list(
-    x_var='index', 
-    color_var='index', 
-    facet_var='index'
-    ),
-  title=paste(analysis_title, "-- All Subgroups")
+all_pval_table = matrix(ncol=num_ref_vars, nrow=num_test_vars)
+colnames(all_pval_table) = reference_categorical_variables
+rownames(all_pval_table) = test_categorical_variables
+
+for (ref_var in reference_categorical_variables)
+{
+  for (test_var in test_categorical_variables)
+  {
+    print(sprintf('ref_var: %s, test_var: %s', ref_var, test_var))
+    
+    crosstab = 
+      all_master_table %>% 
+      select(!!ref_var, !!test_var) %>%
+      table()
+    
+    print(crosstab)
+    
+    pvalue = chisq.test(crosstab) %>% .[['p.value']]
+    print(pvalue)
+    
+    all_pval_table[test_var, ref_var] = pvalue
+    
+    mosaic(crosstab, shade=T)
+  } 
+}
+```
+
+### Heatmap
+```{r}
+pheatmap(
+  mat=all_pval_table,
+  cluster_cols = F,
+  cluster_rows = F
 )
 ```
 
-### Age < 90
+
+### Write Stats Table
 ```{r}
-makeBoxAndDotplot(
-  master_table=age_lt_90_master_table,
-  indices=raw_exp_vars,
-  aesthetics=list(
-    x_var='index', 
-    color_var='index', 
-    facet_var='index'
-    ),
-  title=paste(analysis_title, "-- Age < 90")
+filename = makeDataFileName(
+  'all_chisq.xlsx', 
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+  )
+
+print(filename)
+
+write.xlsx(
+  all_pval_table,
+  file=filename,
+  quote=F,
+  col.names=T,
+  row.names=T
 )
 ```
 
-### AMD Only
-
-```{r}
-makeBoxAndDotplot(
-  master_table=amd_only_master_table,
-  indices=raw_exp_vars,
-  aesthetics=list(
-    x_var='index', 
-    color_var='index', 
-    facet_var='index'
-    ),
-  title=paste(analysis_title, "--AMD Only")
-)
-```

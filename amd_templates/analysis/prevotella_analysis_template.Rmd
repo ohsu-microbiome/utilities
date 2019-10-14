@@ -52,7 +52,7 @@ use_allbac = ${use_allbac}
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('${conda_env}')
+startCondaEnv('regression')
 ```
 
 ### Load Libraries
@@ -69,7 +69,6 @@ library(kableExtra)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 

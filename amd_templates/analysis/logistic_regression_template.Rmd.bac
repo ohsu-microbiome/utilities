@@ -129,7 +129,7 @@ age_lt_90_master_table = setFactorsLevels(
 
 ```{r}
 all_variables = observational_variables[${logistic_regression_predictors['All']}]
-age_lt_90_variables = observational_variables[${logistic_regression_predictors['Age_lt_90']}]
+age_lt_09_variables = observational_variables[${logistic_regression_predictors['Age_lt_90']}]
 ```
 
 * **All Subgroup Predictros:** ${logistic_regression_predictors['All']}
@@ -175,7 +175,7 @@ Determine which covariates have sufficient samples with each value or of perfect
 ```{r}
 covariates = all_variables
 
-logistic_regression_stats = getLogisticRegressionStats(
+all_logistic_regression_stats = getLogisticRegressionStats(
   base_predictor_vars=covariates,
   additional_predictors=c(raw_exp_vars, calculated_exp_vars),
   logistic_response_var='CaseString',
@@ -186,70 +186,39 @@ logistic_regression_stats = getLogisticRegressionStats(
 
 contrasts = makeContrastNames(covariates, all_master_table)
 
-all_logistic_regression_stats = data.frame(Main=character())
-
-for (contrast in c('Main', contrasts))
+logistic_regression_stats = data.frame(ResponseVar=character())
+for (contrast in contrasts)
 {
-  print(contrast)
-  
-  pval_name = paste0(contrast, '.pval')
-  odds_name = paste0(contrast, '.odds')
-  print(pval_name)
-  print(odds_name)
-  all_logistic_regression_stats %<>% 
-    mutate(
-      !!pval_name := numeric(),
-      !!odds_name := numeric()
-    )
+  logistic_regression_stats %<>% mutate(!!contrast := numeric())
+}
+for (var in c(raw_exp_vars, calculated_exp_vars))
+{
+  logistic_regression_stats %<>% mutate(!!var := numeric())
 }
 
+all_logistic_regression_pvalues = logistic_regression_stats
+all_logistic_regression_odds_ratios = logistic_regression_stats
 
-for(var in names(logistic_regression_stats))
+for(var in names(all_logistic_regression_stats))
 {
-  print(sprintf('var=%s', var))
+  temp = 
+    all_logistic_regression_stats[[var]] %>%
+    select(contrast, pvalue, effect_size) %>%
+    column_to_rownames('contrast') %>%
+    t() %>%
+    data.frame() %>%
+    rownames_to_column('stat') %>%
+    mutate(ResponseVar='CaseString')
   
-  var_data = logistic_regression_stats[[var]]
-  print('var_data')
-  print(var_data)
-  
-  stats_list = list()
-  stats_list[['Main']] = var
-      
-  pval_name = paste0('Main', '.pval')
-  odds_name = paste0('Main', '.odds')
-  
-  stats_list[[pval_name]] = 
-    var_data %>%
-    filter(contrast == !!var) %>%
-    pull(pvalue)
-  stats_list[[odds_name]] = 
-    var_data %>% 
-    filter(contrast == !!var) %>%
-    pull(effect_size) %>%
-    exp()
-  
-  for (contrast in contrasts)
-  {
-    print(sprintf('contrast=%s', contrast))
+  pvalues = temp %>% filter(stat=='pvalue') %>% select(-stat)
+  odds_ratios = 
+    temp %>% 
+    filter(stat=='effect_size') %>% 
+    select(-stat) %>% 
+    mutate_at(vars(-ResponseVar), ~exp(.))
     
-    pval_name = paste0(contrast, '.pval')
-    odds_name = paste0(contrast, '.odds')
-    
-    stats_list[[pval_name]] = 
-      var_data %>%
-      filter(contrast == !!contrast) %>%
-      pull(pvalue)
-    stats_list[[odds_name]] = 
-      var_data %>% 
-      filter(contrast == !!contrast) %>%
-      pull(effect_size) %>%
-      exp()
-    
-    print('stats_list')
-    print(stats_list)
-  }
-    
-  all_logistic_regression_stats %<>% add_row(!!!stats_list)
+  all_logistic_regression_pvalues %<>% add_row(!!!pvalues)
+  all_logistic_regression_odds_ratios %<>% add_row(!!!odds_ratios)
 }
 
 ```
@@ -260,28 +229,31 @@ all_wb = createWorkbook()
 
 addWorksheet(
   all_wb, 
-  sheetName="Logistic Regression"
+  sheetName="Unadjusted P-Values"
   )
 
 openxlsx::writeData(
   all_wb, 
-  sheet="Logistic Regression", 
-  all_logistic_regression_stats
+  sheet="Unadjusted P-Values", 
+  all_logistic_regression_pvalues
   )
 
 addWorksheet(
   all_wb, 
-  sheetName="Main Variables"
+  sheetName="Odds Ratios"
   )
 
 openxlsx::writeData(
   all_wb,
-  sheet="Main Variables",
-  c(raw_exp_vars, calculated_exp_vars)
+  sheet="Odds Ratios", 
+  all_logistic_regression_odds_ratios
   )
 
+# addWorksheet(regression_pvals, sheetName="Adjusted P-Values")
+# openxlsx::writeData(regression_pvals, sheet="Adjusted P-Values", adjusted_regression_pvals)
+
 filename = makeDataFileName(
-  'all_logistic_regression.xlsx',
+  'all_only_logistic_regression.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
@@ -292,13 +264,11 @@ saveWorkbook(all_wb, file=filename, overwrite=T)
 ```
 
 ## Age < 90
-
-#### Calculate Stats
+### Calculate Stats
 ```{r}
+covariates = age_lt_09_variables
 
-covariates = age_lt_90_variables
-
-logistic_regression_stats = getLogisticRegressionStats(
+age_lt_90_logistic_regression_stats = getLogisticRegressionStats(
   base_predictor_vars=covariates,
   additional_predictors=c(raw_exp_vars, calculated_exp_vars),
   logistic_response_var='CaseString',
@@ -307,72 +277,41 @@ logistic_regression_stats = getLogisticRegressionStats(
   response_var_name='Index'
 )
 
-contrasts = makeContrastNames(covariates, all_master_table)
+contrasts = makeContrastNames(covariates, age_lt_90_master_table)
 
-age_lt_90_logistic_regression_stats = data.frame(Main=character())
-
-for (contrast in c('Main', contrasts))
+logistic_regression_stats = data.frame(ResponseVar=character())
+for (contrast in contrasts)
 {
-  print(contrast)
-  
-  pval_name = paste0(contrast, '.pval')
-  odds_name = paste0(contrast, '.odds')
-  print(pval_name)
-  print(odds_name)
-  age_lt_90_logistic_regression_stats %<>% 
-    mutate(
-      !!pval_name := numeric(),
-      !!odds_name := numeric()
-    )
+  logistic_regression_stats %<>% mutate(!!contrast := numeric())
+}
+for (var in c(raw_exp_vars, calculated_exp_vars))
+{
+  logistic_regression_stats %<>% mutate(!!var := numeric())
 }
 
+age_lt_90_logistic_regression_pvalues = logistic_regression_stats
+age_lt_90_logistic_regression_odds_ratios = logistic_regression_stats
 
-for(var in names(logistic_regression_stats))
+for(var in names(age_lt_90_logistic_regression_stats))
 {
-  print(sprintf('var=%s', var))
+  temp = 
+    age_lt_90_logistic_regression_stats[[var]] %>%
+    select(contrast, pvalue, effect_size) %>%
+    column_to_rownames('contrast') %>%
+    t() %>%
+    data.frame() %>%
+    rownames_to_column('stat') %>%
+    mutate(ResponseVar='CaseString')
   
-  var_data = logistic_regression_stats[[var]]
-  print('var_data')
-  print(var_data)
-  
-  stats_list = list()
-  stats_list[['Main']] = var
-      
-  pval_name = paste0('Main', '.pval')
-  odds_name = paste0('Main', '.odds')
-  
-  stats_list[[pval_name]] = 
-    var_data %>%
-    filter(contrast == !!var) %>%
-    pull(pvalue)
-  stats_list[[odds_name]] = 
-    var_data %>% 
-    filter(contrast == !!var) %>%
-    pull(effect_size) %>%
-    exp()
-  
-  for (contrast in contrasts)
-  {
-    print(sprintf('contrast=%s', contrast))
+  pvalues = temp %>% filter(stat=='pvalue') %>% select(-stat)
+  odds_ratios = 
+    temp %>% 
+    filter(stat=='effect_size') %>% 
+    select(-stat) %>% 
+    mutate_at(vars(-ResponseVar), ~exp(.))
     
-    pval_name = paste0(contrast, '.pval')
-    odds_name = paste0(contrast, '.odds')
-    
-    stats_list[[pval_name]] = 
-      var_data %>%
-      filter(contrast == !!contrast) %>%
-      pull(pvalue)
-    stats_list[[odds_name]] = 
-      var_data %>% 
-      filter(contrast == !!contrast) %>%
-      pull(effect_size) %>%
-      exp()
-    
-    print('stats_list')
-    print(stats_list)
-  }
-    
-  age_lt_90_logistic_regression_stats %<>% add_row(!!!stats_list)
+  age_lt_90_logistic_regression_pvalues %<>% add_row(!!!pvalues)
+  age_lt_90_logistic_regression_odds_ratios %<>% add_row(!!!odds_ratios)
 }
 
 ```
@@ -384,25 +323,28 @@ age_lt_90_wb = createWorkbook()
 
 addWorksheet(
   age_lt_90_wb, 
-  sheetName="Logistic Regression"
+  sheetName="Unadjusted P-Values"
   )
 
 openxlsx::writeData(
   age_lt_90_wb, 
-  sheet="Logistic Regression", 
-  age_lt_90_logistic_regression_stats
+  sheet="Unadjusted P-Values", 
+  age_lt_90_logistic_regression_pvalues
   )
 
 addWorksheet(
   age_lt_90_wb, 
-  sheetName="Main Variables"
+  sheetName="Odds Ratios"
   )
 
 openxlsx::writeData(
   age_lt_90_wb,
-  sheet="Main Variables",
-  c(raw_exp_vars, calculated_exp_vars)
+  sheet="Odds Ratios", 
+  age_lt_90_logistic_regression_odds_ratios
   )
+
+# addWorksheet(regression_pvals, sheetName="Adjusted P-Values")
+# openxlsx::writeData(regression_pvals, sheet="Adjusted P-Values", adjusted_regression_pvals)
 
 filename = makeDataFileName(
   'age_lt_90_logistic_regression.xlsx',

@@ -60,7 +60,7 @@ Data clustered at the `r toupper("${clustering_level}")` level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('${conda_env}')
+startCondaEnv('regression')
 ```
 
 ### Load Libraries
@@ -77,7 +77,6 @@ library(kableExtra)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 
@@ -106,15 +105,16 @@ taxonomy_table =
     ) %>%
   mutate_all(as.character())
 
-sample_data = 
-  read.delim(
-    '${sample_data_file}', 
-    header=T, 
-    sep='\t',
-    stringsAsFactors=F
-    ) %>%
-  filter(SampleID!='Undetermined')
+# sample_data = 
+#   read.delim(
+#     '${sample_data_file}', 
+#     header=T, 
+#     sep='\t',
+#     stringsAsFactors=F
+#     ) %>%
+#   filter(SampleID!='Undetermined')
 
+sample_data = read.xlsx('${sample_data_file}')
 
 if ("IGA" %in% colnames(sample_data) & use_allbac)
 {

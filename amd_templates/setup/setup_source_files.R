@@ -56,6 +56,11 @@ print(asv_table_file_template)
 print(taxonomy_table_file_template)
 print(sample_data_file_template)
 
+if (exists('phylogenetic_tree_file_template'))
+{
+  print(phylogenetic_tree_file_template)
+}
+
 print("real files")
 asv_table_file = file.path(
   project_root,
@@ -78,12 +83,25 @@ sample_data_file = file.path(
   metadata_dir,
   paste0(miseq_project_prefix, sample_data_file_template)
 )
+
+if (exists('phylogenetic_tree_file_template'))
+{
+  phylogenetic_tree_file = file.path(
+    project_root,
+    dada2_tables_dir,
+    paste0(miseq_project_prefix, phylogenetic_tree_file_template)
+  )
+}
+
 print(sprintf('sample_data_file: %s', sample_data_file))
 print(file.exists(sample_data_file))
 
 ### For some reason, analysis_dir is getting corrupted to "analysis" and I need to
 ### redefine it.
 analysis_dir = getwd()
+
+### Create run script
+run_script = "#!/bin/bash\n\n"
 
 print(sprintf('passing in analysis_dir %s', analysis_dir))
 for (type in template_types)
@@ -94,10 +112,15 @@ for (type in template_types)
 
   new_source_file = generateSourceFile(
     template_type=type,
+    analysis_type,
     analysis_dir=analysis_dir
     )
+
+  run_script = paste0(run_script, "\n", "rmd ", new_source_file, "\n")
+
 }
 
+write(file='runall.sh', run_script)
 
 
 

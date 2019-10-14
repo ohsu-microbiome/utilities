@@ -76,7 +76,6 @@ library(nlme)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 
@@ -111,16 +110,25 @@ source(file.path(
   ))
 ```
 
-### Variables of interest
-#### All Observational Variables
-```{r}
-observational_variable_names = observational_variables %>% names()
-print(observational_variables %>% names())
-```
-#### Selected Variables
-```{r}
 
+### Set Metadata Factor Levels
+```{r}
+all_master_table = setFactorsLevels(all_master_table, observational_variables)
+age_lt_90_master_table = setFactorsLevels(age_lt_90_master_table, observational_variables)
+amd_only_master_table = setFactorsLevels(amd_only_master_table, observational_variables)
 ```
+
+### Variables of interest
+#### Observational Variables
+```{r}
+all_variables = observational_variables[${linear_regression_predictors['All']}]
+age_lt_90_variables = observational_variables[${linear_regression_predictors['Age_lt_90']}]
+amd_only_variables = observational_variables[${linear_regression_predictors['AMD_Only']}]
+```
+
+* **All Variables:** ${linear_regression_predictors['All']}
+* **Age < 90 Variables:** ${linear_regression_predictors['Age_lt_90']}
+* **AMD Only Variables:** ${linear_regression_predictors['AMD_Only']}
 
 #### Calculated Experimental Variables
 
@@ -130,13 +138,6 @@ calculated_exp_vars = ${calculated_exp_vars}
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
-### Set Metadata Factor Levels
-```{r}
-all_master_table = setFactorsLevels(all_master_table, observational_variables)
-age_lt_90_master_table = setFactorsLevels(age_lt_90_master_table, observational_variables)
-amd_only_master_table = setFactorsLevels(amd_only_master_table, observational_variables)
-```
-
 
 ### Determine which covariates have sufficient samples with each value
 ```{r}
@@ -145,29 +146,20 @@ num_samples_threshold = 5
 all_variables = filterVarsBySampleThreshold(
   all_master_table,
   num_samples_threshold,
-  observational_variables
+  all_variables
   )
 
 age_lt_90_variables = filterVarsBySampleThreshold(
   age_lt_90_master_table,
   num_samples_threshold,
-  observational_variables
+  age_lt_90_variables
   )
 
 amd_only_variables = filterVarsBySampleThreshold(
   amd_only_master_table %>% select(-CaseString),
   num_samples_threshold,
-  observational_variables
+  amd_only_variables
   )
-
-control_only_variables = filterVarsBySampleThreshold(
-  all_master_table %>% filter(CaseString=='Control') %>% select(-CaseString),
-  num_samples_threshold,
-  observational_variables
-  )
-
-# all_variables = observational_variables
-# age_lt_90_variables = all_variables
 
 ```
 
@@ -190,18 +182,18 @@ amd_only_contrast_names = makeContrastNames(
   all_master_table
   )
 
-control_only_contrast_names = makeContrastNames(
-  control_only_variables, 
-  all_master_table
-  )
+union_contrast_names = 
+  all_contrast_names %>%
+  union(age_lt_90_contrast_names) %>%
+  union(amd_only_contrast_names)
 ```
 
 ### Initialize regression stats table
 
 ```{r}
-regression_pvals = makeRegressionStatsContrastTemplate(all_contrast_names)
+regression_pvals = makeRegressionStatsContrastTemplate(union_contrast_names)
 
-regression_effect_sizes = makeRegressionStatsContrastTemplate(all_contrast_names)
+regression_effect_sizes = makeRegressionStatsContrastTemplate(union_contrast_names)
 ```
 
 ## Linear Regression {.tabset}
@@ -223,13 +215,14 @@ for (var in exp_vars)
   index_name = paste0(index_name_template, var)
   print(index_name)
   
-  fit = doMultipleRankRegression(
+  fit = doMultipleRegression(
     var,
     predictors,
-    master_table
+    response_vars=var,
+    master_table,
+    transformation='${regression_transform}',
+    log_regularizer=${log_regularizer}
   )
-  
-  # print(vif(fit))
   
   pvals = getRegressionPvals(
     fit,
@@ -237,7 +230,7 @@ for (var in exp_vars)
     index_name
   )
   
-  regression_pvals = regression_pvals %>% add_row(!!!pvals)
+ regression_pvals = regression_pvals %>% add_row(!!!pvals)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
@@ -249,6 +242,15 @@ for (var in exp_vars)
 
 }
 ```
+
+
+#### Visualize
+```{r}
+pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+
+pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+```
+
 
 ### Age < 90
 
@@ -267,12 +269,13 @@ for (var in exp_vars)
   index_name = paste0(index_name_template, var)
   print(index_name)
   
-  fit = doMultipleRankRegression(
+  fit = doMultipleRegression(
     var,
     predictors,
+    response_vars=var,
     master_table,
-    transformation="${regression_transformation}",
-    log_regularizer=${}
+    transformation='${regression_transform}',
+    log_regularizer=${log_regularizer}
   )
   
   pvals = getRegressionPvals(
@@ -281,7 +284,7 @@ for (var in exp_vars)
     index_name
   )
   
-  regression_pvals = regression_pvals %>% add_row(!!!pvals)
+ regression_pvals = regression_pvals %>% add_row(!!!pvals)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
@@ -292,6 +295,14 @@ for (var in exp_vars)
   regression_effect_sizes = regression_effect_sizes %>% add_row(!!!effect_sizes)
 
 }
+```
+
+
+#### Visualize
+```{r}
+pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+
+pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
 ```
 
 
@@ -312,10 +323,13 @@ for (var in exp_vars)
   index_name = paste0(index_name_template, var)
   print(index_name)
   
-  fit = doMultipleRankRegression(
+  fit = doMultipleRegression(
     var,
     predictors,
-    master_table
+    response_vars=var,
+    master_table,
+    transformation='${regression_transform}',
+    log_regularizer=${log_regularizer}
   )
   
   pvals = getRegressionPvals(
@@ -324,7 +338,7 @@ for (var in exp_vars)
     index_name
   )
   
-  regression_pvals = regression_pvals %>% add_row(!!!pvals)
+ regression_pvals = regression_pvals %>% add_row(!!!pvals)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
@@ -336,7 +350,8 @@ for (var in exp_vars)
 
 }
 ```
-## Visualize
+
+#### Visualize
 ```{r}
 pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
 
@@ -344,28 +359,28 @@ pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F
 ```
 
 
-## Write Tables
+### Write Regression Stats
 ```{r}
-regression_pvalues = createWorkbook()
+wb = createWorkbook()
 
 addWorksheet(
-  regression_pvalues, 
+  wb, 
   sheetName="Unadjusted P-Values"
   )
 
 openxlsx::writeData(
-  regression_pvalues, 
+  wb, 
   sheet="Unadjusted P-Values", 
   regression_pvals
   )
 
 addWorksheet(
-  regression_pvalues, 
+  wb, 
   sheetName="Effect Sizes"
   )
 
 openxlsx::writeData(
-  regression_pvalues,
+  wb,
   sheet="Effect Sizes", 
   regression_effect_sizes
   )
@@ -380,118 +395,5 @@ filename = makeDataFileName(
   "${miseq_project_prefix}",
   "${clustering_level}"
 )
-
-saveWorkbook(regression_pvalues, file=filename, overwrite=T)
+saveWorkbook(wb, file=filename, overwrite=T)
 ```
-
-
-## Response Variables
-
-```{r}
-raw_exp_vars = ${raw_exp_vars}
-calculated_exp_vars = ${calculated_exp_vars}
-all_experimental_variables = c(raw_exp_vars, calculated_exp_vars)
-```
-**Raw Experimental Variables: ** `r raw_exp_vars`
-**Calculated Experimental Variables: ** `r calculated_exp_vars`
-
-## Regression analysis
-
-### General Parameters
-```{r}
-stats = ${stats}
-use_parametric = ${use_parametric}
-adjustment_method = "${adjustment_method}"
-response_var_name = "${response_var_name}"
-```
-
-
-### All
-
-```{r}
-all_linear_regression_stats = getMultipleRegressionStats(
-  predictor_vars=all_variables,
-  response_vars=top_n_features,
-  master_table=all_master_table,
-  stats=stats,
-  response_var_name=response_var_name,
-  adjustment_method=adjustment_method,
-  transformation='${taxa_transform}',
-  log_regularizer=${relative_abundance_cutoff}
-)
-
-```
-
-
-### Age < 90
-```{r}
-age_lt_90_linear_regression_stats = getMultipleRegressionStats(
-  predictor_vars=age_lt_90_variables,
-  response_vars=top_n_features,
-  master_table=all_master_table %>% filter(Age < 90),
-  stats=stats,
-  response_var_name=response_var_name,
-  adjustment_method=adjustment_method,
-  transformation='${taxa_transform}',
-  log_regularizer=${relative_abundance_cutoff}
-)
-
-
-```
-
-### AMD Only
-```{r}
-amd_only_regression_stats = getMultipleRegressionStats(
-  predictor_vars=amd_only_variables,
-  response_vars=top_n_features,
-  master_table=all_master_table %>% filter(CaseString=='AMD'),
-  stats=stats,
-  response_var_name=response_var_name,
-  adjustment_method=adjustment_method,
-  transformation='${taxa_transform}',
-  log_regularizer=${relative_abundance_cutoff}
-)
-```
-
-## Write Regression Stats
-```{r}
-
-wb = createWorkbook()
-
-regression_stats_table_names = c(
-  "all_regression_stats",
-  "age_lt_90_regression_stats",
-  "amd_only_regression_stats"
-  )
-
-contrast_names = makeContrastNames(
-  observational_variables,
-  all_master_table
-)
-
-for (tab_name in regression_stats_table_names)
-{
-  for (contrast in contrast_names)
-  {
-    print(contrast)
-    addWorksheet(contrast_regression_stats, sheetName=contrast)
-    openxlsx::writeData(
-    wb=contrast_regression_stats, 
-    sheet=contrast, 
-    x=stats_table[[contrast]]
-    )
-  }
-  
-  filename = makeDataFileName(
-    'linear_regression.xlsx'),
-    "${tables_dir}",
-    "${analysis_type}",
-    "${miseq_project_prefix}",
-    "${clustering_level}"
-  )
-  print(filename)
-  
-  saveWorkbook(contrast_regression_stats, file=filename, overwrite=T)
-  
-}
-

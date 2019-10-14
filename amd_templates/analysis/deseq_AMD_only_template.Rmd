@@ -110,14 +110,7 @@ taxonomy_table =
     ) %>%
   mutate_all(as.character())
 
-sample_data = 
-  read.delim(
-    '${sample_data_file}', 
-    header=T, 
-    sep='\t',
-    stringsAsFactors=F
-    ) %>%
-  filter(SampleID!='Undetermined')
+sample_data = read.xlsx('${sample_data_file}')
 
 if ("IGA" %in% colnames(sample_data) & use_allbac)
 {
@@ -141,36 +134,35 @@ source(file.path(
   'observational_variables.R'
   ))
 
+load(file.path(dada2_table_dir, '${phylogenetic_tree_file}'))
 ```
 
 
 ### Set Metadata Factor Levels
 ```{r}
 sample_data = setFactorsLevels(sample_data, observational_variables)
-# sample_data %<>%
-#   mutate(AREDS=
-#     ifelse(is.na(AREDS), "MISSING", AREDS) %>%
-#     factor(levels=c('N', 'Y', 'MISSING'))
-#   )
 ```
 
 ### Variables of interest
 #### Observational Variables
 ```{r}
-all_covariates = observational_variables[${linear_regression_predictors['All']}]
-age_lt_90_covariates = observational_variables[${linear_regression_predictors['Age_lt_90']}]
 genotypes = ${genotypes}
 phenotypes = ${phenotypes}
+key_covariates = ${key_covariates}
+treatments = ${treatments}
+amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes) %>% unique()
 ```
 
 #### Remove Age
 ```{r}
-all_covariates$Age = NULL
-age_lt_90_covariates$Age = NULL
+key_covariates %<>% setdiff('Age')
+amd_only_variables %<>% setdiff('Age')
 ```
 
-* **All Variables:** `r all_covariates %>% names()`
-* **Age < 90 Variables:** `r age_lt_90_covariates %>% names()`
+* **Genotype variables:** `r genotypes`
+* **Phenotype variables:** `r phenotypes`
+* **Treatment variables:** `r treatments`
+* **Other covariates:**  `r key_covariates`
 
 ### Set Filtering
 ```{r}
@@ -178,21 +170,126 @@ relative_abundance_cutoff=${relative_abundance_cutoff}
 prevalence_cutoff=${prevalence_cutoff}
 ```
 
-### Set Ranks
-```{r}
-all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
-```
-
-## All Subgroups Case/Control Only
+## Variables Independantly
 ### Create Workbook
 ```{r}
 deseq_results_wb = createWorkbook()
 ```
 
-#### Run and add worksheets
+### Run and add worksheets
 ```{r}
-for (lowest_rank in all_ranks)
+
+lowest_rank = 'Genus'
+
+for (varname in amd_only_variables)
 {
+  
+  var = observational_variables[[varname]]
+  
+  taxa_counts = getFilteredTaxaCountsDev(
+    asv_table=asv_table,
+    taxonomy_table=taxonomy_table,
+    sample_data=sample_data,
+    cluster_by=lowest_rank,
+    relative_abundance_cutoff=relative_abundance_cutoff,
+    prevalence_cutoff=prevalence_cutoff,
+    min_count_cutoff=0,
+    filter_by='Taxa',
+    clean_taxa=T,  ### remove NAs in lowest rank
+    n_max_by_mean=F,
+    id_col="SampleName", ### metadata column that containes the unique sample IDs
+    add_glommed_names=T,
+    normalize=F
+  )
+  
+  if (var$case != "" && var$control != "")
+  {
+    var_sample_data =
+      sample_data %>% 
+      filter(!!as.name(varname) %in% c(var$case, var$control))
+  } else
+  {
+    var_sample_data = sample_data
+  }
+    
+  results_df = runDeseqFromTables_dev(
+    asv_table,
+    taxonomy_table,
+    var_sample_data,
+    varname,
+    lowest_rank=lowest_rank,
+    relative_abundance_cutoff=relative_abundance_cutoff,
+    prevalence_cutoff=prevalence_cutoff,
+    include_covariates = 'All'
+    )
+  
+    match_string = paste0(varname, '.*\\.padj')
+    padj_col = grep(match_string, colnames(results_df), value=T)
+  
+  results_df =
+    results_df %>%
+    select(Taxon, !!padj_col, starts_with(varname), everything()) %>%
+    arrange(!!as.name(padj_col))
+  
+  addWorksheet(
+    wb=deseq_results_wb, 
+    sheetName=varname
+    )
+  
+  openxlsx::writeData(
+    wb=deseq_results_wb, 
+    sheet=varname, 
+    x=results_df
+    )
+  
+  setColWidths(
+    wb=deseq_results_wb, 
+    sheet=varname, 
+    cols=1, 
+    widths = "auto"
+  )
+  
+  freezePane(
+    deseq_results_wb, 
+    sheet=varname, 
+    firstCol=T,
+    firstRow=T
+    )
+}
+```
+
+### Save Workbook
+```{r}
+filename = makeDataFileName(
+  'amd_only_individual_variables.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(filename)
+
+saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
+```
+
+## Genotypes, Phenotypes, and AREDS with Controls
+### Create Workbook
+```{r}
+deseq_results_wb = createWorkbook()
+```
+
+### Run and add worksheets
+```{r}
+lowest_rank = 'Genus'
+
+for (varname in c(genotypes, phenotypes, treatments))
+{
+  
+  vars = observational_variables[c(varname, key_covariates)]
+  
+  risk = vars[[varname]]$case
+  non_risk = vars[[varname]]$control
   
   taxa_counts = getFilteredTaxaCountsDev(
     asv_table=asv_table,
@@ -213,282 +310,54 @@ for (lowest_rank in all_ranks)
   results_df = runDeseqFromTables_dev(
     asv_table,
     taxonomy_table,
-    sample_data,
-    "CaseString",
+    sample_data %>% filter(!!as.name(varname) %in% c(risk, non_risk)),
+    vars %>% names(),
     lowest_rank=lowest_rank,
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     include_covariates = 'All'
     )
   
-  padj_col = "CaseString_AMD_vs_Control.padj"
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(results_df), value=T)
   
   results_df =
     results_df %>%
-    select(Taxon, !!padj_col, everything()) %>%
+    select(Taxon, !!padj_col, starts_with(varname), everything()) %>%
     arrange(!!as.name(padj_col))
-  
+    
   addWorksheet(
     wb=deseq_results_wb, 
-    sheetName=lowest_rank
+    sheetName=varname
     )
   
   openxlsx::writeData(
     wb=deseq_results_wb, 
-    sheet=lowest_rank, 
+    sheet=varname, 
     x=results_df
     )
-    
+  
   setColWidths(
     wb=deseq_results_wb, 
-    sheet=lowest_rank, 
+    sheet=varname, 
     cols=1, 
     widths = "auto"
   )
   
   freezePane(
     deseq_results_wb, 
-    sheet=lowest_rank, 
+    sheet=varname, 
     firstCol=T,
     firstRow=T
-  )
-}
-```
-
-#### Save Workbook
-```{r}
-filename = makeDataFileName(
-  'all_subgroups_case_vs_control.xlsx',
-  "${tables_dir}",
-  "${analysis_type}",
-  "${miseq_project_prefix}",
-  "rank"
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
-```
-
-## All Subgroups -- All Variables
-### Create Workbook
-```{r}
-deseq_results_wb = createWorkbook()
-```
-
-### Run and add worksheets
-```{r}
-for (lowest_rank in all_ranks)
-{
-  
-  taxa_counts = getFilteredTaxaCountsDev(
-    asv_table=asv_table,
-    taxonomy_table=taxonomy_table,
-    sample_data=sample_data,
-    cluster_by=lowest_rank,
-    relative_abundance_cutoff=relative_abundance_cutoff,
-    prevalence_cutoff=prevalence_cutoff,
-    min_count_cutoff=0,
-    filter_by='Taxa',
-    clean_taxa=T,  ### remove NAs in lowest rank
-    n_max_by_mean=F,
-    id_col="SampleName", ### metadata column that containes the unique sample IDs
-    add_glommed_names=T,
-    normalize=F
-  )
-    
-  results_df = runDeseqFromTables_dev(
-    asv_table,
-    taxonomy_table,
-    sample_data,
-    all_covariates %>% names(),
-    lowest_rank=lowest_rank,
-    relative_abundance_cutoff=relative_abundance_cutoff,
-    prevalence_cutoff=prevalence_cutoff,
-    include_covariates = 'All'
     )
-  
-  padj_col = "CaseString_AMD_vs_Control.padj"
-  
-  results_df =
-    results_df %>%
-    select(Taxon, !!padj_col, starts_with("CaseString"), everything()) %>%
-    arrange(!!as.name(padj_col))
-  
-  addWorksheet(
-    wb=deseq_results_wb, 
-    sheetName=lowest_rank
-    )
-  
-  openxlsx::writeData(
-    wb=deseq_results_wb, 
-    sheet=lowest_rank, 
-    x=results_df
-    )
-    
-  setColWidths(
-    wb=deseq_results_wb, 
-    sheet=lowest_rank, 
-    cols=1, 
-    widths = "auto"
-  )
-  
-  freezePane(
-    deseq_results_wb, 
-    sheet=lowest_rank, 
-    firstCol=T,
-    firstRow=T
-  )
+
 }
 ```
 
 ### Save Workbook
 ```{r}
 filename = makeDataFileName(
-  'all_subgroups_with_covariates.xlsx',
-  "${tables_dir}",
-  "${analysis_type}",
-  "${miseq_project_prefix}",
-  "rank"
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
-```
-
-## Age < 90 Case/Control Only
-
-### Create Workbook
-```{r}
-deseq_results_wb = createWorkbook()
-```
-
-### Run and add worksheets
-```{r}
-for (lowest_rank in all_ranks)
-{
-  results_df = runDeseqFromTables_dev(
-    asv_table,
-    taxonomy_table,
-    sample_data %>% filter(Age < 90),
-    "CaseString",
-    lowest_rank=lowest_rank,
-    relative_abundance_cutoff=relative_abundance_cutoff,
-    prevalence_cutoff=prevalence_cutoff,
-    include_covariates = 'All'
-    )
-  
-  padj_col = "CaseString_AMD_vs_Control.padj"
-  
-  results_df =
-    results_df %>%
-    select(Taxon, !!padj_col, everything()) %>%
-    arrange(!!as.name(padj_col))
-  
-  addWorksheet(
-    wb=deseq_results_wb, 
-    sheetName=lowest_rank
-    )
-  
-  openxlsx::writeData(
-    wb=deseq_results_wb, 
-    sheet=lowest_rank, 
-    x=results_df
-    )
-    
-  setColWidths(
-    wb=deseq_results_wb, 
-    sheet=lowest_rank, 
-    cols=1, 
-    widths = "auto"
-  )
-  
-  freezePane(
-    deseq_results_wb, 
-    sheet=lowest_rank, 
-    firstCol=T,
-    firstRow=T
-  )
-}
-```
-
-### Save Workbook
-```{r}
-filename = makeDataFileName(
-  'age_lt_90_case_vs_control.xlsx',
-  "${tables_dir}",
-  "${analysis_type}",
-  "${miseq_project_prefix}",
-  "rank"
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
-```
-
-
-## Age < 90
-
-### Create Workbook
-```{r}
-deseq_results_wb = createWorkbook()
-```
-
-### Run and add worksheets
-```{r}
-for (lowest_rank in all_ranks)
-{
-  results_df = runDeseqFromTables_dev(
-    asv_table,
-    taxonomy_table,
-    sample_data %>% filter(Age < 90),
-    age_lt_90_covariates %>% names(),
-    lowest_rank=lowest_rank,
-    relative_abundance_cutoff=relative_abundance_cutoff,
-    prevalence_cutoff=prevalence_cutoff,
-    include_covariates = 'All'
-    )
-  
-  padj_col = "CaseString_AMD_vs_Control.padj"
-  
-  results_df =
-    results_df %>%
-    select(Taxon, !!padj_col, starts_with("CaseString"), everything()) %>%
-    arrange(!!as.name(padj_col))
-  
-  addWorksheet(
-    wb=deseq_results_wb, 
-    sheetName=lowest_rank
-    )
-  
-  openxlsx::writeData(
-    wb=deseq_results_wb, 
-    sheet=lowest_rank, 
-    x=results_df
-    )
-    
-  setColWidths(
-    wb=deseq_results_wb, 
-    sheet=lowest_rank, 
-    cols=1, 
-    widths = "auto"
-  )
-  
-  freezePane(
-    deseq_results_wb, 
-    sheet=lowest_rank, 
-    firstCol=T,
-    firstRow=T
-  )
-}
-```
-
-### Save Workbook
-```{r}
-filename = makeDataFileName(
-  'age_lt_90_with_covariates.xlsx',
+  'amd_only_variables_with_controls.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",

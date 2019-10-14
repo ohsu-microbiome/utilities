@@ -1508,7 +1508,7 @@ window.initializeCodeFolding = function(show) {
 
     // create a collapsable div to wrap the code in
     var div = $('<div class="collapse r-code-collapse"></div>');
-    if (show || $(this)[0].classList.contains('fold-show'))
+    if (show)
       div.addClass('in');
     var id = 'rcode-643E0F36' + currentIndex++;
     div.attr('id', id);
@@ -1638,6 +1638,7 @@ code {
 }
 img {
   max-width:100%;
+  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -1773,28 +1774,30 @@ summary {
 
 <div id="TOC">
 <ul>
-<li><a href="#miseq-miseq_run_number-genus-logistic-regression-analysis"><span class="toc-section-number">1</span> MiSeq-${miseq_run_number} Genus Logistic Regression Analysis</a><ul>
+<li><a href="#miseq-miseq_run_number-beta-diversity"><span class="toc-section-number">1</span> MiSeq-${miseq_run_number} Beta Diversity</a><ul>
 <li><a href="#clustering-level"><span class="toc-section-number">1.1</span> Clustering Level</a></li>
-<li><a href="#setup"><span class="toc-section-number">1.2</span> Setup</a><ul>
-<li><a href="#start-conda-env"><span class="toc-section-number">1.2.1</span> Start Conda ENV</a></li>
-<li><a href="#load-libraries"><span class="toc-section-number">1.2.2</span> Load Libraries</a></li>
-<li><a href="#set-knitr-options"><span class="toc-section-number">1.2.3</span> Set Knitr Options</a></li>
-<li><a href="#load-data"><span class="toc-section-number">1.2.4</span> Load Data</a></li>
+<li><a href="#filtering"><span class="toc-section-number">1.2</span> Filtering</a></li>
+<li><a href="#setup"><span class="toc-section-number">1.3</span> Setup</a><ul>
+<li><a href="#start-conda-env"><span class="toc-section-number">1.3.1</span> Start Conda ENV</a></li>
+<li><a href="#load-libraries"><span class="toc-section-number">1.3.2</span> Load Libraries</a></li>
+<li><a href="#set-knitr-options"><span class="toc-section-number">1.3.3</span> Set Knitr Options</a></li>
+<li><a href="#load-data"><span class="toc-section-number">1.3.4</span> Load Data</a></li>
+<li><a href="#set-filtering"><span class="toc-section-number">1.3.5</span> Set Filtering</a></li>
+<li><a href="#variables-of-interest"><span class="toc-section-number">1.3.6</span> Variables of interest</a></li>
+<li><a href="#get-filtered-taxa-abundance"><span class="toc-section-number">1.3.7</span> Get Filtered Taxa Abundance</a></li>
+<li><a href="#build-master-table"><span class="toc-section-number">1.3.8</span> Build Master Table</a></li>
+<li><a href="#axes-sets"><span class="toc-section-number">1.3.9</span> Axes Sets</a></li>
 </ul></li>
-<li><a href="#variables"><span class="toc-section-number">1.3</span> Variables</a><ul>
-<li><a href="#set-metadata-factor-levels"><span class="toc-section-number">1.3.1</span> Set Metadata Factor Levels</a></li>
-<li><a href="#observational-variables"><span class="toc-section-number">1.3.2</span> Observational Variables</a></li>
-<li><a href="#raw-variables"><span class="toc-section-number">1.3.3</span> Raw Variables</a></li>
-<li><a href="#calculated_exp_vars"><span class="toc-section-number">1.3.4</span> calculated_exp_vars</a></li>
-<li><a href="#filter-covariates"><span class="toc-section-number">1.3.5</span> Filter Covariates</a></li>
-<li><a href="#remaining-covariates"><span class="toc-section-number">1.3.6</span> Remaining Covariates</a></li>
+<li><a href="#mds-plots"><span class="toc-section-number">1.4</span> MDS Plots</a><ul>
+<li><a href="#scree-plot"><span class="toc-section-number">1.4.1</span> Scree Plot</a></li>
+<li><a href="#d"><span class="toc-section-number">1.4.2</span> 2D</a></li>
+<li><a href="#d-1"><span class="toc-section-number">1.4.3</span> 3D</a></li>
 </ul></li>
-<li><a href="#logistic-regression"><span class="toc-section-number">1.4</span> Logistic Regression</a><ul>
-<li><a href="#all-subgroups"><span class="toc-section-number">1.4.1</span> All Subgroups</a></li>
-<li><a href="#write-tables"><span class="toc-section-number">1.4.2</span> Write Tables</a></li>
-<li><a href="#age-90"><span class="toc-section-number">1.4.3</span> Age &lt; 90</a></li>
+<li><a href="#pcoa-plots"><span class="toc-section-number">1.5</span> PCoA Plots</a><ul>
+<li><a href="#scree-plot-1"><span class="toc-section-number">1.5.1</span> Scree Plot</a></li>
+<li><a href="#d-2"><span class="toc-section-number">1.5.2</span> 2D</a></li>
+<li><a href="#d-3"><span class="toc-section-number">1.5.3</span> 3D</a></li>
 </ul></li>
-<li><a href="#write-tables-1"><span class="toc-section-number">1.5</span> Write Tables</a></li>
 </ul></li>
 </ul>
 </div>
@@ -1828,375 +1831,334 @@ summary {
 </style>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCcke3Byb2plY3RfbWV0YWRhdGFfZmlsZX0nKVxuYW5hbHlzaXNfdHlwZSA9IFwiJHthbmFseXNpc190eXBlfVwiXG5jbHVzdGVyaW5nX2xldmVsID0gXCIke2NsdXN0ZXJpbmdfbGV2ZWx9XCJcbnRhYmxlc19kaXIgPSBcIiR7dGFibGVzX2Rpcn1cIlxuYW5hbHlzaXNfdGl0bGUgPSBcIiR7YW5hbHlzaXNfdGl0bGV9XCJcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCcke3Byb2plY3RfbWV0YWRhdGFfZmlsZX0nKVxuYW5hbHlzaXNfdHlwZSA9IFwiJHthbmFseXNpc190eXBlfVwiXG5jbHVzdGVyaW5nX2xldmVsID0gXCIke2NsdXN0ZXJpbmdfbGV2ZWx9XCJcbnRhYmxlc19kaXIgPSBcIiR7dGFibGVzX2Rpcn1cIlxudXNlX2FsbGJhYyA9ICR7dXNlX2FsbGJhY31cbmFuYWx5c2lzX3RpdGxlID0gdG9vbHM6OnRvVGl0bGVDYXNlKGdzdWIoXCJfXCIsIFwiIFwiLCBhbmFseXNpc190eXBlKSlcbmBgYCJ9 -->
 <pre class="r"><code>source(&#39;${project_metadata_file}&#39;)
 analysis_type = &quot;${analysis_type}&quot;
 clustering_level = &quot;${clustering_level}&quot;
 tables_dir = &quot;${tables_dir}&quot;
-analysis_title = &quot;${analysis_title}&quot;</code></pre>
+use_allbac = ${use_allbac}
+analysis_title = tools::toTitleCase(gsub(&quot;_&quot;, &quot; &quot;, analysis_type))</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="miseq-miseq_run_number-genus-logistic-regression-analysis" class="section level1 tabset">
-<h1><span class="header-section-number">1</span> MiSeq-${miseq_run_number} Genus Logistic Regression Analysis</h1>
+<div id="miseq-miseq_run_number-beta-diversity" class="section level1 tabset">
+<h1><span class="header-section-number">1</span> MiSeq-${miseq_run_number} Beta Diversity</h1>
 <div id="clustering-level" class="section level2">
 <h2><span class="header-section-number">1.1</span> Clustering Level</h2>
 <p>Data clustered at the ${CLUSTERING_LEVEL} Level.</p>
 </div>
+<div id="filtering" class="section level2">
+<h2><span class="header-section-number">1.2</span> Filtering</h2>
+<ul>
+<li><strong>Relative Abundance Cutoff:</strong> ${relative_abundance_cutoff}</li>
+<li><strong>Prevalence Cutoff:</strong> ${prevalence_cutoff}</li>
+<li><strong>Min Count Cutoff:</strong> ${min_count_cutoff}</li>
+</ul>
+</div>
 <div id="setup" class="section level2">
-<h2><span class="header-section-number">1.2</span> Setup</h2>
+<h2><span class="header-section-number">1.3</span> Setup</h2>
 <div id="start-conda-env" class="section level3">
-<h3><span class="header-section-number">1.2.1</span> Start Conda ENV</h3>
+<h3><span class="header-section-number">1.3.1</span> Start Conda ENV</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudigncmVncmVzc2lvbicpXG5gYGAifQ== -->
-<pre class="r"><code>startCondaEnv(&#39;regression&#39;)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudignYmV0YWRpdicsIGxpYj0nfi9SMzUnKVxuYGBgIn0= -->
+<pre class="r"><code>startCondaEnv(&#39;betadiv&#39;, lib=&#39;~/R35&#39;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
 <div id="load-libraries" class="section level3">
-<h3><span class="header-section-number">1.2.2</span> Load Libraries</h3>
+<h3><span class="header-section-number">1.3.2</span> Load Libraries</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShybWFya2Rvd24pXG5saWJyYXJ5KHRpZHl2ZXJzZSlcbmxpYnJhcnkobWFncml0dHIpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KGdnYmVlc3dhcm0pXG5saWJyYXJ5KG9wZW54bHN4KVxubGlicmFyeShEVClcbmxpYnJhcnkocGhlYXRtYXApXG5saWJyYXJ5KGthYmxlRXh0cmEpXG5saWJyYXJ5KHZlZ2FuKVxubGlicmFyeShubG1lKVxuXG4jIyMgQ3VzdG9tIGxpYnJhcmllcyB0aGF0IGNhbiBiZSBsb2FkZWQgZnJvbSBHaXRIdWJcbnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL2dlbmVyYWxfYXN2X2RhdGFfYW5hbHlzaXNfdXRpbGl0aWVzLlInKVxuc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvYWxwaGFfZGl2X3V0aWxpdGllcy5SJylcbnNvdXJjZSgnfi91dGlsaXRpZXMvYW1kX3RlbXBsYXRlcy9zZXR1cC9hbWRfcHJvamVjdF91dGlsaXRpZXMuUicpXG5gYGAifQ== -->
-<pre class="r"><code>library(rmarkdown)
-library(tidyverse)
-library(magrittr)
-library(ggplot2)
-library(ggbeeswarm)
-library(openxlsx)
-library(DT)
-library(pheatmap)
-library(kableExtra)
-library(vegan)
-library(nlme)
-
-### Custom libraries that can be loaded from GitHub
-source(&#39;~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R&#39;)
-source(&#39;~/utilities/analysis-utilities/alpha_div_utilities.R&#39;)
-source(&#39;~/utilities/amd_templates/setup/amd_project_utilities.R&#39;)</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
 <div id="set-knitr-options" class="section level3">
-<h3><span class="header-section-number">1.2.3</span> Set Knitr Options</h3>
+<h3><span class="header-section-number">1.3.3</span> Set Knitr Options</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuJHtrbml0cl9vcHRpb25zfVxuXG5gYGAifQ== -->
-<pre class="r"><code>${knitr_options}
-</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuJHtrbml0cl9vcHRpb25zfVxuYGBgIn0= -->
+<pre class="r"><code>${knitr_options}</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
 <div id="load-data" class="section level3">
-<h3><span class="header-section-number">1.2.4</span> Load Data</h3>
+<h3><span class="header-section-number">1.3.4</span> Load Data</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnbWFzdGVyX3RhYmxlLnhsc3gnLFxuICBcIiR7dGFibGVzX2Rpcn1cIixcbiAgXCIke2FuYWx5c2lzX3R5cGV9XCIsXG4gIFwiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH1cIixcbiAgXCIke2NsdXN0ZXJpbmdfbGV2ZWx9XCJcbilcblxucHJpbnQoZmlsZW5hbWUpXG5cbmFsbF9tYXN0ZXJfdGFibGUgPSByZWFkV29ya2Jvb2soZmlsZW5hbWUsIHNoZWV0PSdNYXN0ZXIgVGFibGUnKVxuYWdlX2x0XzkwX21hc3Rlcl90YWJsZSA9IGFsbF9tYXN0ZXJfdGFibGUgJT4lIGZpbHRlcihBZ2UgPCA5MClcbmFtZF9vbmx5X21hc3Rlcl90YWJsZSA9IGFsbF9tYXN0ZXJfdGFibGUgJT4lIGZpbHRlcihDYXNlU3RyaW5nID09ICdBTUQnKVxuZmlsdGVyZWRfdGF4YSA9IHJlYWRXb3JrYm9vayhmaWxlbmFtZSwgc2hlZXQ9XCIke3Rvb2xzOjp0b1RpdGxlQ2FzZShjbHVzdGVyaW5nX2xldmVsKX1cIikgJT4lIHB1bGwoXCJzaG9ydF9nbG9tbWVkX3RheGFcIilcblxuc291cmNlKGZpbGUucGF0aChcbiAgXCIke3Byb2plY3Rfcm9vdH1cIiwgXG4gIFwiJHttZXRhZGF0YV9kaXJ9XCIsIFxuICAnb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMuUidcbiAgKSlcbmBgYCJ9 -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;master_table.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;${clustering_level}&quot;
-)
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYXN2X3RhYmxlID0gXG4gIHJlYWQuZGVsaW0oXG4gICAgJyR7YXN2X3RhYmxlX2ZpbGV9JywgXG4gICAgaGVhZGVyPVQsIFxuICAgIHNlcD0nXFx0JyxcbiAgICBzdHJpbmdzQXNGYWN0b3JzPUZcbiAgICApXG5cbnRheG9ub215X3RhYmxlID0gXG4gIHJlYWQuZGVsaW0oXG4gICAgJyR7dGF4b25vbXlfdGFibGVfZmlsZX0nLCBcbiAgICBoZWFkZXI9VCwgXG4gICAgc2VwPSdcXHQnLFxuICAgIHN0cmluZ3NBc0ZhY3RvcnM9RlxuICAgICkgJT4lXG4gIG11dGF0ZV9hbGwoYXMuY2hhcmFjdGVyKCkpXG5cbnNhbXBsZV9kYXRhID0gcmVhZC54bHN4KCcke3NhbXBsZV9kYXRhX2ZpbGV9JylcblxuaWYgKFwiSUdBXCIgJWluJSBjb2xuYW1lcyhzYW1wbGVfZGF0YSkgJiB1c2VfYWxsYmFjKVxue1xuICBzYW1wbGVfZGF0YSA9IFxuICAgIHNhbXBsZV9kYXRhICU+JVxuICAgIGZpbHRlcihJR0E9PSdBbGxCYWMnKVxuXG4gIHNhbXBsZV9uYW1lcyA9IHNhbXBsZV9kYXRhJFNhbXBsZU5hbWVcbiAgXG4gIGFzdl90YWJsZSA9IFxuICAgIGFzdl90YWJsZSAlPiVcbiAgICBzZWxlY3QoJ0FTVnMnLCBlbmRzX3dpdGgoJ0FsbEJhYycpKVxufVxuXG5zYW1wbGVfZGF0YV9jb2x1bW5zID0gY29sbmFtZXMoc2FtcGxlX2RhdGEpXG5zYW1wbGVfbmFtZXMgPSBzYW1wbGVfZGF0YSRTYW1wbGVOYW1lXG5cblxuc291cmNlKGZpbGUucGF0aChcbiAgXCIke3Byb2plY3Rfcm9vdH1cIiwgXG4gIFwiJHttZXRhZGF0YV9kaXJ9XCIsIFxuICAnb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMuUidcbiAgKSlcblxuYGBgIn0= -->
+<pre class="r"><code>asv_table = 
+  read.delim(
+    &#39;${asv_table_file}&#39;, 
+    header=T, 
+    sep=&#39;\t&#39;,
+    stringsAsFactors=F
+    )
 
-print(filename)
+taxonomy_table = 
+  read.delim(
+    &#39;${taxonomy_table_file}&#39;, 
+    header=T, 
+    sep=&#39;\t&#39;,
+    stringsAsFactors=F
+    ) %&gt;%
+  mutate_all(as.character())
 
-all_master_table = readWorkbook(filename, sheet=&#39;Master Table&#39;)
-age_lt_90_master_table = all_master_table %&gt;% filter(Age &lt; 90)
-amd_only_master_table = all_master_table %&gt;% filter(CaseString == &#39;AMD&#39;)
-filtered_taxa = readWorkbook(filename, sheet=&quot;${tools::toTitleCase(clustering_level)}&quot;) %&gt;% pull(&quot;short_glommed_taxa&quot;)
+sample_data = read.xlsx(&#39;${sample_data_file}&#39;)
+
+if (&quot;IGA&quot; %in% colnames(sample_data) &amp; use_allbac)
+{
+  sample_data = 
+    sample_data %&gt;%
+    filter(IGA==&#39;AllBac&#39;)
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %&gt;%
+    select(&#39;ASVs&#39;, ends_with(&#39;AllBac&#39;))
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
 
 source(file.path(
   &quot;${project_root}&quot;, 
   &quot;${metadata_dir}&quot;, 
   &#39;observational_variables.R&#39;
-  ))</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-</div>
-<div id="variables" class="section level2">
-<h2><span class="header-section-number">1.3</span> Variables</h2>
-<div id="set-metadata-factor-levels" class="section level3">
-<h3><span class="header-section-number">1.3.1</span> Set Metadata Factor Levels</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX21hc3Rlcl90YWJsZSA9IHNldEZhY3RvcnNMZXZlbHMoXG4gIGFsbF9tYXN0ZXJfdGFibGUsIFxuICBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1xuICApXG5gYGAifQ== -->
-<pre class="r"><code>all_master_table = setFactorsLevels(
-  all_master_table, 
-  observational_variables
-  )</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="observational-variables" class="section level3">
-<h3><span class="header-section-number">1.3.2</span> Observational Variables</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxub2JzZXJ2YXRpb25hbF92YXJpYWJsZV9uYW1lcyA9ICR7bG9naXN0aWNfcmVncmVzc2lvbl9wcmVkaWN0b3JzfVxub2JzZXJ2YXRpb25hbF92YXJpYWJsZXMgPSBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1tvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlX25hbWVzXVxuYGBgIn0= -->
-<pre class="r"><code>observational_variable_names = ${logistic_regression_predictors}
-observational_variables = observational_variables[observational_variable_names]</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p>Using CaseString, ARMS2rs10490924, CFHrs1061170, CFHrs10737680, SKIV2rs429608, GA_No_CNV_Either_Eye, CNV_Either_Eye, Age, Gender, AREDS, Tissue_code</p>
-</div>
-<div id="raw-variables" class="section level3">
-<h3><span class="header-section-number">1.3.3</span> Raw Variables</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmF3X2V4cF92YXJzID0gJHtyYXdfZXhwX3ZhcnN9XG5wcmludChyYXdfZXhwX3ZhcnMpXG5gYGAifQ== -->
-<pre class="r"><code>raw_exp_vars = ${raw_exp_vars}
-print(raw_exp_vars)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="calculated_exp_vars" class="section level3">
-<h3><span class="header-section-number">1.3.4</span> calculated_exp_vars</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2FsY3VsYXRlZF9leHBfdmFycyA9ICR7Y2FsY3VsYXRlZF9leHBfdmFyc31cbnByaW50KGNhbGN1bGF0ZWRfZXhwX3ZhcnMpXG5gYGAifQ== -->
-<pre class="r"><code>calculated_exp_vars = ${calculated_exp_vars}
-print(calculated_exp_vars)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="filter-covariates" class="section level3">
-<h3><span class="header-section-number">1.3.5</span> Filter Covariates</h3>
-<p>Determine which covariates have sufficient samples with each value or of perfect separation.</p>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnVtX3NhbXBsZXNfdGhyZXNob2xkID0gNVxuXG5hbGxfdmFyaWFibGVzID0gZmlsdGVyVmFyc0J5U2FtcGxlVGhyZXNob2xkMihcbiAgbWFzdGVyX3RhYmxlPWFsbF9tYXN0ZXJfdGFibGUsXG4gIHRocmVzaG9sZD1udW1fc2FtcGxlc190aHJlc2hvbGQsXG4gIHZhcmlhYmxlX2xpc3Q9b2JzZXJ2YXRpb25hbF92YXJpYWJsZXNcbiAgKVxuXG5hZ2VfbHRfOTBfdmFyaWFibGVzID0gZmlsdGVyVmFyc0J5U2FtcGxlVGhyZXNob2xkMihcbiAgbWFzdGVyX3RhYmxlPWFnZV9sdF85MF9tYXN0ZXJfdGFibGUgJT4lIGZpbHRlcihBZ2U8OTApLFxuICB0aHJlc2hvbGQ9bnVtX3NhbXBsZXNfdGhyZXNob2xkLFxuICB2YXJpYWJsZV9saXN0PW9ic2VydmF0aW9uYWxfdmFyaWFibGVzXG4gIClcbmBgYCJ9 -->
-<pre class="r"><code>num_samples_threshold = 5
-
-all_variables = filterVarsBySampleThreshold2(
-  master_table=all_master_table,
-  threshold=num_samples_threshold,
-  variable_list=observational_variables
-  )
-
-age_lt_90_variables = filterVarsBySampleThreshold2(
-  master_table=age_lt_90_master_table %&gt;% filter(Age&lt;90),
-  threshold=num_samples_threshold,
-  variable_list=observational_variables
-  )</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="remaining-covariates" class="section level3">
-<h3><span class="header-section-number">1.3.6</span> Remaining Covariates</h3>
-<p>CaseString, ARMS2rs10490924, CFHrs1061170, CFHrs10737680, GA_No_CNV_Either_Eye, CNV_Either_Eye, Age, Gender, AREDS, Tissue_code CaseString, ARMS2rs10490924, CFHrs1061170, CFHrs10737680, GA_No_CNV_Either_Eye, CNV_Either_Eye, Age, Gender, AREDS, Tissue_code</p>
-</div>
-</div>
-<div id="logistic-regression" class="section level2">
-<h2><span class="header-section-number">1.4</span> Logistic Regression</h2>
-<div id="all-subgroups" class="section level3">
-<h3><span class="header-section-number">1.4.1</span> All Subgroups</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudmFybmFtZXMgPSBhbGxfdmFyaWFibGVzICU+JSBuYW1lcygpXG5cbmFsbF9sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzID0gZ2V0TG9naXN0aWNSZWdyZXNzaW9uU3RhdHMoXG4gIGJhc2VfcHJlZGljdG9yX3ZhcnM9b2JzZXJ2YXRpb25hbF92YXJpYWJsZXNbdmFybmFtZXNdLFxuICBhZGRpdGlvbmFsX3ByZWRpY3RvcnM9YyhyYXdfZXhwX3ZhcnMsIGNhbGN1bGF0ZWRfZXhwX3ZhcnMpLFxuICBsb2dpc3RpY19yZXNwb25zZV92YXI9J0Nhc2VTdHJpbmcnLFxuICBtYXN0ZXJfdGFibGU9YWxsX21hc3Rlcl90YWJsZSxcbiAgc3RhdHM9YygncHZhbHVlJywgJ2VmZmVjdF9zaXplJywgJ3N0ZF9lcnJvcicpLFxuICByZXNwb25zZV92YXJfbmFtZT0nSW5kZXgnXG4pXG5cbmNvbnRyYXN0cyA9IG1ha2VDb250cmFzdE5hbWVzKGFsbF92YXJpYWJsZXMsIGFsbF9tYXN0ZXJfdGFibGUpXG5cbmxvZ2lzdGljX3JlZ3Jlc3Npb25fc3RhdHMgPSBkYXRhLmZyYW1lKFJlc3BvbnNlVmFyPWNoYXJhY3RlcigpKVxuZm9yIChjb250cmFzdCBpbiBjb250cmFzdHMpXG57XG4gIGxvZ2lzdGljX3JlZ3Jlc3Npb25fc3RhdHMgJTw+JSBtdXRhdGUoISFjb250cmFzdCA6PSBudW1lcmljKCkpXG59XG5mb3IgKHZhciBpbiBjKHJhd19leHBfdmFycywgY2FsY3VsYXRlZF9leHBfdmFycykpXG57XG4gIGxvZ2lzdGljX3JlZ3Jlc3Npb25fc3RhdHMgJTw+JSBtdXRhdGUoISF2YXIgOj0gbnVtZXJpYygpKVxufVxuXG5hbGxfbG9naXN0aWNfcmVncmVzc2lvbl9wdmFsdWVzID0gbG9naXN0aWNfcmVncmVzc2lvbl9zdGF0c1xuYWxsX2xvZ2lzdGljX3JlZ3Jlc3Npb25fbG9nX29kZHNfcmF0aW9zID0gbG9naXN0aWNfcmVncmVzc2lvbl9zdGF0c1xuXG5mb3IodmFyIGluIG5hbWVzKGFsbF9sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzKSlcbntcbiAgdGVtcCA9IFxuICAgIGFsbF9sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzW1t2YXJdXSAlPiVcbiAgICBzZWxlY3QoY29udHJhc3QsIHB2YWx1ZSwgZWZmZWN0X3NpemUpICU+JVxuICAgIGNvbHVtbl90b19yb3duYW1lcygnY29udHJhc3QnKSAlPiVcbiAgICB0KCkgJT4lXG4gICAgZGF0YS5mcmFtZSgpICU+JVxuICAgIHJvd25hbWVzX3RvX2NvbHVtbignc3RhdCcpICU+JVxuICAgIG11dGF0ZShSZXNwb25zZVZhcj0nQ2FzZVN0cmluZycpXG4gIFxuICBwdmFsdWVzID0gdGVtcCAlPiUgZmlsdGVyKHN0YXQ9PSdwdmFsdWUnKSAlPiUgc2VsZWN0KC1zdGF0KVxuICBvZGRzX3JhdGlvcyA9IHRlbXAgJT4lIGZpbHRlcihzdGF0PT0nZWZmZWN0X3NpemUnKSAlPiUgc2VsZWN0KC1zdGF0KVxuICAgIFxuICBhbGxfbG9naXN0aWNfcmVncmVzc2lvbl9wdmFsdWVzICU8PiUgYWRkX3JvdyghISFwdmFsdWVzKVxuICBhbGxfbG9naXN0aWNfcmVncmVzc2lvbl9sb2dfb2Rkc19yYXRpb3MgJTw+JSBhZGRfcm93KCEhIW9kZHNfcmF0aW9zKVxufVxuXG5gYGAifQ== -->
-<pre class="r"><code>varnames = all_variables %&gt;% names()
-
-all_logistic_regression_stats = getLogisticRegressionStats(
-  base_predictor_vars=observational_variables[varnames],
-  additional_predictors=c(raw_exp_vars, calculated_exp_vars),
-  logistic_response_var=&#39;CaseString&#39;,
-  master_table=all_master_table,
-  stats=c(&#39;pvalue&#39;, &#39;effect_size&#39;, &#39;std_error&#39;),
-  response_var_name=&#39;Index&#39;
-)
-
-contrasts = makeContrastNames(all_variables, all_master_table)
-
-logistic_regression_stats = data.frame(ResponseVar=character())
-for (contrast in contrasts)
-{
-  logistic_regression_stats %&lt;&gt;% mutate(!!contrast := numeric())
-}
-for (var in c(raw_exp_vars, calculated_exp_vars))
-{
-  logistic_regression_stats %&lt;&gt;% mutate(!!var := numeric())
-}
-
-all_logistic_regression_pvalues = logistic_regression_stats
-all_logistic_regression_log_odds_ratios = logistic_regression_stats
-
-for(var in names(all_logistic_regression_stats))
-{
-  temp = 
-    all_logistic_regression_stats[[var]] %&gt;%
-    select(contrast, pvalue, effect_size) %&gt;%
-    column_to_rownames(&#39;contrast&#39;) %&gt;%
-    t() %&gt;%
-    data.frame() %&gt;%
-    rownames_to_column(&#39;stat&#39;) %&gt;%
-    mutate(ResponseVar=&#39;CaseString&#39;)
-  
-  pvalues = temp %&gt;% filter(stat==&#39;pvalue&#39;) %&gt;% select(-stat)
-  odds_ratios = temp %&gt;% filter(stat==&#39;effect_size&#39;) %&gt;% select(-stat)
-    
-  all_logistic_regression_pvalues %&lt;&gt;% add_row(!!!pvalues)
-  all_logistic_regression_log_odds_ratios %&lt;&gt;% add_row(!!!odds_ratios)
-}
+  ))
 </code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="write-tables" class="section level3">
-<h3><span class="header-section-number">1.4.2</span> Write Tables</h3>
+<div id="set-filtering" class="section level3">
+<h3><span class="header-section-number">1.3.5</span> Set Filtering</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX3diID0gY3JlYXRlV29ya2Jvb2soKVxuXG5hZGRXb3Jrc2hlZXQoXG4gIGFsbF93YiwgXG4gIHNoZWV0TmFtZT1cIlVuYWRqdXN0ZWQgUC1WYWx1ZXNcIlxuICApXG5cbm9wZW54bHN4Ojp3cml0ZURhdGEoXG4gIGFsbF93YiwgXG4gIHNoZWV0PVwiVW5hZGp1c3RlZCBQLVZhbHVlc1wiLCBcbiAgYWxsX2xvZ2lzdGljX3JlZ3Jlc3Npb25fcHZhbHVlc1xuICApXG5cbmFkZFdvcmtzaGVldChcbiAgYWxsX3diLCBcbiAgc2hlZXROYW1lPVwiTG9nIE9kZHMgUmF0aW9zXCJcbiAgKVxuXG5vcGVueGxzeDo6d3JpdGVEYXRhKFxuICBhbGxfd2IsXG4gIHNoZWV0PVwiTG9nIE9kZHMgUmF0aW9zXCIsIFxuICBhbGxfbG9naXN0aWNfcmVncmVzc2lvbl9sb2dfb2Rkc19yYXRpb3NcbiAgKVxuXG4jIGFkZFdvcmtzaGVldChyZWdyZXNzaW9uX3B2YWxzLCBzaGVldE5hbWU9XCJBZGp1c3RlZCBQLVZhbHVlc1wiKVxuIyBvcGVueGxzeDo6d3JpdGVEYXRhKHJlZ3Jlc3Npb25fcHZhbHMsIHNoZWV0PVwiQWRqdXN0ZWQgUC1WYWx1ZXNcIiwgYWRqdXN0ZWRfcmVncmVzc2lvbl9wdmFscylcblxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX2xvZ2lzdGljX3JlZ3Jlc3Npb24ueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcIiR7Y2x1c3RlcmluZ19sZXZlbH1cIlxuKVxuXG5zYXZlV29ya2Jvb2soYWxsX3diLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VClcbmBgYCJ9 -->
-<pre class="r"><code>all_wb = createWorkbook()
-
-addWorksheet(
-  all_wb, 
-  sheetName=&quot;Unadjusted P-Values&quot;
-  )
-
-openxlsx::writeData(
-  all_wb, 
-  sheet=&quot;Unadjusted P-Values&quot;, 
-  all_logistic_regression_pvalues
-  )
-
-addWorksheet(
-  all_wb, 
-  sheetName=&quot;Log Odds Ratios&quot;
-  )
-
-openxlsx::writeData(
-  all_wb,
-  sheet=&quot;Log Odds Ratios&quot;, 
-  all_logistic_regression_log_odds_ratios
-  )
-
-# addWorksheet(regression_pvals, sheetName=&quot;Adjusted P-Values&quot;)
-# openxlsx::writeData(regression_pvals, sheet=&quot;Adjusted P-Values&quot;, adjusted_regression_pvals)
-
-filename = makeDataFileName(
-  &#39;all_logistic_regression.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;${clustering_level}&quot;
-)
-
-saveWorkbook(all_wb, file=filename, overwrite=T)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZiA9ICR7cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZn1cbnByZXZhbGVuY2VfY3V0b2ZmID0gJHtwcmV2YWxlbmNlX2N1dG9mZn1cbmBgYCJ9 -->
+<pre class="r"><code>relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p><strong>relative abundance cutoff:</strong> 0.002 <strong>prevalence cutoff:</strong> 0.1</p>
+</div>
+<div id="variables-of-interest" class="section level3">
+<h3><span class="header-section-number">1.3.6</span> Variables of interest</h3>
+<div id="observational-variables" class="section level4">
+<h4><span class="header-section-number">1.3.6.1</span> Observational Variables</h4>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxua2V5X2NvdmFyaWF0ZXMgPSAke2tleV9jb3ZhcmlhdGVzfVxudHJlYXRtZW50cyA9ICR7dHJlYXRtZW50c31cbnZhcmlhYmxlcyA9IGMoJ0Nhc2VTdHJpbmcnLCBrZXlfY292YXJpYXRlcywgdHJlYXRtZW50cykgJT4lIHVuaXF1ZSgpXG5gYGAifQ== -->
+<pre class="r"><code>key_covariates = ${key_covariates}
+treatments = ${treatments}
+variables = c(&#39;CaseString&#39;, key_covariates, treatments) %&gt;% unique()</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="age-90" class="section level3">
-<h3><span class="header-section-number">1.4.3</span> Age &lt; 90</h3>
+<div id="remove-age" class="section level4">
+<h4><span class="header-section-number">1.3.6.2</span> Remove Age</h4>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWdlX2x0XzkwX2xvZ2lzdGljX3JlZ3Jlc3Npb25fc3RhdHMgPSBnZXRMb2dpc3RpY1JlZ3Jlc3Npb25TdGF0cyhcbiAgYmFzZV9wcmVkaWN0b3JfdmFycz1vYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1t2YXJzXSxcbiAgYWRkaXRpb25hbF9wcmVkaWN0b3JzPWMocmF3X2V4cF92YXJzLCBjYWxjdWxhdGVkX2V4cF92YXJzKSxcbiAgbG9naXN0aWNfcmVzcG9uc2VfdmFyPSdDYXNlU3RyaW5nJyxcbiAgbWFzdGVyX3RhYmxlPWFnZV9sdF85MF9tYXN0ZXJfdGFibGUsXG4gIHN0YXRzPWMoJ3B2YWx1ZScsICdlZmZlY3Rfc2l6ZScsICdzdGRfZXJyb3InKSxcbiAgcmVzcG9uc2VfdmFyX25hbWU9J0luZGV4J1xuKVxuXG5jb250cmFzdHMgPSBtYWtlQ29udHJhc3ROYW1lcyhhZ2VfbHRfOTBfdmFyaWFibGVzLCBhbGxfbWFzdGVyX3RhYmxlKVxuXG5sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzID0gZGF0YS5mcmFtZShSZXNwb25zZVZhcj1jaGFyYWN0ZXIoKSlcbmZvciAoY29udHJhc3QgaW4gY29udHJhc3RzKVxue1xuICBsb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzICU8PiUgbXV0YXRlKCEhY29udHJhc3QgOj0gbnVtZXJpYygpKVxufVxuZm9yICh2YXIgaW4gYyhyYXdfZXhwX3ZhcnMsIGNhbGN1bGF0ZWRfZXhwX3ZhcnMpKVxue1xuICBsb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzICU8PiUgbXV0YXRlKCEhdmFyIDo9IG51bWVyaWMoKSlcbn1cblxuYWdlX2x0XzkwX2xvZ2lzdGljX3JlZ3Jlc3Npb25fcHZhbHVlcyA9IGxvZ2lzdGljX3JlZ3Jlc3Npb25fc3RhdHNcbmFnZV9sdF85MF9sb2dpc3RpY19yZWdyZXNzaW9uX2xvZ19vZGRzX3JhdGlvcyA9IGxvZ2lzdGljX3JlZ3Jlc3Npb25fc3RhdHNcblxuZm9yKHZhciBpbiBuYW1lcyhhbGxfbG9naXN0aWNfcmVncmVzc2lvbl9zdGF0cykpXG57XG4gIHRlbXAgPSBcbiAgICBhZ2VfbHRfOTBfbG9naXN0aWNfcmVncmVzc2lvbl9zdGF0c1tbdmFyXV0gJT4lXG4gICAgc2VsZWN0KGNvbnRyYXN0LCBwdmFsdWUsIGVmZmVjdF9zaXplKSAlPiVcbiAgICBjb2x1bW5fdG9fcm93bmFtZXMoJ2NvbnRyYXN0JykgJT4lXG4gICAgdCgpICU+JVxuICAgIGRhdGEuZnJhbWUoKSAlPiVcbiAgICByb3duYW1lc190b19jb2x1bW4oJ3N0YXQnKSAlPiVcbiAgICBtdXRhdGUoUmVzcG9uc2VWYXI9J0Nhc2VTdHJpbmcnKVxuICBcbiAgcHZhbHVlcyA9IHRlbXAgJT4lIGZpbHRlcihzdGF0PT0ncHZhbHVlJykgJT4lIHNlbGVjdCgtc3RhdClcbiAgb2Rkc19yYXRpb3MgPSB0ZW1wICU+JSBmaWx0ZXIoc3RhdD09J2VmZmVjdF9zaXplJykgJT4lIHNlbGVjdCgtc3RhdClcbiAgICBcbiAgYWdlX2x0XzkwX2xvZ2lzdGljX3JlZ3Jlc3Npb25fcHZhbHVlcyAlPD4lIGFkZF9yb3coISEhcHZhbHVlcylcbiAgYWdlX2x0XzkwX2xvZ2lzdGljX3JlZ3Jlc3Npb25fbG9nX29kZHNfcmF0aW9zICU8PiUgYWRkX3JvdyghISFvZGRzX3JhdGlvcylcbn1cblxuYGBgIn0= -->
-<pre class="r"><code>age_lt_90_logistic_regression_stats = getLogisticRegressionStats(
-  base_predictor_vars=observational_variables[vars],
-  additional_predictors=c(raw_exp_vars, calculated_exp_vars),
-  logistic_response_var=&#39;CaseString&#39;,
-  master_table=age_lt_90_master_table,
-  stats=c(&#39;pvalue&#39;, &#39;effect_size&#39;, &#39;std_error&#39;),
-  response_var_name=&#39;Index&#39;
-)
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudmFyaWFibGVzICU8PiUgc2V0ZGlmZignQWdlJylcbmBgYCJ9 -->
+<pre class="r"><code>variables %&lt;&gt;% setdiff(&#39;Age&#39;)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<ul>
+<li><strong>Treatment variables:</strong> ${treatments}</li>
+<li><strong>Key covariates:</strong> ${key_covariates}</li>
+<li><strong>Variables Used:</strong> Gender, Tissue_code, AREDS</li>
+</ul>
+</div>
+</div>
+<div id="get-filtered-taxa-abundance" class="section level3">
+<h3><span class="header-section-number">1.3.7</span> Get Filtered Taxa Abundance</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudGF4YV9hYnVuZGFuY2UgPSBnZXRGaWx0ZXJlZFRheGFDb3VudHNEZXYoXG4gIGFzdl90YWJsZSxcbiAgdGF4b25vbXlfdGFibGUsXG4gIHNhbXBsZV9kYXRhLCBcbiAgY2x1c3Rlcl9ieT1cIiR7Y2x1c3RlcmluZ19sZXZlbH1cIixcbiAgcmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZj0ke3JlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmZ9LFxuICBwcmV2YWxlbmNlX2N1dG9mZj0ke3ByZXZhbGVuY2VfY3V0b2ZmfSxcbiAgaWRfY29sPVwiU2FtcGxlTmFtZVwiLFxuICBub3JtYWxpemU9VFxuICApXG5cbmZpbHRlcmVkX3RheGEgPSB0YXhhX2FidW5kYW5jZSRzaG9ydF9nbG9tbWVkX3RheGFcblxuYGBgIn0= -->
+<pre class="r"><code>taxa_abundance = getFilteredTaxaCountsDev(
+  asv_table,
+  taxonomy_table,
+  sample_data, 
+  cluster_by=&quot;${clustering_level}&quot;,
+  relative_abundance_cutoff=${relative_abundance_cutoff},
+  prevalence_cutoff=${prevalence_cutoff},
+  id_col=&quot;SampleName&quot;,
+  normalize=T
+  )
 
-contrasts = makeContrastNames(age_lt_90_variables, all_master_table)
-
-logistic_regression_stats = data.frame(ResponseVar=character())
-for (contrast in contrasts)
-{
-  logistic_regression_stats %&lt;&gt;% mutate(!!contrast := numeric())
-}
-for (var in c(raw_exp_vars, calculated_exp_vars))
-{
-  logistic_regression_stats %&lt;&gt;% mutate(!!var := numeric())
-}
-
-age_lt_90_logistic_regression_pvalues = logistic_regression_stats
-age_lt_90_logistic_regression_log_odds_ratios = logistic_regression_stats
-
-for(var in names(all_logistic_regression_stats))
-{
-  temp = 
-    age_lt_90_logistic_regression_stats[[var]] %&gt;%
-    select(contrast, pvalue, effect_size) %&gt;%
-    column_to_rownames(&#39;contrast&#39;) %&gt;%
-    t() %&gt;%
-    data.frame() %&gt;%
-    rownames_to_column(&#39;stat&#39;) %&gt;%
-    mutate(ResponseVar=&#39;CaseString&#39;)
-  
-  pvalues = temp %&gt;% filter(stat==&#39;pvalue&#39;) %&gt;% select(-stat)
-  odds_ratios = temp %&gt;% filter(stat==&#39;effect_size&#39;) %&gt;% select(-stat)
-    
-  age_lt_90_logistic_regression_pvalues %&lt;&gt;% add_row(!!!pvalues)
-  age_lt_90_logistic_regression_log_odds_ratios %&lt;&gt;% add_row(!!!odds_ratios)
-}
+filtered_taxa = taxa_abundance$short_glommed_taxa
 </code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-</div>
-<div id="write-tables-1" class="section level2">
-<h2><span class="header-section-number">1.5</span> Write Tables</h2>
+<div id="build-master-table" class="section level3">
+<h3><span class="header-section-number">1.3.8</span> Build Master Table</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWdlX2x0XzkwX3diID0gY3JlYXRlV29ya2Jvb2soKVxuXG5hZGRXb3Jrc2hlZXQoXG4gIGFnZV9sdF85MF93YiwgXG4gIHNoZWV0TmFtZT1cIlVuYWRqdXN0ZWQgUC1WYWx1ZXNcIlxuICApXG5cbm9wZW54bHN4Ojp3cml0ZURhdGEoXG4gIGFnZV9sdF85MF93YiwgXG4gIHNoZWV0PVwiVW5hZGp1c3RlZCBQLVZhbHVlc1wiLCBcbiAgYWdlX2x0XzkwX2xvZ2lzdGljX3JlZ3Jlc3Npb25fcHZhbHVlc1xuICApXG5cbmFkZFdvcmtzaGVldChcbiAgYWdlX2x0XzkwX3diLCBcbiAgc2hlZXROYW1lPVwiTG9nIE9kZHMgUmF0aW9zXCJcbiAgKVxuXG5vcGVueGxzeDo6d3JpdGVEYXRhKFxuICBhZ2VfbHRfOTBfd2IsXG4gIHNoZWV0PVwiTG9nIE9kZHMgUmF0aW9zXCIsIFxuICBhZ2VfbHRfOTBfbG9naXN0aWNfcmVncmVzc2lvbl9sb2dfb2Rkc19yYXRpb3NcbiAgKVxuXG4jIGFkZFdvcmtzaGVldChyZWdyZXNzaW9uX3B2YWxzLCBzaGVldE5hbWU9XCJBZGp1c3RlZCBQLVZhbHVlc1wiKVxuIyBvcGVueGxzeDo6d3JpdGVEYXRhKHJlZ3Jlc3Npb25fcHZhbHMsIHNoZWV0PVwiQWRqdXN0ZWQgUC1WYWx1ZXNcIiwgYWRqdXN0ZWRfcmVncmVzc2lvbl9wdmFscylcblxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWdlX2x0XzkwX2xvZ2lzdGljX3JlZ3Jlc3Npb24ueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcIiR7Y2x1c3RlcmluZ19sZXZlbH1cIlxuKVxuXG5zYXZlV29ya2Jvb2soYWdlX2x0XzkwX3diLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VClcbmBgYCJ9 -->
-<pre class="r"><code>age_lt_90_wb = createWorkbook()
-
-addWorksheet(
-  age_lt_90_wb, 
-  sheetName=&quot;Unadjusted P-Values&quot;
-  )
-
-openxlsx::writeData(
-  age_lt_90_wb, 
-  sheet=&quot;Unadjusted P-Values&quot;, 
-  age_lt_90_logistic_regression_pvalues
-  )
-
-addWorksheet(
-  age_lt_90_wb, 
-  sheetName=&quot;Log Odds Ratios&quot;
-  )
-
-openxlsx::writeData(
-  age_lt_90_wb,
-  sheet=&quot;Log Odds Ratios&quot;, 
-  age_lt_90_logistic_regression_log_odds_ratios
-  )
-
-# addWorksheet(regression_pvals, sheetName=&quot;Adjusted P-Values&quot;)
-# openxlsx::writeData(regression_pvals, sheet=&quot;Adjusted P-Values&quot;, adjusted_regression_pvals)
-
-filename = makeDataFileName(
-  &#39;age_lt_90_logistic_regression.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;${clustering_level}&quot;
-)
-
-saveWorkbook(age_lt_90_wb, file=filename, overwrite=T)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubWFzdGVyX3RhYmxlID0gZ2V0TWFzdGVyVGFibGUoXG4gIHRheGFfYWJ1bmRhbmNlLFxuICBzYW1wbGVfZGF0YSxcbiAgJ1NhbXBsZU5hbWUnLFxuICAnc2hvcnRfZ2xvbW1lZF90YXhhJ1xuKVxuYGBgIn0= -->
+<pre class="r"><code>master_table = getMasterTable(
+  taxa_abundance,
+  sample_data,
+  &#39;SampleName&#39;,
+  &#39;short_glommed_taxa&#39;
+)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="axes-sets" class="section level3">
+<h3><span class="header-section-number">1.3.9</span> Axes Sets</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYXhlc19zZXRzID0gbGlzdChcbiAgYygxLDIpLFxuICBjKDIsMyksXG4gIGMoMSwzKVxuKVxuYGBgIn0= -->
+<pre class="r"><code>axes_sets = list(
+  c(1,2),
+  c(2,3),
+  c(1,3)
+)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+</div>
+<div id="mds-plots" class="section level2 tabset">
+<h2><span class="header-section-number">1.4</span> MDS Plots</h2>
+<div id="scree-plot" class="section level3">
+<h3><span class="header-section-number">1.4.1</span> Scree Plot</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBwbG90Tk1EU1NjcmVlIDwtIGZ1bmN0aW9uKHgpIFxuIyB7XG4jICAgcGxvdChcbiMgICAgIHJlcCgxLCAxMCksIFxuIyAgICAgcmVwbGljYXRlKDEwLCBtZXRhTURTKHgsIGF1dG90cmFuc2Zvcm0gPSBGLCBrID0gMSkkc3RyZXNzKSwgXG4jICAgICB4bGltID0gYygxLCAxMCksXG4jICAgICB5bGltID0gYygwLCAwLjMwKSwgXG4jICAgICB4bGFiID0gXCIjIG9mIERpbWVuc2lvbnNcIiwgXG4jICAgICB5bGFiID0gXCJTdHJlc3NcIiwgXG4jICAgICBtYWluID0gXCJOTURTIHN0cmVzcyBwbG90XCJcbiMgICAgIClcbiMgICBmb3IgKGkgaW4gMToxMClcbiMgICB7XG4jICAgICBwb2ludHMoXG4jICAgICAgIHJlcChpICsgMSwxMCksXG4jICAgICAgIHJlcGxpY2F0ZSgxMCwgbWV0YU1EUyh4LCBhdXRvdHJhbnNmb3JtID0gRiwgayA9IGkgKyAxKSRzdHJlc3MpXG4jICAgICAgIClcbiMgICB9XG4jIH1cbiMgXG4jIHBsb3ROTURTU2NyZWUobWFzdGVyX3RhYmxlICU+JSBzZWxlY3QoZmlsdGVyZWRfdGF4YSkpXG5gYGAifQ== -->
+<pre class="r"><code># plotNMDSScree &lt;- function(x) 
+# {
+#   plot(
+#     rep(1, 10), 
+#     replicate(10, metaMDS(x, autotransform = F, k = 1)$stress), 
+#     xlim = c(1, 10),
+#     ylim = c(0, 0.30), 
+#     xlab = &quot;# of Dimensions&quot;, 
+#     ylab = &quot;Stress&quot;, 
+#     main = &quot;NMDS stress plot&quot;
+#     )
+#   for (i in 1:10)
+#   {
+#     points(
+#       rep(i + 1,10),
+#       replicate(10, metaMDS(x, autotransform = F, k = i + 1)$stress)
+#       )
+#   }
+# }
+# 
+# plotNMDSScree(master_table %&gt;% select(filtered_taxa))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="d" class="section level3">
+<h3><span class="header-section-number">1.4.2</span> 2D</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="d-1" class="section level3">
+<h3><span class="header-section-number">1.4.3</span> 3D</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGMgPSBnZXROTURTKG1hc3Rlcl90YWJsZSwgZmlsdGVyZWRfdGF4YSwgYXhlcz1jKDE6MykpXG5wY2RmID0gZGF0YS5mcmFtZShwYyRwb2ludHMpICU+JSByb3duYW1lc190b19jb2x1bW4oJ1NhbXBsZU5hbWUnKVxucGNtdCA9IGlubmVyX2pvaW4ocGNkZiwgbWFzdGVyX3RhYmxlLCBieT0nU2FtcGxlTmFtZScpXG5cbnBsb3RPcmQzRChcbiAgcGNtdCwgXG4gIGF4ZXM9YygnTURTMScsICdNRFMyJywgJ01EUzMnKSwgXG4gIGNvbG9yPVwiQ2FzZVN0cmluZ1wiLFxuICB0aXRsZV9leHRyYT1cIm5NRFNcIlxuICApXG5gYGAifQ== -->
+<pre class="r"><code>pc = getNMDS(master_table, filtered_taxa, axes=c(1:3))
+pcdf = data.frame(pc$points) %&gt;% rownames_to_column(&#39;SampleName&#39;)
+pcmt = inner_join(pcdf, master_table, by=&#39;SampleName&#39;)
+
+plotOrd3D(
+  pcmt, 
+  axes=c(&#39;MDS1&#39;, &#39;MDS2&#39;, &#39;MDS3&#39;), 
+  color=&quot;CaseString&quot;,
+  title_extra=&quot;nMDS&quot;
+  )</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+</div>
+<div id="pcoa-plots" class="section level2 tabset">
+<h2><span class="header-section-number">1.5</span> PCoA Plots</h2>
+<div id="scree-plot-1" class="section level3">
+<h3><span class="header-section-number">1.5.1</span> Scree Plot</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGMgPSBnZXRQcmluY2VDb21wcyhtYXN0ZXJfdGFibGUsIGZpbHRlcmVkX3RheGEsICdTYW1wbGVOYW1lJylcbnNjcmVlcGxvdChwYylcbmBgYCJ9 -->
+<pre class="r"><code>pc = getPrinceComps(master_table, filtered_taxa, &#39;SampleName&#39;)
+screeplot(pc)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="d-2" class="section level3">
+<h3><span class="header-section-number">1.5.2</span> 2D</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZm9yICh2YXIgaW4gdmFyaWFibGVzKVxue1xuICB2YXJfZGF0YSA9IG9ic2VydmF0aW9uYWxfdmFyaWFibGVzW1t2YXJdXVxuICBwcmludCh2YXJfZGF0YSlcbiAgXG4gIG5hbWUgPSB2YXJfZGF0YSRjb3ZhcmlhdGVfb2ZfaW50ZXJlc3RcbiAgY2FzZSA9IHZhcl9kYXRhJGNhc2VcbiAgY29udHJvbCA9IHZhcl9kYXRhJGNvbnRyb2xcbiAgXG4gIGZvciAoYXhlcyBpbiBheGVzX3NldHMpXG4gIHtcbiAgICBtYWtlUENPQVBsb3QoXG4gICAgICBtYXN0ZXJfdGFibGUsXG4gICAgICBtZXRob2Q9J2JyYXknLFxuICAgICAgZmVhdHVyZXM9ZmlsdGVyZWRfdGF4YSxcbiAgICAgIGF4ZXM9YXhlcyxcbiAgICAgIGNvbG9yPXZhcixcbiAgICAgIHRpdGxlX2V4dHJhPXBhc3RlKG5hbWUsIGNhc2UsICd2cycsIGNvbnRyb2wpLFxuICAgICAgZWxpcHNlcz1GXG4gICAgKSBcbiAgfVxuXG59XG4jICsgYWVzKHg9UEMxLCB5PVBDMiwgY29sb3I9SUdBLCBzaGFwZT1DYXNlU3RyaW5nKVxuYGBgIn0= -->
+<pre class="r"><code>for (var in variables)
+{
+  var_data = observational_variables[[var]]
+  print(var_data)
+  
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  
+  for (axes in axes_sets)
+  {
+    makePCOAPlot(
+      master_table,
+      method=&#39;bray&#39;,
+      features=filtered_taxa,
+      axes=axes,
+      color=var,
+      title_extra=paste(name, case, &#39;vs&#39;, control),
+      elipses=F
+    ) 
+  }
+
+}
+# + aes(x=PC1, y=PC2, color=IGA, shape=CaseString)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="d-3" class="section level3">
+<h3><span class="header-section-number">1.5.3</span> 3D</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGMgPSBnZXRQcmluY2VDb21wcyhtYXN0ZXJfdGFibGUsIGZpbHRlcmVkX3RheGEsICdTYW1wbGVOYW1lJylcbnBjZGYgPSBkYXRhLmZyYW1lKHBjJHgpICU+JSByb3duYW1lc190b19jb2x1bW4oJ1NhbXBsZU5hbWUnKVxucGNtdCA9IGlubmVyX2pvaW4ocGNkZiwgbWFzdGVyX3RhYmxlLCBieT0nU2FtcGxlTmFtZScpXG5cbnBsb3RPcmQzRChcbiAgcHJpbmNvbXBfbWFzdGVyX3RhYmxlPXBjbXQsXG4gIGF4ZXM9YygnUEMxJywgJ1BDMicsICdQQzMnKSxcbiAgaWRfY29sPVwiU2FtcGxlTmFtZVwiLFxuICBjb2xvcj1cIkNhc2VTdHJpbmdcIixcbiAgdGl0bGVfZXh0cmE9XCJCcmF5IERpc3RhbmNlIFBDb0FcIlxuKVxuYGBgIn0= -->
+<pre class="r"><code>pc = getPrinceComps(master_table, filtered_taxa, &#39;SampleName&#39;)
+pcdf = data.frame(pc$x) %&gt;% rownames_to_column(&#39;SampleName&#39;)
+pcmt = inner_join(pcdf, master_table, by=&#39;SampleName&#39;)
+
+plotOrd3D(
+  princomp_master_table=pcmt,
+  axes=c(&#39;PC1&#39;, &#39;PC2&#39;, &#39;PC3&#39;),
+  id_col=&quot;SampleName&quot;,
+  color=&quot;CaseString&quot;,
+  title_extra=&quot;Bray Distance PCoA&quot;
+)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+</div>
 </div>
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAo8L3N0eWxlPgoKCmBgYHtyfQpzb3VyY2UoJyR7cHJvamVjdF9tZXRhZGF0YV9maWxlfScpCmFuYWx5c2lzX3R5cGUgPSAiJHthbmFseXNpc190eXBlfSIKY2x1c3RlcmluZ19sZXZlbCA9ICIke2NsdXN0ZXJpbmdfbGV2ZWx9Igp0YWJsZXNfZGlyID0gIiR7dGFibGVzX2Rpcn0iCmFuYWx5c2lzX3RpdGxlID0gIiR7YW5hbHlzaXNfdGl0bGV9IgpgYGAKCiMgTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSBgciBhbmFseXNpc190aXRsZWAgTG9naXN0aWMgUmVncmVzc2lvbiBBbmFseXNpcyB7LnRhYnNldH0KIyMgQ2x1c3RlcmluZyBMZXZlbApEYXRhIGNsdXN0ZXJlZCBhdCB0aGUgYHIgdG91cHBlcignJHtjbHVzdGVyaW5nX2xldmVsfScpYCBMZXZlbC4KCiMjIFNldHVwCiMjIyBTdGFydCBDb25kYSBFTlYKYGBge3J9CnN0YXJ0Q29uZGFFbnYoJ3JlZ3Jlc3Npb24nKQpgYGAKCgojIyMgTG9hZCBMaWJyYXJpZXMKYGBge3J9CmxpYnJhcnkocm1hcmtkb3duKQpsaWJyYXJ5KHRpZHl2ZXJzZSkKbGlicmFyeShtYWdyaXR0cikKbGlicmFyeShnZ3Bsb3QyKQpsaWJyYXJ5KGdnYmVlc3dhcm0pCmxpYnJhcnkob3Blbnhsc3gpCmxpYnJhcnkoRFQpCmxpYnJhcnkocGhlYXRtYXApCmxpYnJhcnkoa2FibGVFeHRyYSkKbGlicmFyeSh2ZWdhbikKbGlicmFyeShubG1lKQoKIyMjIEN1c3RvbSBsaWJyYXJpZXMgdGhhdCBjYW4gYmUgbG9hZGVkIGZyb20gR2l0SHViCnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL2dlbmVyYWxfYXN2X2RhdGFfYW5hbHlzaXNfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FuYWx5c2lzLXV0aWxpdGllcy9hbHBoYV9kaXZfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FtZF90ZW1wbGF0ZXMvc2V0dXAvYW1kX3Byb2plY3RfdXRpbGl0aWVzLlInKQpgYGAKCiMjIyBTZXQgS25pdHIgT3B0aW9ucwpgYGB7cn0KJHtrbml0cl9vcHRpb25zfQoKYGBgCgojIyMgTG9hZCBEYXRhCmBgYHtyfQpmaWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ21hc3Rlcl90YWJsZS54bHN4JywKICAiJHt0YWJsZXNfZGlyfSIsCiAgIiR7YW5hbHlzaXNfdHlwZX0iLAogICIke21pc2VxX3Byb2plY3RfcHJlZml4fSIsCiAgIiR7Y2x1c3RlcmluZ19sZXZlbH0iCikKCnByaW50KGZpbGVuYW1lKQoKYWxsX21hc3Rlcl90YWJsZSA9IHJlYWRXb3JrYm9vayhmaWxlbmFtZSwgc2hlZXQ9J01hc3RlciBUYWJsZScpCmFnZV9sdF85MF9tYXN0ZXJfdGFibGUgPSBhbGxfbWFzdGVyX3RhYmxlICU+JSBmaWx0ZXIoQWdlIDwgOTApCmFtZF9vbmx5X21hc3Rlcl90YWJsZSA9IGFsbF9tYXN0ZXJfdGFibGUgJT4lIGZpbHRlcihDYXNlU3RyaW5nID09ICdBTUQnKQpmaWx0ZXJlZF90YXhhID0gcmVhZFdvcmtib29rKGZpbGVuYW1lLCBzaGVldD0iJHt0b29sczo6dG9UaXRsZUNhc2UoY2x1c3RlcmluZ19sZXZlbCl9IikgJT4lIHB1bGwoInNob3J0X2dsb21tZWRfdGF4YSIpCgpzb3VyY2UoZmlsZS5wYXRoKAogICIke3Byb2plY3Rfcm9vdH0iLCAKICAiJHttZXRhZGF0YV9kaXJ9IiwgCiAgJ29ic2VydmF0aW9uYWxfdmFyaWFibGVzLlInCiAgKSkKYGBgCgojIyBWYXJpYWJsZXMKCiMjIyBTZXQgTWV0YWRhdGEgRmFjdG9yIExldmVscwpgYGB7cn0KYWxsX21hc3Rlcl90YWJsZSA9IHNldEZhY3RvcnNMZXZlbHMoCiAgYWxsX21hc3Rlcl90YWJsZSwgCiAgb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMKICApCmBgYAoKIyMjIE9ic2VydmF0aW9uYWwgVmFyaWFibGVzCgpgYGB7cn0Kb2JzZXJ2YXRpb25hbF92YXJpYWJsZV9uYW1lcyA9ICR7bG9naXN0aWNfcmVncmVzc2lvbl9wcmVkaWN0b3JzfQpvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcyA9IG9ic2VydmF0aW9uYWxfdmFyaWFibGVzW29ic2VydmF0aW9uYWxfdmFyaWFibGVfbmFtZXNdCmBgYAoKVXNpbmcgYHIgb2JzZXJ2YXRpb25hbF92YXJpYWJsZV9uYW1lc2AKCiMjIyBSYXcgVmFyaWFibGVzCmBgYHtyfQpyYXdfZXhwX3ZhcnMgPSAke3Jhd19leHBfdmFyc30KcHJpbnQocmF3X2V4cF92YXJzKQpgYGAKCiMjIyBjYWxjdWxhdGVkX2V4cF92YXJzCmBgYHtyfQpjYWxjdWxhdGVkX2V4cF92YXJzID0gJHtjYWxjdWxhdGVkX2V4cF92YXJzfQpwcmludChjYWxjdWxhdGVkX2V4cF92YXJzKQpgYGAKCiMjIyBGaWx0ZXIgQ292YXJpYXRlcwpEZXRlcm1pbmUgd2hpY2ggY292YXJpYXRlcyBoYXZlIHN1ZmZpY2llbnQgc2FtcGxlcyB3aXRoIGVhY2ggdmFsdWUgb3Igb2YgcGVyZmVjdCBzZXBhcmF0aW9uLgpgYGB7cn0KbnVtX3NhbXBsZXNfdGhyZXNob2xkID0gNQoKYWxsX3ZhcmlhYmxlcyA9IGZpbHRlclZhcnNCeVNhbXBsZVRocmVzaG9sZDIoCiAgbWFzdGVyX3RhYmxlPWFsbF9tYXN0ZXJfdGFibGUsCiAgdGhyZXNob2xkPW51bV9zYW1wbGVzX3RocmVzaG9sZCwKICB2YXJpYWJsZV9saXN0PW9ic2VydmF0aW9uYWxfdmFyaWFibGVzCiAgKQoKYWdlX2x0XzkwX3ZhcmlhYmxlcyA9IGZpbHRlclZhcnNCeVNhbXBsZVRocmVzaG9sZDIoCiAgbWFzdGVyX3RhYmxlPWFnZV9sdF85MF9tYXN0ZXJfdGFibGUgJT4lIGZpbHRlcihBZ2U8OTApLAogIHRocmVzaG9sZD1udW1fc2FtcGxlc190aHJlc2hvbGQsCiAgdmFyaWFibGVfbGlzdD1vYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcwogICkKYGBgCgojIyMgUmVtYWluaW5nIENvdmFyaWF0ZXMKYHIgYWxsX3ZhcmlhYmxlcyAlPiUgbmFtZXMoKWAKYHIgYWdlX2x0XzkwX3ZhcmlhYmxlcyAlPiUgbmFtZXMoKWAKCiMjIExvZ2lzdGljIFJlZ3Jlc3Npb24KIyMjIEFsbCBTdWJncm91cHMKCmBgYHtyfQp2YXJuYW1lcyA9IGFsbF92YXJpYWJsZXMgJT4lIG5hbWVzKCkKCmFsbF9sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzID0gZ2V0TG9naXN0aWNSZWdyZXNzaW9uU3RhdHMoCiAgYmFzZV9wcmVkaWN0b3JfdmFycz1vYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1t2YXJuYW1lc10sCiAgYWRkaXRpb25hbF9wcmVkaWN0b3JzPWMocmF3X2V4cF92YXJzLCBjYWxjdWxhdGVkX2V4cF92YXJzKSwKICBsb2dpc3RpY19yZXNwb25zZV92YXI9J0Nhc2VTdHJpbmcnLAogIG1hc3Rlcl90YWJsZT1hbGxfbWFzdGVyX3RhYmxlLAogIHN0YXRzPWMoJ3B2YWx1ZScsICdlZmZlY3Rfc2l6ZScsICdzdGRfZXJyb3InKSwKICByZXNwb25zZV92YXJfbmFtZT0nSW5kZXgnCikKCmNvbnRyYXN0cyA9IG1ha2VDb250cmFzdE5hbWVzKGFsbF92YXJpYWJsZXMsIGFsbF9tYXN0ZXJfdGFibGUpCgpsb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzID0gZGF0YS5mcmFtZShSZXNwb25zZVZhcj1jaGFyYWN0ZXIoKSkKZm9yIChjb250cmFzdCBpbiBjb250cmFzdHMpCnsKICBsb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzICU8PiUgbXV0YXRlKCEhY29udHJhc3QgOj0gbnVtZXJpYygpKQp9CmZvciAodmFyIGluIGMocmF3X2V4cF92YXJzLCBjYWxjdWxhdGVkX2V4cF92YXJzKSkKewogIGxvZ2lzdGljX3JlZ3Jlc3Npb25fc3RhdHMgJTw+JSBtdXRhdGUoISF2YXIgOj0gbnVtZXJpYygpKQp9CgphbGxfbG9naXN0aWNfcmVncmVzc2lvbl9wdmFsdWVzID0gbG9naXN0aWNfcmVncmVzc2lvbl9zdGF0cwphbGxfbG9naXN0aWNfcmVncmVzc2lvbl9sb2dfb2Rkc19yYXRpb3MgPSBsb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzCgpmb3IodmFyIGluIG5hbWVzKGFsbF9sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzKSkKewogIHRlbXAgPSAKICAgIGFsbF9sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzW1t2YXJdXSAlPiUKICAgIHNlbGVjdChjb250cmFzdCwgcHZhbHVlLCBlZmZlY3Rfc2l6ZSkgJT4lCiAgICBjb2x1bW5fdG9fcm93bmFtZXMoJ2NvbnRyYXN0JykgJT4lCiAgICB0KCkgJT4lCiAgICBkYXRhLmZyYW1lKCkgJT4lCiAgICByb3duYW1lc190b19jb2x1bW4oJ3N0YXQnKSAlPiUKICAgIG11dGF0ZShSZXNwb25zZVZhcj0nQ2FzZVN0cmluZycpCiAgCiAgcHZhbHVlcyA9IHRlbXAgJT4lIGZpbHRlcihzdGF0PT0ncHZhbHVlJykgJT4lIHNlbGVjdCgtc3RhdCkKICBvZGRzX3JhdGlvcyA9IHRlbXAgJT4lIGZpbHRlcihzdGF0PT0nZWZmZWN0X3NpemUnKSAlPiUgc2VsZWN0KC1zdGF0KQogICAgCiAgYWxsX2xvZ2lzdGljX3JlZ3Jlc3Npb25fcHZhbHVlcyAlPD4lIGFkZF9yb3coISEhcHZhbHVlcykKICBhbGxfbG9naXN0aWNfcmVncmVzc2lvbl9sb2dfb2Rkc19yYXRpb3MgJTw+JSBhZGRfcm93KCEhIW9kZHNfcmF0aW9zKQp9CgpgYGAKCiMjIyBXcml0ZSBUYWJsZXMKYGBge3J9CmFsbF93YiA9IGNyZWF0ZVdvcmtib29rKCkKCmFkZFdvcmtzaGVldCgKICBhbGxfd2IsIAogIHNoZWV0TmFtZT0iVW5hZGp1c3RlZCBQLVZhbHVlcyIKICApCgpvcGVueGxzeDo6d3JpdGVEYXRhKAogIGFsbF93YiwgCiAgc2hlZXQ9IlVuYWRqdXN0ZWQgUC1WYWx1ZXMiLCAKICBhbGxfbG9naXN0aWNfcmVncmVzc2lvbl9wdmFsdWVzCiAgKQoKYWRkV29ya3NoZWV0KAogIGFsbF93YiwgCiAgc2hlZXROYW1lPSJMb2cgT2RkcyBSYXRpb3MiCiAgKQoKb3Blbnhsc3g6OndyaXRlRGF0YSgKICBhbGxfd2IsCiAgc2hlZXQ9IkxvZyBPZGRzIFJhdGlvcyIsIAogIGFsbF9sb2dpc3RpY19yZWdyZXNzaW9uX2xvZ19vZGRzX3JhdGlvcwogICkKCiMgYWRkV29ya3NoZWV0KHJlZ3Jlc3Npb25fcHZhbHMsIHNoZWV0TmFtZT0iQWRqdXN0ZWQgUC1WYWx1ZXMiKQojIG9wZW54bHN4Ojp3cml0ZURhdGEocmVncmVzc2lvbl9wdmFscywgc2hlZXQ9IkFkanVzdGVkIFAtVmFsdWVzIiwgYWRqdXN0ZWRfcmVncmVzc2lvbl9wdmFscykKCmZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZSgKICAnYWxsX2xvZ2lzdGljX3JlZ3Jlc3Npb24ueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICIke2NsdXN0ZXJpbmdfbGV2ZWx9IgopCgpzYXZlV29ya2Jvb2soYWxsX3diLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VCkKYGBgCgojIyMgQWdlIDwgOTAKCmBgYHtyfQphZ2VfbHRfOTBfbG9naXN0aWNfcmVncmVzc2lvbl9zdGF0cyA9IGdldExvZ2lzdGljUmVncmVzc2lvblN0YXRzKAogIGJhc2VfcHJlZGljdG9yX3ZhcnM9b2JzZXJ2YXRpb25hbF92YXJpYWJsZXNbdmFyc10sCiAgYWRkaXRpb25hbF9wcmVkaWN0b3JzPWMocmF3X2V4cF92YXJzLCBjYWxjdWxhdGVkX2V4cF92YXJzKSwKICBsb2dpc3RpY19yZXNwb25zZV92YXI9J0Nhc2VTdHJpbmcnLAogIG1hc3Rlcl90YWJsZT1hZ2VfbHRfOTBfbWFzdGVyX3RhYmxlLAogIHN0YXRzPWMoJ3B2YWx1ZScsICdlZmZlY3Rfc2l6ZScsICdzdGRfZXJyb3InKSwKICByZXNwb25zZV92YXJfbmFtZT0nSW5kZXgnCikKCmNvbnRyYXN0cyA9IG1ha2VDb250cmFzdE5hbWVzKGFnZV9sdF85MF92YXJpYWJsZXMsIGFsbF9tYXN0ZXJfdGFibGUpCgpsb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzID0gZGF0YS5mcmFtZShSZXNwb25zZVZhcj1jaGFyYWN0ZXIoKSkKZm9yIChjb250cmFzdCBpbiBjb250cmFzdHMpCnsKICBsb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzICU8PiUgbXV0YXRlKCEhY29udHJhc3QgOj0gbnVtZXJpYygpKQp9CmZvciAodmFyIGluIGMocmF3X2V4cF92YXJzLCBjYWxjdWxhdGVkX2V4cF92YXJzKSkKewogIGxvZ2lzdGljX3JlZ3Jlc3Npb25fc3RhdHMgJTw+JSBtdXRhdGUoISF2YXIgOj0gbnVtZXJpYygpKQp9CgphZ2VfbHRfOTBfbG9naXN0aWNfcmVncmVzc2lvbl9wdmFsdWVzID0gbG9naXN0aWNfcmVncmVzc2lvbl9zdGF0cwphZ2VfbHRfOTBfbG9naXN0aWNfcmVncmVzc2lvbl9sb2dfb2Rkc19yYXRpb3MgPSBsb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzCgpmb3IodmFyIGluIG5hbWVzKGFsbF9sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzKSkKewogIHRlbXAgPSAKICAgIGFnZV9sdF85MF9sb2dpc3RpY19yZWdyZXNzaW9uX3N0YXRzW1t2YXJdXSAlPiUKICAgIHNlbGVjdChjb250cmFzdCwgcHZhbHVlLCBlZmZlY3Rfc2l6ZSkgJT4lCiAgICBjb2x1bW5fdG9fcm93bmFtZXMoJ2NvbnRyYXN0JykgJT4lCiAgICB0KCkgJT4lCiAgICBkYXRhLmZyYW1lKCkgJT4lCiAgICByb3duYW1lc190b19jb2x1bW4oJ3N0YXQnKSAlPiUKICAgIG11dGF0ZShSZXNwb25zZVZhcj0nQ2FzZVN0cmluZycpCiAgCiAgcHZhbHVlcyA9IHRlbXAgJT4lIGZpbHRlcihzdGF0PT0ncHZhbHVlJykgJT4lIHNlbGVjdCgtc3RhdCkKICBvZGRzX3JhdGlvcyA9IHRlbXAgJT4lIGZpbHRlcihzdGF0PT0nZWZmZWN0X3NpemUnKSAlPiUgc2VsZWN0KC1zdGF0KQogICAgCiAgYWdlX2x0XzkwX2xvZ2lzdGljX3JlZ3Jlc3Npb25fcHZhbHVlcyAlPD4lIGFkZF9yb3coISEhcHZhbHVlcykKICBhZ2VfbHRfOTBfbG9naXN0aWNfcmVncmVzc2lvbl9sb2dfb2Rkc19yYXRpb3MgJTw+JSBhZGRfcm93KCEhIW9kZHNfcmF0aW9zKQp9CgpgYGAKCgojIyBXcml0ZSBUYWJsZXMKYGBge3J9CmFnZV9sdF85MF93YiA9IGNyZWF0ZVdvcmtib29rKCkKCmFkZFdvcmtzaGVldCgKICBhZ2VfbHRfOTBfd2IsIAogIHNoZWV0TmFtZT0iVW5hZGp1c3RlZCBQLVZhbHVlcyIKICApCgpvcGVueGxzeDo6d3JpdGVEYXRhKAogIGFnZV9sdF85MF93YiwgCiAgc2hlZXQ9IlVuYWRqdXN0ZWQgUC1WYWx1ZXMiLCAKICBhZ2VfbHRfOTBfbG9naXN0aWNfcmVncmVzc2lvbl9wdmFsdWVzCiAgKQoKYWRkV29ya3NoZWV0KAogIGFnZV9sdF85MF93YiwgCiAgc2hlZXROYW1lPSJMb2cgT2RkcyBSYXRpb3MiCiAgKQoKb3Blbnhsc3g6OndyaXRlRGF0YSgKICBhZ2VfbHRfOTBfd2IsCiAgc2hlZXQ9IkxvZyBPZGRzIFJhdGlvcyIsIAogIGFnZV9sdF85MF9sb2dpc3RpY19yZWdyZXNzaW9uX2xvZ19vZGRzX3JhdGlvcwogICkKCiMgYWRkV29ya3NoZWV0KHJlZ3Jlc3Npb25fcHZhbHMsIHNoZWV0TmFtZT0iQWRqdXN0ZWQgUC1WYWx1ZXMiKQojIG9wZW54bHN4Ojp3cml0ZURhdGEocmVncmVzc2lvbl9wdmFscywgc2hlZXQ9IkFkanVzdGVkIFAtVmFsdWVzIiwgYWRqdXN0ZWRfcmVncmVzc2lvbl9wdmFscykKCmZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZSgKICAnYWdlX2x0XzkwX2xvZ2lzdGljX3JlZ3Jlc3Npb24ueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICIke2NsdXN0ZXJpbmdfbGV2ZWx9IgopCgpzYXZlV29ya2Jvb2soYWdlX2x0XzkwX3diLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VCkKYGBgCg==</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAo8L3N0eWxlPgoKYGBge3J9CnNvdXJjZSgnJHtwcm9qZWN0X21ldGFkYXRhX2ZpbGV9JykKYW5hbHlzaXNfdHlwZSA9ICIke2FuYWx5c2lzX3R5cGV9IgpjbHVzdGVyaW5nX2xldmVsID0gIiR7Y2x1c3RlcmluZ19sZXZlbH0iCnRhYmxlc19kaXIgPSAiJHt0YWJsZXNfZGlyfSIKdXNlX2FsbGJhYyA9ICR7dXNlX2FsbGJhY30KYW5hbHlzaXNfdGl0bGUgPSB0b29sczo6dG9UaXRsZUNhc2UoZ3N1YigiXyIsICIgIiwgYW5hbHlzaXNfdHlwZSkpCmBgYAoKIyBNaVNlcS0ke21pc2VxX3J1bl9udW1iZXJ9IEJldGEgRGl2ZXJzaXR5IHsudGFic2V0fQoKIyMgQ2x1c3RlcmluZyBMZXZlbApEYXRhIGNsdXN0ZXJlZCBhdCB0aGUgYHIgdG91cHBlcignJHtjbHVzdGVyaW5nX2xldmVsfScpYCBMZXZlbC4KCiMjIEZpbHRlcmluZwoqICoqUmVsYXRpdmUgQWJ1bmRhbmNlIEN1dG9mZjoqKiAke3JlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmZ9CiogKipQcmV2YWxlbmNlIEN1dG9mZjoqKiAke3ByZXZhbGVuY2VfY3V0b2ZmfQoqICoqTWluIENvdW50IEN1dG9mZjoqKiAke21pbl9jb3VudF9jdXRvZmZ9CgojIyBTZXR1cAoKIyMjIFN0YXJ0IENvbmRhIEVOVgpgYGB7cn0Kc3RhcnRDb25kYUVudignYmV0YWRpdicsIGxpYj0nfi9SMzUnKQpgYGAKCiMjIyBMb2FkIExpYnJhcmllcwpgYGB7ciwgZWNobz1GfQpsaWJyYXJ5KHRpZHl2ZXJzZSkKbGlicmFyeShtYWdyaXR0cikKbGlicmFyeShnZ3Bsb3QyKQpsaWJyYXJ5KGdnYmVlc3dhcm0pCmxpYnJhcnkob3Blbnhsc3gpCmxpYnJhcnkoRFQpCmxpYnJhcnkocGhlYXRtYXApCmxpYnJhcnkoa2FibGVFeHRyYSkKbGlicmFyeSh2ZWdhbikKbGlicmFyeShwbG90bHkpCgojIyMgQ3VzdG9tIGxpYnJhcmllcyB0aGF0IGNhbiBiZSBsb2FkZWQgZnJvbSBHaXRIdWIKc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZ2VuZXJhbF9hc3ZfZGF0YV9hbmFseXNpc191dGlsaXRpZXMuUicpCnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL2JldGFfZGl2ZXJzaXR5X3V0aWxpdGllcy5SJykKYGBgCgojIyMgU2V0IEtuaXRyIE9wdGlvbnMKYGBge3J9CiR7a25pdHJfb3B0aW9uc30KYGBgCgojIyMgTG9hZCBEYXRhCmBgYHtyfQphc3ZfdGFibGUgPSAKICByZWFkLmRlbGltKAogICAgJyR7YXN2X3RhYmxlX2ZpbGV9JywgCiAgICBoZWFkZXI9VCwgCiAgICBzZXA9J1x0JywKICAgIHN0cmluZ3NBc0ZhY3RvcnM9RgogICAgKQoKdGF4b25vbXlfdGFibGUgPSAKICByZWFkLmRlbGltKAogICAgJyR7dGF4b25vbXlfdGFibGVfZmlsZX0nLCAKICAgIGhlYWRlcj1ULCAKICAgIHNlcD0nXHQnLAogICAgc3RyaW5nc0FzRmFjdG9ycz1GCiAgICApICU+JQogIG11dGF0ZV9hbGwoYXMuY2hhcmFjdGVyKCkpCgpzYW1wbGVfZGF0YSA9IHJlYWQueGxzeCgnJHtzYW1wbGVfZGF0YV9maWxlfScpCgppZiAoIklHQSIgJWluJSBjb2xuYW1lcyhzYW1wbGVfZGF0YSkgJiB1c2VfYWxsYmFjKQp7CiAgc2FtcGxlX2RhdGEgPSAKICAgIHNhbXBsZV9kYXRhICU+JQogICAgZmlsdGVyKElHQT09J0FsbEJhYycpCgogIHNhbXBsZV9uYW1lcyA9IHNhbXBsZV9kYXRhJFNhbXBsZU5hbWUKICAKICBhc3ZfdGFibGUgPSAKICAgIGFzdl90YWJsZSAlPiUKICAgIHNlbGVjdCgnQVNWcycsIGVuZHNfd2l0aCgnQWxsQmFjJykpCn0KCnNhbXBsZV9kYXRhX2NvbHVtbnMgPSBjb2xuYW1lcyhzYW1wbGVfZGF0YSkKc2FtcGxlX25hbWVzID0gc2FtcGxlX2RhdGEkU2FtcGxlTmFtZQoKCnNvdXJjZShmaWxlLnBhdGgoCiAgIiR7cHJvamVjdF9yb290fSIsIAogICIke21ldGFkYXRhX2Rpcn0iLCAKICAnb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMuUicKICApKQoKYGBgCgojIyMgU2V0IEZpbHRlcmluZwpgYGB7cn0KcmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZiA9ICR7cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZn0KcHJldmFsZW5jZV9jdXRvZmYgPSAke3ByZXZhbGVuY2VfY3V0b2ZmfQpgYGAKKipyZWxhdGl2ZSBhYnVuZGFuY2UgY3V0b2ZmOioqIGByIHJlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmZgCioqcHJldmFsZW5jZSBjdXRvZmY6KiogYHIgcHJldmFsZW5jZV9jdXRvZmZgCgojIyMgVmFyaWFibGVzIG9mIGludGVyZXN0CiMjIyMgT2JzZXJ2YXRpb25hbCBWYXJpYWJsZXMKYGBge3J9CmtleV9jb3ZhcmlhdGVzID0gJHtrZXlfY292YXJpYXRlc30KdHJlYXRtZW50cyA9ICR7dHJlYXRtZW50c30KdmFyaWFibGVzID0gYygnQ2FzZVN0cmluZycsIGtleV9jb3ZhcmlhdGVzLCB0cmVhdG1lbnRzKSAlPiUgdW5pcXVlKCkKYGBgCgojIyMjIFJlbW92ZSBBZ2UKYGBge3J9CnZhcmlhYmxlcyAlPD4lIHNldGRpZmYoJ0FnZScpCmBgYAoKKiAqKlRyZWF0bWVudCB2YXJpYWJsZXM6KiogJHt0cmVhdG1lbnRzfQoqICoqS2V5IGNvdmFyaWF0ZXM6KiogICR7a2V5X2NvdmFyaWF0ZXN9CiogKipWYXJpYWJsZXMgVXNlZDoqKiBgciB2YXJpYWJsZXNgCgojIyMgR2V0IEZpbHRlcmVkIFRheGEgQWJ1bmRhbmNlCmBgYHtyfQp0YXhhX2FidW5kYW5jZSA9IGdldEZpbHRlcmVkVGF4YUNvdW50c0RldigKICBhc3ZfdGFibGUsCiAgdGF4b25vbXlfdGFibGUsCiAgc2FtcGxlX2RhdGEsIAogIGNsdXN0ZXJfYnk9IiR7Y2x1c3RlcmluZ19sZXZlbH0iLAogIHJlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmY9JHtyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmfSwKICBwcmV2YWxlbmNlX2N1dG9mZj0ke3ByZXZhbGVuY2VfY3V0b2ZmfSwKICBpZF9jb2w9IlNhbXBsZU5hbWUiLAogIG5vcm1hbGl6ZT1UCiAgKQoKZmlsdGVyZWRfdGF4YSA9IHRheGFfYWJ1bmRhbmNlJHNob3J0X2dsb21tZWRfdGF4YQoKYGBgCgojIyMgQnVpbGQgTWFzdGVyIFRhYmxlCmBgYHtyfQptYXN0ZXJfdGFibGUgPSBnZXRNYXN0ZXJUYWJsZSgKICB0YXhhX2FidW5kYW5jZSwKICBzYW1wbGVfZGF0YSwKICAnU2FtcGxlTmFtZScsCiAgJ3Nob3J0X2dsb21tZWRfdGF4YScKKQpgYGAKCiMjIyBBeGVzIFNldHMKYGBge3J9CmF4ZXNfc2V0cyA9IGxpc3QoCiAgYygxLDIpLAogIGMoMiwzKSwKICBjKDEsMykKKQpgYGAKCgojIyBNRFMgUGxvdHMgey50YWJzZXR9CiMjIyBTY3JlZSBQbG90CmBgYHtyfQojIHBsb3ROTURTU2NyZWUgPC0gZnVuY3Rpb24oeCkgCiMgewojICAgcGxvdCgKIyAgICAgcmVwKDEsIDEwKSwgCiMgICAgIHJlcGxpY2F0ZSgxMCwgbWV0YU1EUyh4LCBhdXRvdHJhbnNmb3JtID0gRiwgayA9IDEpJHN0cmVzcyksIAojICAgICB4bGltID0gYygxLCAxMCksCiMgICAgIHlsaW0gPSBjKDAsIDAuMzApLCAKIyAgICAgeGxhYiA9ICIjIG9mIERpbWVuc2lvbnMiLCAKIyAgICAgeWxhYiA9ICJTdHJlc3MiLCAKIyAgICAgbWFpbiA9ICJOTURTIHN0cmVzcyBwbG90IgojICAgICApCiMgICBmb3IgKGkgaW4gMToxMCkKIyAgIHsKIyAgICAgcG9pbnRzKAojICAgICAgIHJlcChpICsgMSwxMCksCiMgICAgICAgcmVwbGljYXRlKDEwLCBtZXRhTURTKHgsIGF1dG90cmFuc2Zvcm0gPSBGLCBrID0gaSArIDEpJHN0cmVzcykKIyAgICAgICApCiMgICB9CiMgfQojIAojIHBsb3ROTURTU2NyZWUobWFzdGVyX3RhYmxlICU+JSBzZWxlY3QoZmlsdGVyZWRfdGF4YSkpCmBgYAoKCiMjIyAyRApgYGB7ciwgZWNobz1GfQoKZm9yICh2YXIgaW4gdmFyaWFibGVzKQp7CiAgdmFyX2RhdGEgPSBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1tbdmFyXV0KICBwcmludCh2YXJfZGF0YSkKICAKICBuYW1lID0gdmFyX2RhdGEkY292YXJpYXRlX29mX2ludGVyZXN0CiAgY2FzZSA9IHZhcl9kYXRhJGNhc2UKICBjb250cm9sID0gdmFyX2RhdGEkY29udHJvbAogIAogIGZvciAoYXhlcyBpbiBheGVzX3NldHMpCiAgewogICAgbWFrZU5NRFNQbG90KAogICAgICBtYXN0ZXJfdGFibGUsCiAgICAgIGZlYXR1cmVzPWZpbHRlcmVkX3RheGEsCiAgICAgIGF4ZXM9YXhlcywKICAgICAgY29sb3I9dmFyLAogICAgICB0aXRsZV9leHRyYT1wYXN0ZShuYW1lLCBjYXNlLCAndnMnLCBjb250cm9sKSwKICAgICAgZWxpcHNlcz1GCiAgICApCiAgfQoKfQoKYGBgCgojIyMgM0QKYGBge3J9CnBjID0gZ2V0Tk1EUyhtYXN0ZXJfdGFibGUsIGZpbHRlcmVkX3RheGEsIGF4ZXM9YygxOjMpKQpwY2RmID0gZGF0YS5mcmFtZShwYyRwb2ludHMpICU+JSByb3duYW1lc190b19jb2x1bW4oJ1NhbXBsZU5hbWUnKQpwY210ID0gaW5uZXJfam9pbihwY2RmLCBtYXN0ZXJfdGFibGUsIGJ5PSdTYW1wbGVOYW1lJykKCnBsb3RPcmQzRCgKICBwY210LCAKICBheGVzPWMoJ01EUzEnLCAnTURTMicsICdNRFMzJyksIAogIGNvbG9yPSJDYXNlU3RyaW5nIiwKICB0aXRsZV9leHRyYT0ibk1EUyIKICApCmBgYAoKCiMjIFBDb0EgUGxvdHMgey50YWJzZXR9CiMjIyBTY3JlZSBQbG90CmBgYHtyfQpwYyA9IGdldFByaW5jZUNvbXBzKG1hc3Rlcl90YWJsZSwgZmlsdGVyZWRfdGF4YSwgJ1NhbXBsZU5hbWUnKQpzY3JlZXBsb3QocGMpCmBgYAoKIyMjIDJECmBgYHtyfQpmb3IgKHZhciBpbiB2YXJpYWJsZXMpCnsKICB2YXJfZGF0YSA9IG9ic2VydmF0aW9uYWxfdmFyaWFibGVzW1t2YXJdXQogIHByaW50KHZhcl9kYXRhKQogIAogIG5hbWUgPSB2YXJfZGF0YSRjb3ZhcmlhdGVfb2ZfaW50ZXJlc3QKICBjYXNlID0gdmFyX2RhdGEkY2FzZQogIGNvbnRyb2wgPSB2YXJfZGF0YSRjb250cm9sCiAgCiAgZm9yIChheGVzIGluIGF4ZXNfc2V0cykKICB7CiAgICBtYWtlUENPQVBsb3QoCiAgICAgIG1hc3Rlcl90YWJsZSwKICAgICAgbWV0aG9kPSdicmF5JywKICAgICAgZmVhdHVyZXM9ZmlsdGVyZWRfdGF4YSwKICAgICAgYXhlcz1heGVzLAogICAgICBjb2xvcj12YXIsCiAgICAgIHRpdGxlX2V4dHJhPXBhc3RlKG5hbWUsIGNhc2UsICd2cycsIGNvbnRyb2wpLAogICAgICBlbGlwc2VzPUYKICAgICkgCiAgfQoKfQojICsgYWVzKHg9UEMxLCB5PVBDMiwgY29sb3I9SUdBLCBzaGFwZT1DYXNlU3RyaW5nKQpgYGAKCiMjIyAzRApgYGB7cn0KcGMgPSBnZXRQcmluY2VDb21wcyhtYXN0ZXJfdGFibGUsIGZpbHRlcmVkX3RheGEsICdTYW1wbGVOYW1lJykKcGNkZiA9IGRhdGEuZnJhbWUocGMkeCkgJT4lIHJvd25hbWVzX3RvX2NvbHVtbignU2FtcGxlTmFtZScpCnBjbXQgPSBpbm5lcl9qb2luKHBjZGYsIG1hc3Rlcl90YWJsZSwgYnk9J1NhbXBsZU5hbWUnKQoKcGxvdE9yZDNEKAogIHByaW5jb21wX21hc3Rlcl90YWJsZT1wY210LAogIGF4ZXM9YygnUEMxJywgJ1BDMicsICdQQzMnKSwKICBpZF9jb2w9IlNhbXBsZU5hbWUiLAogIGNvbG9yPSJDYXNlU3RyaW5nIiwKICB0aXRsZV9leHRyYT0iQnJheSBEaXN0YW5jZSBQQ29BIgopCmBgYAoKCgoKCgoK</div>
 
 
 
@@ -2243,7 +2205,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("logistic_regression_template.Rmd");
+  window.initializeSourceEmbed("beta_diversity_template.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

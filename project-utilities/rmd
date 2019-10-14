@@ -1,0 +1,6 @@
+#!/bin/bash
+
+#Rscript -e "rmarkdown::render('$1', output_dir='../reports', output_format='html_notebook')"
+Rscript -e "rmarkdown::render('$1')"
+mv *.html ../reports
+

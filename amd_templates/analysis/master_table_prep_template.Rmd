@@ -60,7 +60,7 @@ Data clustered at the `r toupper("${clustering_level}")` level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('${conda_env}')
+startCondaEnv('base')
 ```
 
 
@@ -68,14 +68,12 @@ startCondaEnv('${conda_env}')
 ```{r}
 library(rmarkdown)
 library(knitr)
-
 library(tidyverse)
 library(magrittr)
-# library(ggplot2)
-# library(ggbeeswarm)
+library(ggplot2)
 library(openxlsx)
 library(DT)
-# library(pheatmap)
+library(pheatmap)
 library(kableExtra)
 
 ### Custom libraries that can be loaded from GitHub
@@ -109,15 +107,16 @@ taxonomy_table =
     ) %>%
   mutate_all(as.character())
 
-sample_data = 
-  read.delim(
-    '${sample_data_file}', 
-    header=T, 
-    sep='\t',
-    stringsAsFactors=F
-    ) %>%
-  filter(SampleID!='Undetermined')
+# sample_data = 
+#   read.delim(
+#     '${sample_data_file}', 
+#     header=T, 
+#     sep='\t',
+#     stringsAsFactors=F
+#     ) %>%
+#   filter(SampleID!='Undetermined')
 
+sample_data = read.xlsx('${sample_data_file}')
 
 if ("IGA" %in% colnames(sample_data) & use_allbac)
 {

@@ -39,8 +39,8 @@ h4 {
 
 ```{r}
 source('/home/balter/miseq-0278/metadata/project_metadata.R')
-analysis_type = "igaseq"
-clustering_level = "asv"
+analysis_type = ${analysis_type}
+clustering_level = ${clustering_level}
 tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
 analysis_title = "IgA-Seq"
 ```
@@ -59,7 +59,7 @@ Data clustered at the `r toupper(clustering_level)` Level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('alphadiv')
+startCondaEnv('regression')
 ```
 
 ### Load Libraries
@@ -76,7 +76,6 @@ library(ggbeeswarm)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 
@@ -191,7 +190,8 @@ all_experimental_variables = c(raw_exp_vars, calculated_exp_vars)
 ### General Parameters
 ```{r}
 stats = ${stats}
-use_parametric = ${use_parametric}
+transformation = "${regression_transform}"
+log_regularizer = ${log_regularizer}
 adjustment_method = "${adjustment_method}"
 response_var_name = "${response_var_name}"
 ```
@@ -207,7 +207,8 @@ all_iga_index_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 all_ici_score_regression_stats = getMultipleRegressionStats(
@@ -217,7 +218,8 @@ all_ici_score_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric 
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 all_log_ici_score_regression_stats = getMultipleRegressionStats(
@@ -227,7 +229,8 @@ all_log_ici_score_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric 
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 ```
@@ -242,7 +245,8 @@ age_lt_90_iga_index_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 age_lt_90_ici_score_regression_stats = getMultipleRegressionStats(
@@ -252,7 +256,8 @@ age_lt_90_ici_score_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric 
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 age_lt_90_log_ici_score_regression_stats = getMultipleRegressionStats(
@@ -262,7 +267,8 @@ age_lt_90_log_ici_score_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric 
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 ```
@@ -276,7 +282,8 @@ amd_only_iga_index_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 amd_only_ici_score_regression_stats = getMultipleRegressionStats(
@@ -286,7 +293,8 @@ amd_only_ici_score_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric 
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 amd_only_log_ici_score_regression_stats = getMultipleRegressionStats(
@@ -296,7 +304,8 @@ amd_only_log_ici_score_regression_stats = getMultipleRegressionStats(
   stats=stats,
   response_var_name=response_var_name,
   adjustment_method=adjustment_method,
-  parametric=use_parametric 
+  transformation=transformation,
+  log_regularizer=log_regularizer
 )
 
 ```

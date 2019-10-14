@@ -60,7 +60,7 @@ Data clustered at the `r toupper(clustering_level)` Level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('base', lib="~/R35")
+startCondaEnv('regression', lib="~/R35")
 ```
 
 

@@ -199,9 +199,9 @@ control_only_contrast_names = makeContrastNames(
 ### Initialize regression stats table
 
 ```{r}
-regression_pvals = makeRegressionStatsContrastTemplate(all_contrast_names)
+regression_pvals_template = makeRegressionStatsContrastTemplate(all_contrast_names)
 
-regression_effect_sizes = makeRegressionStatsContrastTemplate(all_contrast_names)
+regression_effect_sizes_template = makeRegressionStatsContrastTemplate(all_contrast_names)
 ```
 
 ## Linear Regression {.tabset}
@@ -215,21 +215,22 @@ master_table = all_master_table
 contrasts = all_contrast_names
 index_name_template = 'All_'
 
-# regression_pvals = regression_pvals_template
-# regression_effect_sizes = regression_pvals_template
+regression_pvals = regression_pvals_template
+regression_effect_sizes = regression_pvals_template
 
 for (var in exp_vars)
 {
-  index_name = paste0(index_name_template, var)
+  index_name = var
   print(index_name)
   
-  fit = doMultipleRankRegression(
+  fit = doMultipleRegression(
     var,
     predictors,
-    master_table
+    response_vars=var,
+    master_table,
+    transformation='${regression_transform}',
+    log_regularizer=${log_regularizer}
   )
-  
-  # print(vif(fit))
   
   pvals = getRegressionPvals(
     fit,
@@ -237,7 +238,7 @@ for (var in exp_vars)
     index_name
   )
   
-  regression_pvals = regression_pvals %>% add_row(!!!pvals)
+ regression_pvals = regression_pvals %>% add_row(!!!pvals)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
@@ -250,6 +251,55 @@ for (var in exp_vars)
 }
 ```
 
+
+#### Visualize
+```{r}
+pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+
+pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+```
+
+#### Write Regression Stats
+```{r}
+wb = createWorkbook()
+
+addWorksheet(
+  wb, 
+  sheetName="Unadjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="Unadjusted P-Values", 
+  regression_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="Effect Sizes"
+  )
+
+openxlsx::writeData(
+  wb,
+  sheet="Effect Sizes", 
+  regression_effect_sizes
+  )
+
+# addWorksheet(regression_pvals, sheetName="Adjusted P-Values")
+# openxlsx::writeData(regression_pvals, sheet="Adjusted P-Values", adjusted_regression_pvals)
+
+filename = makeDataFileName(
+  'all_linear_regression.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+saveWorkbook(wb, file=filename, overwrite=T)
+```
+
+
 ### Age < 90
 
 ```{r}
@@ -259,20 +309,21 @@ master_table = age_lt_90_master_table
 contrasts = age_lt_90_contrast_names %>% unlist()
 index_name_template = 'Age_lt_90_'
 
-# regression_pvals = regression_pvals_template
-# regression_effect_sizes = regression_pvals_template
+regression_pvals = regression_pvals_template
+regression_effect_sizes = regression_pvals_template
 
 for (var in exp_vars)
 {
-  index_name = paste0(index_name_template, var)
+  index_name = var
   print(index_name)
   
-  fit = doMultipleRankRegression(
+  fit = doMultipleRegression(
     var,
     predictors,
+    response_vars=var,
     master_table,
-    transform="${regression_transform}",
-    log_regularizer=${}
+    transformation='${regression_transform}',
+    log_regularizer=${log_regularizer}
   )
   
   pvals = getRegressionPvals(
@@ -281,7 +332,7 @@ for (var in exp_vars)
     index_name
   )
   
-  regression_pvals = regression_pvals %>% add_row(!!!pvals)
+ regression_pvals = regression_pvals %>% add_row(!!!pvals)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
@@ -292,6 +343,53 @@ for (var in exp_vars)
   regression_effect_sizes = regression_effect_sizes %>% add_row(!!!effect_sizes)
 
 }
+```
+
+
+#### Visualize
+```{r}
+pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+
+pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+```
+
+#### Write Regression Stats
+```{r}
+wb = createWorkbook()
+
+addWorksheet(
+  wb, 
+  sheetName="Unadjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="Unadjusted P-Values", 
+  regression_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="Effect Sizes"
+  )
+
+openxlsx::writeData(
+  wb,
+  sheet="Effect Sizes", 
+  regression_effect_sizes
+  )
+
+# addWorksheet(regression_pvals, sheetName="Adjusted P-Values")
+# openxlsx::writeData(regression_pvals, sheet="Adjusted P-Values", adjusted_regression_pvals)
+
+filename = makeDataFileName(
+  'age_lt_90_linear_regression.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+saveWorkbook(wb, file=filename, overwrite=T)
 ```
 
 
@@ -304,18 +402,21 @@ master_table = amd_only_master_table
 contrasts = amd_only_contrast_names %>% unlist()
 index_name_template = 'AMD_Only_'
 
-# regression_pvals = regression_pvals_template
-# regression_effect_sizes = regression_pvals_template
+regression_pvals = regression_pvals_template
+regression_effect_sizes = regression_pvals_template
 
 for (var in exp_vars)
 {
-  index_name = paste0(index_name_template, var)
+  index_name = var
   print(index_name)
   
-  fit = doMultipleRankRegression(
+  fit = doMultipleRegression(
     var,
     predictors,
-    master_table
+    response_vars=var,
+    master_table,
+    transformation='${regression_transform}',
+    log_regularizer=${log_regularizer}
   )
   
   pvals = getRegressionPvals(
@@ -324,7 +425,7 @@ for (var in exp_vars)
     index_name
   )
   
-  regression_pvals = regression_pvals %>% add_row(!!!pvals)
+ regression_pvals = regression_pvals %>% add_row(!!!pvals)
 
   effect_sizes = getRegressionEffectSizes(
     fit,
@@ -336,7 +437,8 @@ for (var in exp_vars)
 
 }
 ```
-## Visualize
+
+#### Visualize
 ```{r}
 pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
 
@@ -344,28 +446,28 @@ pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F
 ```
 
 
-## Write Tables
+#### Write Regression Stats
 ```{r}
-regression_pvalues = createWorkbook()
+wb = createWorkbook()
 
 addWorksheet(
-  regression_pvalues, 
+  wb, 
   sheetName="Unadjusted P-Values"
   )
 
 openxlsx::writeData(
-  regression_pvalues, 
+  wb, 
   sheet="Unadjusted P-Values", 
   regression_pvals
   )
 
 addWorksheet(
-  regression_pvalues, 
+  wb, 
   sheetName="Effect Sizes"
   )
 
 openxlsx::writeData(
-  regression_pvalues,
+  wb,
   sheet="Effect Sizes", 
   regression_effect_sizes
   )
@@ -374,130 +476,11 @@ openxlsx::writeData(
 # openxlsx::writeData(regression_pvals, sheet="Adjusted P-Values", adjusted_regression_pvals)
 
 filename = makeDataFileName(
-  'linear_regression.xlsx',
+  'amd_only_linear_regression.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
   "${clustering_level}"
 )
-
-saveWorkbook(regression_pvalues, file=filename, overwrite=T)
+saveWorkbook(wb, file=filename, overwrite=T)
 ```
-
-
-```
-categorical_data = 
-  sample_data %>%
-  select(
-    Gender,
-    CaseString,
-    ARMS2rs10490924, 
-    CFHrs1061170, 
-    CFHrs10737680, 
-    SKIV2Lrs429608, 
-    CNV_Either_Eye, 
-    GA_No_CNV_Either_Eye, 
-    AREDS
-  ) 
-
-# %>%
-#   mutate_all(list(~ifelse(is.na(.), 0, 1))) 
-```
-
-
-```
-num_vars = length(categorical_variable_names)
-
-categorical_chisq_pvals = matrix(rep(0, num_vars*num_vars), ncol=num_vars, nrow=num_vars)
-colnames(categorical_chisq_pvals) = categorical_variable_names
-rownames(categorical_chisq_pvals) = categorical_variable_names
-
-for (var in categorical_variable_names)
-{
-  for(other_var in categorical_variable_names)
-  {
-    print(sprintf('var: %s, other_var: %s', var, other_var))
-    
-    if (var != other_var)
-    {
-      test =
-        sample_data %>%
-        select(var, other_var) %>%
-        table() %>%
-        chisq.test()
-
-      categorical_chisq_pvals[var, other_var] = round(test$p.value,3)
-    }
-
-  }
-}
-  
-```
-
-
-
-
-```
-## Logistic Regression
-### All Subgroups
-#### Logistic Predictor Vars
-
-num_samples_threshold = 5
-
-all_variables = filterVarsBySampleThreshold2(
-  all_master_table,
-  num_samples_threshold,
-  observational_variables
-  )
-
-vars = setdiff(all_variables %>% names(), c('CaseString', 'AREDS'))
-```
-
-```
-#### Run Regression
-
-all_logistic_regression_stats = getLogisticRegressionStats(
-  base_predictor_vars=observational_variables[vars],
-  additional_predictors=c(raw_exp_vars, calculated_exp_vars),
-  logistic_response_var='CaseString',
-  master_table=all_master_table,
-  stats=c('pvalue', 'effect_size', 'std_error'),
-  response_var_name='Index'
-)
-
-contrasts = makeContrastNames(observational_variables[vars], all_master_table)
-
-logistic_regression_stats = data.frame(ResponseVar=character())
-for (contrast in contrasts)
-{
-  logistic_regression_stats %<>% mutate(!!contrast := numeric())
-}
-for (var in c(raw_exp_vars, calculated_exp_vars))
-{
-  logistic_regression_stats %<>% mutate(!!var := numeric())
-}
-
-logistic_regression_pvalues = logistic_regression_stats
-logistic_regression_odds_ratios = logistic_regression_stats
-
-for(var in names(all_logistic_regression_stats))
-{
-  
-  temp = 
-    all_logistic_regression_stats[[var]] %>%
-    select(contrast, pvalue, effect_size) %>%
-    column_to_rownames('contrast') %>%
-    t() %>%
-    data.frame() %>%
-    rownames_to_column('stat') %>%
-    mutate(ResponseVar='CaseString')
-  
-  pvalues = temp %>% filter(stat=='pvalue') %>% select(-stat)
-  odds_ratios = temp %>% filter(stat=='effect_size') %>% select(-stat)
-    
-  logistic_regression_pvalues %<>% add_row(!!!pvalues)
-  logistic_regression_odds_ratios %<>% add_row(!!!odds_ratios)
-}
-
-```
-

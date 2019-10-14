@@ -61,7 +61,7 @@ Data clustered at the `r toupper('${clustering_level}')` Level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('${conda_env}')
+startCondaEnv('base')
 ```
 
 ### Load Libraries
@@ -79,7 +79,6 @@ library(ggbeeswarm)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 
@@ -127,33 +126,18 @@ source(file.path(
 ```
 
 ### Variables of interest
-#### All Observational Variables
+#### Observational Variables
 ```{r}
-# print(observational_variables)
+all_variables = observational_variables[${two_group_covariates['All']}]
+age_lt_90_variables = observational_variables[${two_group_covariates['Age_lt_90']}]
+amd_only_variables = observational_variables[${two_group_covariates['AMD_Only']}]
 ```
 
-#### AMD Only Observational Variables
-```{r}
-amd_only_variables = observational_variables
+* **All Variables:** ${two_group_covariates['All']}
+* **Age < 90 Variables:** ${two_group_covariates['Age_lt_90']}
+* **AMD Only Variables:** ${two_group_covariates['AMD_Only']}
 
-amd_only_excluded_variables = c(
-  'Gender',
-  'CaseString',
-  'Age'
-)
-
-for (varname in amd_only_excluded_variables)
-{
-  print(sprintf('Excluding %s', varname))
-  amd_only_variables[varname] = NULL
-}
-
-```
-
-**Excluding: ** `r amd_only_excluded_variables`
-
-
-#### Calculated Experimental Variables
+#### Raw and Calculated Experimental Variables
 
 ```{r}
 raw_exp_vars = ${raw_exp_vars}
@@ -232,6 +216,20 @@ plotAllTwoGroupTests(
   indices=c(raw_exp_vars, calculated_exp_vars),
   title_template=paste(analysis_title, "AMD Only: "),
   annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+)
+
+```
+
+
+### AMD Only, Age < 90---Multiple Covariates
+
+```{r}
+plotAllTwoGroupTests(
+  variables=amd_only_variables,
+  master_table=amd_only_master_table,
+  indices=c(raw_exp_vars, calculated_exp_vars),
+  title_template=paste(analysis_title, "AMD Only: "),
+  annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only_Age_lt_90')
 )
 
 ```

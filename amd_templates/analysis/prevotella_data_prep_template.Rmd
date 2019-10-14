@@ -36,19 +36,15 @@ output:
   
 </style>
 
-
-
 ```{r}
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-analysis_title = "${analysis_title}"
 use_allbac = ${use_allbac}
-
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_title` Data Prep {.tabset}
+# MiSeq-${miseq_run_number} Basic Data Prep{.tabset}
 ## Clustering Level
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
@@ -57,33 +53,36 @@ Data clustered at the `r toupper('${clustering_level}')` Level.
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
+
 ## Setup 
-### Start Conda ENV
-```{r}
-startCondaEnv('alphadiv')
-```
 
 ### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('base')
+```
 
 ### Load Libraries
 ```{r}
 library(rmarkdown)
-library(knitr)
-
 library(tidyverse)
 library(magrittr)
-library(DT)
+library(ggplot2)
+library(ggbeeswarm)
 library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 
+
 ### Set Knitr Options
 ```{r}
-
 ${knitr_options}
 ```
 
@@ -117,7 +116,6 @@ taxonomy_table =
 
 sample_data = read.xlsx('${sample_data_file}')
 
-
 if ("IGA" %in% colnames(sample_data) & use_allbac)
 {
   sample_data = 
@@ -132,6 +130,7 @@ if ("IGA" %in% colnames(sample_data) & use_allbac)
 }
 
 sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
 
 ```
 
@@ -145,11 +144,11 @@ prevalence_cutoff = ${prevalence_cutoff}
 
 ### Get Filtered Taxa Abundance
 ```{r}
-genus_taxa_abundance = getFilteredTaxaCounts(
+genus_abundance = getFilteredTaxaCountsDev(
   asv_table,
   taxonomy_table,
   sample_data, 
-  lowest_rank="${clustering_level}",
+  cluster_by="Genus",
   relative_abundance_cutoff=relative_abundance_cutoff,
   prevalence_cutoff=prevalence_cutoff,
   id_col="SampleName",
@@ -157,73 +156,58 @@ genus_taxa_abundance = getFilteredTaxaCounts(
   )
 ```
 
-### Create Master Table
-
+## Create Master Tables
 ```{r}
-master_table = getMasterTable(
-  genus_taxa_abundance,
+all_master_table = getMasterTable(
+  genus_abundance,
   sample_data,
   'SampleName',
   'short_glommed_taxa'
 )
 ```
 
-## Calculate Alpha Diversity {.tabset}
 
-### [Close]  
-
-### Subgroups
+## Collect % Prevotella
 ```{r}
-all_alpha_diversity = calculateAlphaDiversity2(
-  master_table,
-  genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
+### Prevotella genera from Silva database website https://www.arb-silva.de/search/
+prevotella_genera = paste0(c(
+  'Bacteroidetes_Prevotella|', 
+  paste0('Bacteroidetes_Prevotella_', c(1,2,6,7,9), collapse="|")
+  ),
+  collapse=""
 )
-
-amd_only_alpha_diversity = calculateAlphaDiversity2(
-  master_table %>% filter(CaseString=='AMD'),
-  genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
-)
-
-age_lt_90_alpha_diversity = calculateAlphaDiversity2(
-  master_table %>% filter(Age<90),
-  genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
-)
-
-all_master_table =
-  inner_join(all_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
-
-amd_only_master_table =
-  inner_join(amd_only_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
-
-
-age_lt_90_master_table =
-  inner_join(age_lt_90_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
+prevotella_genera
 ```
 
-### Write Alpha Diversity Tables
+Prevotella genera from Silva database website https://www.arb-silva.de/search/:
+`r prevotella_genera`
+
+
+```{r}
+all_master_table %<>%
+  mutate(
+    FractionPrevotellaAll = 
+      select(., matches(prevotella_genera)) %>% 
+      rowSums(),
+    FractionBacteroidetes = 
+      select(., starts_with('Bacteroidetes_')) %>% 
+      rowSums(),
+    FractionPrevotellaBacteroidetes = FractionPrevotellaAll/FractionBacteroidetes,
+    PctPrevotella_gt_1 = ifelse(FractionPrevotellaAll > 0.01, 'Y', 'N'),
+    PctPrevotella_gt_5 = ifelse(FractionPrevotellaAll > 0.05, 'Y', 'N'),
+    PctPrevotella_gt_10 = ifelse(FractionPrevotellaAll > 0.1, 'Y', 'N')
+  )
+```
+
+## Write Table
 ```{r}
 wb = createWorkbook()
-
-all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
-
-if (clustering_level == 'ASV')
-{
-  ranks_to_keep = c(all_ranks, 'ASVs')
-} else
-{
-  ranks_to_keep = all_ranks[1:match("${clustering_level}", all_ranks)]
-}
 
 addWorksheet(wb, sheetName="Master Table")
 openxlsx::writeData(wb, sheet="Master Table", all_master_table)
 
-just_taxa = genus_taxa_abundance %>% select(ranks_to_keep, glommed_taxa, short_glommed_taxa)
+all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+just_taxa = genus_abundance %>% select(all_ranks, glommed_taxa, short_glommed_taxa)
 addWorksheet(wb, sheetName="${tools::toTitleCase(clustering_level)}")
 openxlsx::writeData(wb, sheet="${tools::toTitleCase(clustering_level)}", just_taxa)
 
@@ -234,7 +218,9 @@ filename = makeDataFileName(
   "${miseq_project_prefix}",
   "${clustering_level}"
 )
-print(sprintf("master table file: %s", filename))
+print(filename)
 
 saveWorkbook(wb, file=filename, overwrite=T)
 ```
+
+

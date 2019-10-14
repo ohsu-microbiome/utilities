@@ -1069,18 +1069,21 @@ runDeseqFromTables_dev = function(
   ### Data for testing
   # asv_table = asv_table
   # taxonomy_table = taxonomy_table
-  # sample_data = sample_data
-  # variables = observational_variables[c('CaseString', 'Gender')]
-  # lowest_rank = 'Phylum'
+  # sample_data = sample_data %>% filter(!!as.name(varname) %in% c(var$case, var$control))
+  # variables = varname
+  # lowest_rank = 'Genus'
   # relative_abundance_cutoff = 0.002
   # prevalence_cutoff = 0.1
+  # include_covariates = 'All'
+  
+  
 
   sample_names = sample_data$SampleName
   
-  sample_data = setFactorsLevels(
-    sample_data,
-    variables
-  )
+  # sample_data = setFactorsLevels(
+  #   sample_data,
+  #   variables
+  # )
   
   # taxa_counts = getFilteredTaxaCounts(
   #   asv_table,
@@ -1098,8 +1101,8 @@ runDeseqFromTables_dev = function(
     taxonomy_table=taxonomy_table,
     sample_data=sample_data,
     cluster_by=lowest_rank,
-    relative_abundance_cutoff=0,
-    prevalence_cutoff=0,
+    relative_abundance_cutoff=relative_abundance_cutoff,
+    prevalence_cutoff=prevalence_cutoff,
     min_count_cutoff=0,
     filter_by='Taxa',
     clean_taxa=T,  ### remove NAs in lowest rank
@@ -1116,10 +1119,12 @@ runDeseqFromTables_dev = function(
   
   design_formula = 
     variables %>%
-    names() %>%
+    # names() %>%
     paste(., collapse=' + ') %>%
     paste('~', .) %>%
     as.formula()
+  
+  print(design_formula)
   
   dds = DESeqDataSetFromMatrix(
     countData=
@@ -1141,12 +1146,12 @@ runDeseqFromTables_dev = function(
   if (include_covariates != 'All')
   {
     contrast_names_to_use = sapply(
-      include_covariates, 
+      include_covariates,
       function(x)
       {
         pattern = paste0('^', x)
         grep(pattern, contrast_names, value=T)
-      },  
+      },
       USE.NAMES = F
     )
   } else

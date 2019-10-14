@@ -1,0 +1,590 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
+analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+```
+
+# MiSeq-${miseq_run_number} UNIFRAC Beta Diversity AMD Only{.tabset}
+
+## Clustering Level
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+## Setup
+
+### Start Conda ENV
+```{r}
+startCondaEnv('betadiv', lib='~/R35')
+```
+
+### Load Libraries
+```{r, echo=F}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(phyloseq)
+library(plotly)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/beta_diversity_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+asv_table = 
+  read.delim(
+    '${asv_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    )
+
+taxonomy_table = 
+  read.delim(
+    '${taxonomy_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  mutate_all(as.character())
+
+sample_data = read.xlsx('${sample_data_file}')
+
+sample_data %<>%
+  filter(CaseString == 'AMD') %>%
+  mutate(
+    CNV_Either_Eye = ifelse(CNV_Either_Eye == 1, '1', '0'),
+    GA_No_CNV_Either_Eye = ifelse(GA_No_CNV_Either_Eye == 1, '1', '0')
+  )
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='AllBac')
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %>%
+    select('ASVs', ends_with('AllBac'))
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+load('${phylogenetic_tree_file}')
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+```
+
+
+### Make Phyloseq Object
+```{r}
+ps = phyloseq(
+  otu_table(asv_table %>%
+              remove_rownames() %>%
+              column_to_rownames('ASVs') %>%
+              as.matrix(),
+    taxa_are_rows=T
+  ),
+  tax_table(taxonomy_table %>%
+              remove_rownames() %>%
+              column_to_rownames('ASVs') %>%
+              as.matrix()
+  ),
+  sample_data(sample_data %>%
+                remove_rownames() %>%
+                column_to_rownames('SampleName')
+              ),
+  phy_tree(fit$tree)
+)
+
+ps %<>% subset_samples(CaseString == 'AMD')
+```
+
+### Variables of interest
+#### Observational Variables
+```{r}
+genotypes = ${genotypes}
+phenotypes = ${phenotypes}
+key_covariates = ${key_covariates}
+treatments = ${treatments}
+amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes) %>% unique()
+```
+
+#### Remove Age
+```{r}
+key_covariates %<>% setdiff('Age')
+amd_only_variables %<>% setdiff('Age')
+amd_only_variables %<>% setdiff('Age')
+```
+
+* **Genotype variables:** ${genotypes}
+* **Phenotype variables:** ${phenotypes}
+* **Treatment variables:** ${treatments}
+* **Key covariates:**  ${key_covariates}
+* **Variables Used:** `r amd_only_variables`
+
+#### Axes Sets
+```{r}
+axes_sets = list(
+  c(1,2),
+  c(2,3),
+  c(2,3)
+)
+```
+
+## UNWEIGHTED {.tabset}
+### All {.tabset}
+#### 2D
+
+```{r}
+for (var in amd_only_variables)
+{
+  var_data = observational_variables[[var]]
+  print(var_data)
+  
+  remove_idx = 
+    sample_data %>%
+    mutate(
+      remove_idx = (!!as.name(var) %in% c(var_data$case, var_data$control))
+      ) %>%
+    pull(remove_idx)
+  
+  this_ps = prune_samples(remove_idx, ps)
+  
+  ps_ord = ordinate(this_ps, 'PCoA', 'UNIFRAC', weighted=F)
+  
+  for (axes in axes_sets)
+  {
+    plotUnifracOrd(
+      this_ps, 
+      ps_ord, 
+      ord_type = 'PCoA',
+      dist_type='UNIFRAC',
+      weighted=F, 
+      axes=axes,
+      var_data = observational_variables[[var]],
+      color=var,
+      plot_type='samples'
+    ) %>% print()
+  }
+
+}
+
+```
+
+#### 3D
+```{r, fig.height=10}
+
+taglist = htmltools::tagList()
+
+i = 1
+
+for (var in amd_only_variables)
+{
+  
+  print(var)
+  
+  var_data = observational_variables[[var]]
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  ref = var_data$labels$reference
+  comp = var_data$labels$comparison
+  
+  remove_idx = 
+    sample_data %>%
+    mutate(
+      remove_idx = (!!as.name(var) %in% c(var_data$case, var_data$control))
+      ) %>%
+    pull(remove_idx)
+  
+  this_ps = prune_samples(remove_idx, ps)
+  
+  ps_ord = ordinate(this_ps, 'PCoA', 'UNIFRAC', weighted=F)
+  
+  princomp_master_table = 
+    ps_ord$vectors %>%
+    data.frame() %>%
+    rownames_to_column('SampleName') %>%
+    left_join(sample_data, by='SampleName') %>%
+    mutate(!!as.name(var) := ifelse(!!as.name(var)==control, ref, comp))
+
+  print("getting plot tag")
+  taglist[[i]] = plotOrd3D(
+    princomp_master_table=princomp_master_table,
+    axes=paste0('Axis.', c(1,2,3)),
+    id_col="SampleName",
+    color=var,
+    title_extra=paste("Unweighted Unifrac", var)
+  ) %>% htmltools::as.tags()
+  
+  print(i)
+  
+  i = i + 1
+}
+
+taglist
+
+
+
+
+```
+
+### Age < 90 {.tabset}
+#### 2D
+```{r}
+ps_age_lt_90 = subset_samples(ps, Age < 90)
+```
+
+```{r}
+for (var in amd_only_variables)
+{
+  var_data = observational_variables[[var]]
+  print(var_data)
+  
+  remove_idx = 
+    sample_data %>%
+    filter(Age < 90) %>%
+    mutate(
+      remove_idx = (!!as.name(var) %in% c(var_data$case, var_data$control))
+      ) %>%
+    pull(remove_idx)
+  
+  this_ps = prune_samples(remove_idx, ps_age_lt_90)
+  
+  ps_ord = ordinate(this_ps, 'PCoA', 'UNIFRAC', weighted=F)
+  
+  for (axes in axes_sets)
+  {
+    plotUnifracOrd(
+      this_ps, 
+      ps_ord, 
+      ord_type = 'PCoA',
+      dist_type='UNIFRAC',
+      weighted=F, 
+      axes=axes,
+      var_data = observational_variables[[var]],
+      color=var,
+      plot_type='samples'
+    ) %>% print()
+  }
+
+}
+
+```
+
+#### 3D
+```{r, fig.height=10}
+
+taglist = htmltools::tagList()
+
+i = 1
+
+for (var in amd_only_variables)
+{
+  
+  print(var)
+  
+  var_data = observational_variables[[var]]
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  ref = var_data$labels$reference
+  comp = var_data$labels$comparison
+  
+  remove_idx = 
+    sample_data %>%
+    filter(Age < 90) %>%
+    mutate(remove_idx = !!as.name(var) %in% c(var_data$case, var_data$control)) %>%
+    pull(remove_idx)
+  
+  this_ps = prune_samples(remove_idx, ps_age_lt_90)
+  
+  ps_ord = ordinate(this_ps, 'PCoA', 'UNIFRAC', weighted=F)
+  
+  princomp_master_table = 
+    ps_ord$vectors %>%
+    data.frame() %>%
+    rownames_to_column('SampleName') %>%
+    left_join(sample_data, by='SampleName') %>%
+    filter(Age < 90) %>%
+    mutate(!!as.name(var) := ifelse(!!as.name(var)==control, ref, comp))
+
+  print("getting plot tag")
+  taglist[[i]] = plotOrd3D(
+    princomp_master_table=princomp_master_table,
+    axes=paste0('Axis.', c(1,2,3)),
+    id_col="SampleName",
+    color=var,
+    title_extra=paste("Unweighted Unifrac", var)
+  ) %>% htmltools::as.tags()
+  
+  print(i)
+  
+  i = i + 1
+}
+
+taglist
+
+
+
+
+```
+
+## WEIGHTED {.tabset}
+### All {.tabset}
+#### 2D
+
+```{r}
+for (var in amd_only_variables)
+{
+  var_data = observational_variables[[var]]
+  print(var_data)
+  
+  remove_idx = 
+    sample_data %>%
+    mutate(
+      remove_idx = (!!as.name(var) %in% c(var_data$case, var_data$control))
+      ) %>%
+    pull(remove_idx)
+  
+  this_ps = prune_samples(remove_idx, ps)
+  
+  ps_ord = ordinate(this_ps, 'PCoA', 'UNIFRAC', weighted=T)
+  
+  for (axes in axes_sets)
+  {
+    plotUnifracOrd(
+      this_ps, 
+      ps_ord, 
+      ord_type = 'PCoA',
+      dist_type='UNIFRAC',
+      weighted=T, 
+      axes=axes,
+      var_data = observational_variables[[var]],
+      color=var,
+      plot_type='samples'
+      ) %>% print()
+  }
+}
+
+```
+
+#### 3D
+```{r}
+
+taglist = htmltools::tagList()
+
+i = 1
+
+for (var in amd_only_variables)
+{
+  
+  print(var)
+  
+  var_data = observational_variables[[var]]
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  ref = var_data$labels$reference
+  comp = var_data$labels$comparison
+  
+  remove_idx = 
+    sample_data %>%
+    mutate(
+      remove_idx = (!!as.name(var) %in% c(var_data$case, var_data$control))
+      ) %>%
+    pull(remove_idx)
+  
+  this_ps = prune_samples(remove_idx, ps)
+  
+  ps_ord = ordinate(this_ps, 'PCoA', 'UNIFRAC', weighted=T)
+  
+  princomp_master_table = 
+    ps_ord$vectors %>%
+    data.frame() %>%
+    rownames_to_column('SampleName') %>%
+    left_join(sample_data, by='SampleName') %>%
+    mutate(!!as.name(var) := ifelse(!!as.name(var)==control, ref, comp))
+
+  print("getting plot tag")
+  taglist[[i]] = plotOrd3D(
+    princomp_master_table=princomp_master_table,
+    axes=paste0('Axis.', c(1,2,3)),
+    id_col="SampleName",
+    color=var,
+    title_extra=paste("Weighted Unifrac", var)
+  ) %>% htmltools::as.tags()
+  
+  print(i)
+  
+  i = i + 1
+}
+
+taglist
+
+
+
+```
+### Age < 90 {.tabset}
+#### 2D
+```{r}
+ps_age_lt_90 = subset_samples(ps, Age < 90)
+```
+
+```{r}
+for (var in amd_only_variables)
+{
+  var_data = observational_variables[[var]]
+  print(var_data)
+  
+  remove_idx = 
+    sample_data %>%
+    filter(Age < 90) %>%
+    mutate(
+      remove_idx = (!!as.name(var) %in% c(var_data$case, var_data$control))
+      ) %>%
+    pull(remove_idx)
+  
+  this_ps = prune_samples(remove_idx, ps_age_lt_90)
+  
+  ps_ord = ordinate(this_ps, 'PCoA', 'UNIFRAC', weighted=T)
+  
+  for (axes in axes_sets)
+  {
+    plotUnifracOrd(
+      this_ps, 
+      ps_ord, 
+      ord_type = 'PCoA',
+      dist_type='UNIFRAC',
+      weighted=T, 
+      axes=axes,
+      var_data = observational_variables[[var]],
+      color=var,
+      plot_type='samples'
+      ) %>% print()
+  }
+}
+
+```
+
+#### 3D
+```{r}
+taglist = htmltools::tagList()
+
+i = 1
+
+for (var in amd_only_variables)
+{
+  
+  print(var)
+  
+  var_data = observational_variables[[var]]
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  ref = var_data$labels$reference
+  comp = var_data$labels$comparison
+  
+  remove_idx = 
+    sample_data %>%
+    filter(Age < 90) %>%
+    mutate(remove_idx = !!as.name(var) %in% c(var_data$case, var_data$control)) %>%
+    pull(remove_idx)
+  
+  this_ps = prune_samples(remove_idx, ps_age_lt_90)
+  
+  ps_ord = ordinate(this_ps, 'PCoA', 'UNIFRAC', weighted=T)
+  
+  princomp_master_table = 
+    ps_ord$vectors %>%
+    data.frame() %>%
+    rownames_to_column('SampleName') %>%
+    left_join(sample_data, by='SampleName') %>%
+    filter(Age < 90) %>%
+    mutate(!!as.name(var) := ifelse(!!as.name(var)==control, ref, comp))
+
+  print("getting plot tag")
+  taglist[[i]] = plotOrd3D(
+    princomp_master_table=princomp_master_table,
+    axes=paste0('Axis.', c(1,2,3)),
+    id_col="SampleName",
+    color=var,
+    title_extra=paste("Weighted Unifrac", var)
+  ) %>% htmltools::as.tags()
+  
+  print(i)
+  
+  i = i + 1
+}
+
+taglist
+
+
+
+```

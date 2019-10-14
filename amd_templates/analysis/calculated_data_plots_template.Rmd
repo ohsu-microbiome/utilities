@@ -62,7 +62,7 @@ Data clustered at the `r toupper('${clustering_level}')` Level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('alphadiv')
+startCondaEnv('base')
 ```
 
 ### Load Libraries
@@ -78,12 +78,9 @@ library(openxlsx)
 library(DT)
 library(pheatmap)
 library(kableExtra)
-library(vegan)
-library(nlme)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 

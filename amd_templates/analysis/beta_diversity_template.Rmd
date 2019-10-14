@@ -1,0 +1,321 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
+analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+```
+
+# MiSeq-${miseq_run_number} Beta Diversity {.tabset}
+
+## Clustering Level
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+## Setup
+
+### Start Conda ENV
+```{r}
+startCondaEnv('betadiv', lib='~/R35')
+```
+
+### Load Libraries
+```{r, echo=F}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(plotly)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/beta_diversity_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+asv_table = 
+  read.delim(
+    '${asv_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    )
+
+taxonomy_table = 
+  read.delim(
+    '${taxonomy_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  mutate_all(as.character())
+
+sample_data = read.xlsx('${sample_data_file}')
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='AllBac')
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %>%
+    select('ASVs', ends_with('AllBac'))
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+```
+
+### Set Filtering
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+```
+**relative abundance cutoff:** `r relative_abundance_cutoff`
+**prevalence cutoff:** `r prevalence_cutoff`
+
+### Variables of interest
+#### Observational Variables
+```{r}
+key_covariates = ${key_covariates}
+treatments = ${treatments}
+variables = c('CaseString', key_covariates, treatments) %>% unique()
+```
+
+#### Remove Age
+```{r}
+variables %<>% setdiff('Age')
+```
+
+* **Treatment variables:** ${treatments}
+* **Key covariates:**  ${key_covariates}
+* **Variables Used:** `r variables`
+
+### Get Filtered Taxa Abundance
+```{r}
+taxa_abundance = getFilteredTaxaCountsDev(
+  asv_table,
+  taxonomy_table,
+  sample_data, 
+  cluster_by="${clustering_level}",
+  relative_abundance_cutoff=${relative_abundance_cutoff},
+  prevalence_cutoff=${prevalence_cutoff},
+  id_col="SampleName",
+  normalize=T
+  )
+
+filtered_taxa = taxa_abundance$short_glommed_taxa
+
+```
+
+### Build Master Table
+```{r}
+master_table = getMasterTable(
+  taxa_abundance,
+  sample_data,
+  'SampleName',
+  'short_glommed_taxa'
+)
+```
+
+### Axes Sets
+```{r}
+axes_sets = list(
+  c(1,2),
+  c(2,3),
+  c(1,3)
+)
+```
+
+
+## MDS Plots {.tabset}
+### Scree Plot
+```{r}
+# plotNMDSScree <- function(x) 
+# {
+#   plot(
+#     rep(1, 10), 
+#     replicate(10, metaMDS(x, autotransform = F, k = 1)$stress), 
+#     xlim = c(1, 10),
+#     ylim = c(0, 0.30), 
+#     xlab = "# of Dimensions", 
+#     ylab = "Stress", 
+#     main = "NMDS stress plot"
+#     )
+#   for (i in 1:10)
+#   {
+#     points(
+#       rep(i + 1,10),
+#       replicate(10, metaMDS(x, autotransform = F, k = i + 1)$stress)
+#       )
+#   }
+# }
+# 
+# plotNMDSScree(master_table %>% select(filtered_taxa))
+```
+
+
+### 2D
+```{r, echo=F}
+
+for (var in variables)
+{
+  var_data = observational_variables[[var]]
+  print(var_data)
+  
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  
+  for (axes in axes_sets)
+  {
+    makeNMDSPlot(
+      master_table,
+      features=filtered_taxa,
+      axes=axes,
+      color=var,
+      title_extra=paste(name, case, 'vs', control),
+      elipses=F
+    )
+  }
+
+}
+
+```
+
+### 3D
+```{r}
+pc = getNMDS(master_table, filtered_taxa, axes=c(1:3))
+pcdf = data.frame(pc$points) %>% rownames_to_column('SampleName')
+pcmt = inner_join(pcdf, master_table, by='SampleName')
+
+plotOrd3D(
+  pcmt, 
+  axes=c('MDS1', 'MDS2', 'MDS3'), 
+  color="CaseString",
+  title_extra="nMDS"
+  )
+```
+
+
+## PCoA Plots {.tabset}
+### Scree Plot
+```{r}
+pc = getPrinceComps(master_table, filtered_taxa, 'SampleName')
+screeplot(pc)
+```
+
+### 2D
+```{r}
+for (var in variables)
+{
+  var_data = observational_variables[[var]]
+  print(var_data)
+  
+  name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  
+  for (axes in axes_sets)
+  {
+    makePCOAPlot(
+      master_table,
+      method='bray',
+      features=filtered_taxa,
+      axes=axes,
+      color=var,
+      title_extra=paste(name, case, 'vs', control),
+      elipses=F
+    ) 
+  }
+
+}
+# + aes(x=PC1, y=PC2, color=IGA, shape=CaseString)
+```
+
+### 3D
+```{r}
+pc = getPrinceComps(master_table, filtered_taxa, 'SampleName')
+pcdf = data.frame(pc$x) %>% rownames_to_column('SampleName')
+pcmt = inner_join(pcdf, master_table, by='SampleName')
+
+plotOrd3D(
+  princomp_master_table=pcmt,
+  axes=c('PC1', 'PC2', 'PC3'),
+  id_col="SampleName",
+  color="CaseString",
+  title_extra="Bray Distance PCoA"
+)
+```
+
+
+
+
+
+
+

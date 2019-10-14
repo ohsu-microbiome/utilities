@@ -1,0 +1,296 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_title = "${analysis_title}"
+```
+
+# MiSeq-${miseq_run_number} ${analysis_title} Linear Regression Analysis {.tabset}
+## Clustering Level
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+## Setup
+### Start Conda ENV
+```{r}
+startCondaEnv('regression')
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(nlme)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/alpha_div_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+filename = makeDataFileName(
+  'master_table.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(filename)
+
+all_master_table = readWorkbook(filename, sheet='Master Table')
+age_lt_90_master_table = all_master_table %>% filter(Age < 90)
+amd_only_master_table = all_master_table %>% filter(CaseString == 'AMD')
+filtered_taxa = readWorkbook(filename, sheet="${tools::toTitleCase(clustering_level)}") %>% pull("short_glommed_taxa")
+
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+```
+
+### Variables of interest
+#### All Observational Variables
+```{r}
+observational_variable_names = observational_variables %>% names()
+print(observational_variables %>% names())
+```
+#### Selected Variables
+```{r}
+
+```
+
+#### Calculated Experimental Variables
+
+```{r}
+raw_exp_vars = ${raw_exp_vars}
+calculated_exp_vars = ${calculated_exp_vars}
+```
+**Calculated Experimental Variables: ** `r calculated_exp_vars`
+
+### Set Metadata Factor Levels
+```{r}
+all_master_table = setFactorsLevels(all_master_table, observational_variables)
+age_lt_90_master_table = setFactorsLevels(age_lt_90_master_table, observational_variables)
+amd_only_master_table = setFactorsLevels(amd_only_master_table, observational_variables)
+```
+
+
+### Determine which covariates have sufficient samples with each value
+```{r}
+num_samples_threshold = 5
+
+all_variables = filterVarsBySampleThreshold(
+  all_master_table,
+  num_samples_threshold,
+  observational_variables
+  )
+
+age_lt_90_variables = filterVarsBySampleThreshold(
+  age_lt_90_master_table,
+  num_samples_threshold,
+  observational_variables
+  )
+
+amd_only_variables = filterVarsBySampleThreshold(
+  amd_only_master_table %>% select(-CaseString),
+  num_samples_threshold,
+  observational_variables
+  )
+
+control_only_variables = filterVarsBySampleThreshold(
+  all_master_table %>% filter(CaseString=='Control') %>% select(-CaseString),
+  num_samples_threshold,
+  observational_variables
+  )
+
+# all_variables = observational_variables
+# age_lt_90_variables = all_variables
+
+```
+
+
+### Create p-val names for contrasts
+
+```{r}
+all_contrast_names = makeContrastNames(
+  all_variables, 
+  all_master_table
+  )
+
+age_lt_90_contrast_names = makeContrastNames(
+  age_lt_90_variables, 
+  all_master_table
+  )
+
+amd_only_contrast_names = makeContrastNames(
+  amd_only_variables, 
+  all_master_table
+  )
+
+control_only_contrast_names = makeContrastNames(
+  control_only_variables, 
+  all_master_table
+  )
+```
+
+## Response Variables
+
+```{r}
+raw_exp_vars = ${raw_exp_vars}
+calculated_exp_vars = ${calculated_exp_vars}
+all_experimental_variables = c(raw_exp_vars, calculated_exp_vars)
+```
+**Raw Experimental Variables: ** `r raw_exp_vars`
+**Calculated Experimental Variables: ** `r calculated_exp_vars`
+
+## Regression analysis
+
+### All
+
+```{r}
+all_linear_regression_stats = getMultipleRegressionStats(
+  predictor_vars=all_variables,
+  response_vars=all_experimental_variables,
+  master_table=all_master_table,
+  stats=${regression_stats},
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  transformation='${taxa_transform}',
+  log_regularizer=${relative_abundance_cutoff}
+)
+
+```
+
+
+### Age < 90
+```{r}
+age_lt_90_linear_regression_stats = getMultipleRegressionStats(
+  predictor_vars=age_lt_90_variables,
+  response_vars=all_experimental_variables,
+  master_table=all_master_table %>% filter(Age < 90),
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  transformation='${taxa_transform}',
+  log_regularizer=${relative_abundance_cutoff}
+)
+
+
+```
+
+### AMD Only
+```{r}
+amd_only_regression_stats = getMultipleRegressionStats(
+  predictor_vars=amd_only_variables,
+  response_vars=all_experimental_variables,
+  master_table=all_master_table %>% filter(CaseString=='AMD'),
+  stats=stats,
+  response_var_name=response_var_name,
+  adjustment_method=adjustment_method,
+  transformation='${taxa_transform}',
+  log_regularizer=${relative_abundance_cutoff}
+)
+```
+
+## Write Regression Stats
+```{r}
+
+wb = createWorkbook()
+
+regression_stats_table_names = c(
+  "all_regression_stats",
+  "age_lt_90_regression_stats",
+  "amd_only_regression_stats"
+  )
+
+contrast_names = makeContrastNames(
+  observational_variables,
+  all_master_table
+)
+
+
+for (tab_name in regression_stats_table_names)
+{
+  contrast_regression_stats = createWorkbook()
+  
+  print(tab_name)
+  stats_table_name = paste0(tab_name, "_regression_stats")
+  print(stats_table_name)
+  stats_table = get(stats_table_name)
+  
+  filename = makeDataFileName(
+    paste0(tab_name, '_linear_regression.xlsx'),
+    "${tables_dir}",
+    "${analysis_type}",
+    "${miseq_project_prefix}",
+    "${clustering_level}"
+  )
+  print(filename)
+  
+  saveWorkbook(contrast_regression_stats, file=filename, overwrite=T)
+  
+}
+```

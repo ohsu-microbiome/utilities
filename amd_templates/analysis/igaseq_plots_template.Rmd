@@ -62,7 +62,7 @@ Data clustered at the `r toupper('${clustering_level}')` Level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('${conda_env}')
+startCondaEnv('igaseq')
 ```
 
 

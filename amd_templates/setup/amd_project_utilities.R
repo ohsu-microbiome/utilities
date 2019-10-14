@@ -23,6 +23,7 @@ findProjectRoot = function(starting_dir, target)
 
 generateSourceFile = function(
   template_type = '',
+  analysis_type,
   analysis_dir='.'
   )
 {
@@ -76,6 +77,7 @@ generateSourceFile = function(
     analysis_dir,
     paste0(
       miseq_project_prefix, "_",
+      analysis_type, "_",
       gsub("_template", "", template_filename)
     )
   )

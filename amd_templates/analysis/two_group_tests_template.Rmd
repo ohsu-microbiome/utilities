@@ -59,7 +59,7 @@ Data clustered at the `r toupper('${clustering_level}')` Level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('${conda_env}')
+startCondaEnv('base')
 ```
 
 
@@ -77,7 +77,6 @@ library(ggbeeswarm)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 
@@ -111,31 +110,16 @@ source(file.path(
 
 
 ### Variables of interest
-#### All Observational Variables
+#### Observational Variables
 ```{r}
-# print(observational_variables)
+all_variables = observational_variables[${two_group_covariates['All']}]
+age_lt_90_variables = observational_variables[${two_group_covariates['Age_lt_90']}]
+amd_only_variables = observational_variables[${two_group_covariates['AMD_Only']}]
 ```
 
-#### AMD Only Observational Variables
-```{r}
-amd_only_variables = observational_variables
-
-amd_only_excluded_variables = c(
-  'Gender',
-  'CaseString',
-  'Age'
-)
-
-for (varname in amd_only_excluded_variables)
-{
-  print(sprintf('Excluding %s', varname))
-  amd_only_variables[varname] = NULL
-}
-
-```
-
-**Excluding: ** `r amd_only_excluded_variables`
-
+* **All Variables:** ${two_group_covariates['All']}
+* **Age < 90 Variables:** ${two_group_covariates['Age_lt_90']}
+* **AMD Only Variables:** ${two_group_covariates['AMD_Only']}
 
 #### Raw and Calculated Experimental Variables
 
@@ -175,69 +159,88 @@ contrast_names =
 ```
 
 ```{r}
-all_two_group_stats = data.frame(
+two_group_stats_template = data.frame(
   TestGroup=character(),
   TestVariable=character(),
   Reference=character(),
   Comparison=character()
   )
-
-for (var in c(raw_exp_vars, calculated_exp_vars))
-{
-  all_two_group_stats = 
-    all_two_group_stats %>%
-    mutate(!!as.name(var) := numeric())
-}
-
-
-```
-
-#### All
-```{r}
-pval_list = doTwoGroupTests(
-  exp_vars = c(raw_exp_vars, calculated_exp_vars),
-  test_var = observational_variables$CaseString,
-  master_table = all_master_table,
-  test_group = 'All'
-)
-
-all_two_group_stats %<>%
-  add_row(!!!pval_list)
-```
-
-#### Age < 90
-```{r}
-pval_list = doTwoGroupTests(
-  exp_vars = c(raw_exp_vars, calculated_exp_vars),
-  test_var = observational_variables$CaseString,
-  master_table = age_lt_90_master_table,
-  test_group = 'Age_lt_90'
-)
-
-all_two_group_stats %<>%
-  add_row(!!!pval_list)
-
-```
-
-
-#### AMD Only + Covariates
-```{r}
-amd_only_two_group_stats = data.frame(
-  TestGroup=character(),
-  TestVariable=character(),
-  Reference=character(),
-  Comparison=character()
-  )
-
-for (var in c(raw_exp_vars, calculated_exp_vars))
-{
-  amd_only_two_group_stats = 
-    amd_only_two_group_stats %>%
-    mutate(!!as.name(var) := numeric())
-}
-
 
 exp_vars = c(raw_exp_vars, calculated_exp_vars)
+
+for (var in exp_vars)
+{
+  two_group_stats_template = 
+    two_group_stats_template %>%
+    mutate(!!as.name(var) := numeric())
+}
+
+two_group_stats = two_group_stats_template
+```
+
+
+#### All
+
+```{r}
+all_two_group_stats = two_group_stats_template
+
+master_table = all_master_table
+test_group = 'All'
+  
+for (test_var in all_variables)
+{
+  
+  name = test_var$covariate_of_interest
+  print(name)
+  
+  pval_list = doTwoGroupTests(
+    exp_vars = exp_vars,
+    test_var = test_var,
+    master_table = all_master_table,
+    test_group = 'All'
+  )
+  
+  all_two_group_stats %<>%
+    add_row(!!!pval_list)
+}
+
+two_group_stats %<>% add_row(!!!all_two_group_stats)
+```
+
+
+#### Age < 90
+
+```{r}
+age_lt_90_two_group_stats = two_group_stats_template
+
+# test_var = amd_only_variables$AREDS
+master_table = age_lt_90_master_table
+test_group = 'Age_lt_90'
+  
+for (test_var in age_lt_90_variables)
+{
+  
+  name = test_var$covariate_of_interest
+  print(name)
+  
+  pval_list = doTwoGroupTests(
+    exp_vars = exp_vars,
+    test_var = test_var,
+    master_table = age_lt_90_master_table,
+    test_group = 'Age_lt_90'
+  )
+  
+  age_lt_90_two_group_stats %<>%
+    add_row(!!!pval_list)
+}
+
+two_group_stats %<>% add_row(!!!age_lt_90_two_group_stats)
+```
+
+
+#### AMD Only 
+```{r}
+amd_only_two_group_stats = two_group_stats_template
 
 # test_var = amd_only_variables$AREDS
 master_table = amd_only_master_table
@@ -259,14 +262,38 @@ for (test_var in amd_only_variables)
   amd_only_two_group_stats %<>%
     add_row(!!!pval_list)
 }
+
+two_group_stats %<>% add_row(!!!amd_only_two_group_stats)
 ```
 
-## Assemble Stats Table
+#### AMD Only, Age < 90
 ```{r}
-all_two_group_stats =
-  all_two_group_stats %>%
-  add_row(!!!amd_only_two_group_stats)
+amd_only_age_lt_90_two_group_stats = two_group_stats_template
+
+# test_var = amd_only_variables$AREDS
+master_table = amd_only_master_table %>% filter(Age < 90)
+test_group = 'AMD_Only_Age_lt_90'
+  
+for (test_var in amd_only_variables)
+{
+  
+  name = test_var$covariate_of_interest
+  print(name)
+  
+  pval_list = doTwoGroupTests(
+    exp_vars = exp_vars,
+    test_var = test_var,
+    master_table = master_table,
+    test_group = test_group
+  )
+  
+  amd_only_age_lt_90_two_group_stats %<>%
+    add_row(!!!pval_list)
+}
+
+two_group_stats %<>% add_row(!!!amd_only_age_lt_90_two_group_stats)
 ```
+
 
 ## Write Stats Table
 ```{r}
@@ -281,7 +308,7 @@ filename = makeDataFileName(
 print(filename)
 
 write.xlsx(
-  all_two_group_stats,
+  two_group_stats,
   file=filename,
   quote=F
 )

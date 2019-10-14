@@ -106,6 +106,30 @@ source(file.path(
 
 ```
 
+
+### Variables of interest
+#### Observational Variables
+```{r}
+genotypes = ${genotypes}
+phenotypes = ${phenotypes}
+key_covariates = ${key_covariates}
+treatments = ${treatments}
+amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes) %>% unique()
+```
+
+#### Remove Age
+```{r}
+key_covariates %<>% setdiff('Age')
+amd_only_variables %<>% setdiff('Age')
+amd_only_variables %<>% setdiff('Age')
+```
+
+* **Genotype variables:** `r genotypes`
+* **Phenotype variables:** `r phenotypes`
+* **Treatment variables:** `r treatments`
+* **Other covariates:**  `r key_covariates`
+
+### Set Ranks
 ```{r}
 all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
 ```
@@ -113,10 +137,10 @@ all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
 ## Plots {.tabset}
 ### [ ] Close
 
-### All Subgroups
-```{r}
+### All Subgroups -- Case/Control
+```{r, fig.width=10}
 wb_filename = makeDataFileName(
-  'all_deseq_results.xlsx',
+  'all_subgroups_case_vs_control.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
@@ -131,25 +155,29 @@ for (rank in all_ranks)
   data = 
     readWorkbook(wb_filename, sheet=rank) 
   
+  sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+  
+  if (dim(sig_data)[1] < 1)
+  {
+    next
+  }
   
   plotEffectSize2(
-    data=data %>%
-      filter(CaseString_AMD_vs_Control.padj <= 0.2),
+    data=sig_data,
     effect_size_col="CaseString_AMD_vs_Control.L2FC",
     effect_size_legend_title="Abundance in AMD",
     feature_col="Taxon",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control Log2 Fold Change")
+    plot_title=paste0(rank,": AMD/Control: Log2 Fold Change")
   )
 }
 ```
 
-
-### Age < 90
-```{r}
+### All Subgroups -- With Covariates
+```{r, fig.width=10}
 wb_filename = makeDataFileName(
-  'age_lt_90_deseq_results.xlsx',
+  'all_subgroups_with_covariates.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
@@ -164,17 +192,190 @@ for (rank in all_ranks)
   data = 
     readWorkbook(wb_filename, sheet=rank) 
   
+  sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+  
+  if (dim(sig_data)[1] < 1)
+  {
+    next
+  }
   
   plotEffectSize2(
-    data=data %>%
-      filter(CaseString_AMD_vs_Control.padj <= 0.2),
+    data=sig_data,
     effect_size_col="CaseString_AMD_vs_Control.L2FC",
     effect_size_legend_title="Abundance in AMD",
     feature_col="Taxon",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control Log2 Fold Change")
+    plot_title=paste0(rank,": AMD/Control + Gender + Tissue_code: Log2 Fold Change")
   )
 }
 ```
+
+
+### Age < 90 -- Case/Control
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'age_lt_90_case_vs_control.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(wb_filename)
+
+for (rank in all_ranks)
+{
+  # rank = 'Genus'
+  data = 
+    readWorkbook(wb_filename, sheet=rank) 
+  
+  sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+  
+  if (dim(sig_data)[1] < 1)
+  {
+    next
+  }
+  
+  plotEffectSize2(
+    data=sig_data,
+    effect_size_col="CaseString_AMD_vs_Control.L2FC",
+    effect_size_legend_title="Abundance in AMD",
+    feature_col="Taxon",
+    alpha_col='CaseString_AMD_vs_Control.padj',
+    alpha_legend_title="Adjusted P-Values",
+    plot_title=paste0(rank,": AMD/Control: Log2 Fold Change")
+  )
+}
+```
+
+### Age < 90 -- With Covariates
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'age_lt_90_with_covariates.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(wb_filename)
+
+for (rank in all_ranks)
+{
+  # rank = 'Genus'
+  data = 
+    readWorkbook(wb_filename, sheet=rank) 
+  
+  sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+  
+  if (dim(sig_data)[1] < 1)
+  {
+    next
+  }
+  
+  plotEffectSize2(
+    data=sig_data,
+    effect_size_col="CaseString_AMD_vs_Control.L2FC",
+    effect_size_legend_title="Abundance in AMD",
+    feature_col="Taxon",
+    alpha_col='CaseString_AMD_vs_Control.padj',
+    alpha_legend_title="Adjusted P-Values",
+    plot_title=paste0(rank,": AMD/Control + Gender + Tissue_code: Log2 Fold Change")
+  )
+}
+```
+
+
+### AMD Only -- individual variables
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'amd_only_individual_variables.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(wb_filename)
+
+lowest_rank = 'Genus'
+
+for (varname in amd_only_variables)
+{
+  # rank = 'Genus'
+  data = 
+    readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.2)
+  
+  if (dim(sig_data)[1] < 1)
+  {
+    next
+  }
+  
+  plotEffectSize2(
+    data=sig_data,
+    effect_size_col=effect_size_col,
+    effect_size_legend_title=paste0("Abundance in ", varname),
+    feature_col="Taxon",
+    alpha_col=padj_col,
+    alpha_legend_title="Adjusted P-Values",
+    plot_title=paste0(varname,": Log2 Fold Change")
+  )
+}
+```
+
+
+### AMD Only -- Genotypes, Phenotypes, and AREDS with Controls
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'amd_only_variables_with_controls.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(wb_filename)
+
+lowest_rank = 'Genus'
+
+for (varname in c(genotypes, phenotypes, treatments))
+{
+  # rank = 'Genus'
+  data = 
+    readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.2)
+  
+  if (dim(sig_data)[1] < 1)
+  {
+    next
+  }
+  
+  plotEffectSize2(
+    data=sig_data,
+    effect_size_col=effect_size_col,
+    effect_size_legend_title=paste0("Abundance in ", varname),
+    feature_col="Taxon",
+    alpha_col=padj_col,
+    alpha_legend_title="Adjusted P-Values",
+    plot_title=paste0(varname, " + Gender + Tissue_code: Log2 Fold Change")
+  )
+}
+```
+
 
