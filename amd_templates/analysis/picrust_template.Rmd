@@ -1,0 +1,201 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
+```
+
+# MiSeq-${miseq_run_number} PICRUSt2 Analysis {.tabset}
+
+## Setup 
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('picrust2')
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(glue)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+## Run PICRUSt2
+
+### Construct Filenames
+```{r}
+asv_fna_filename = makeDataFileName(
+  'asvs.fna',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(sprintf('asv_fna_filename: %s', asv_fna_filename))
+
+asv_counts_table_filename = makeDataFileName(
+  'asv_counts.tsv',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(sprintf('asv_counts_table_filename: %s', asv_counts_table_filename))
+
+```
+
+### Delete existing output directory
+```{r}
+system('rm -rf ${tables_dir}/picrust_out')
+```
+
+
+### Create Run String
+```{r}
+run_string_template = "
+picrust2_pipeline.py \\\\
+
+  -s {asv_fna_filename} \\\\
+
+  -i {asv_counts_table_filename} \\\\
+
+  -o ${tables_dir}/picrust_out \\\\
+
+  -p ${num_procs} \\\\
+
+  --verbose  \\\\
+
+  --remove_intermediate
+"
+
+run_string = glue(run_string_template)
+
+print("Run String:")
+print(run_string)
+```
+
+### Run PICRUSt2
+```{r}
+print("sending run string to system")
+system(run_string)
+```
+
+## Convert Files to XSLX
+### Unzip all gzipped files
+```{r}
+cmd = 'find ${tables_dir} -type f -name "*.gz" -exec gunzip {} +'
+print(cmd)
+
+system(cmd)
+```
+
+### Get list of TSV Files
+```{r}
+cmd = 'find ${tables_dir} -name "*.tsv"'
+print(cmd)
+
+tsv_files = system(cmd, intern=T)
+
+print("tsv files")
+print(tsv_files)
+```
+
+### Load TSV files and Save as XLSX
+```{r}
+for (filename in tsv_files)
+{
+  
+  data = read.delim(
+    filename,
+    sep='\t',
+    stringsAsFactors=F
+  )
+
+  base_name = basename(filename)
+  dir_name = dirname(filename)
+  
+  new_filename = file.path(
+    dir_name,
+    paste0('miseq-${miseq_run_number}_', gsub('tsv', 'xlsx', base_name))
+  )
+  
+  print(new_filename)
+
+  write.xlsx(
+    data,
+    file=new_filename,
+    col.names=T,
+    row.names=F
+  )
+
+}
+```
+
+
+
+
+
+
+
+

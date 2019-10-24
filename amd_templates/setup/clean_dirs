@@ -1,7 +1,7 @@
 #!/bin/bash
 
-rm -f *.Rmd
-rm -f *.html
-rm -f ../tables/*
-rm -f ../reports/*
+rm -rf *.Rmd
+rm -rf *.html
+rm -rf ../tables/*
+rm -rf ../reports/*
 

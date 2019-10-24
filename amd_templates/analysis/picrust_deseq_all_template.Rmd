@@ -1,0 +1,426 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+  .dataTable {
+    font-size: 9pt;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+use_allbac = ${use_allbac}
+analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+```
+
+# MiSeq-${miseq_run_number} DESeq2 Analysis {.tabset}
+
+## Clustering
+Data clustered at the `r toupper("${clustering_level}")` level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+
+## Setup 
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('deseq', lib='~/R35')
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(openxlsx)
+library(DT)
+library(kableExtra)
+library(DESeq2)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/deseq_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+pathway_counts_table_file = file.path(
+  "${tables_dir}",
+  "picrust_out",
+  "pathways_out",
+  "miseq-${miseq_run_number}_path_abun_unstrat.xlsx"
+)
+
+pathway_counts_table = read.xlsx(
+  pathway_counts_table_file,
+  colNames=T
+  )
+
+sample_data = read.xlsx(
+  '${sample_data_file}',
+  colNames=T
+  )
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='AllBac')
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %>%
+    select('ASVs', ends_with('AllBac'))
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+```
+
+### Integerize pathway counts
+```{r}
+pathway_counts_table = 
+  pathway_counts_table %>%
+  remove_rownames() %>%
+  mutate_at(vars(sample_names), ~floor(.+0.00000001))
+```
+
+
+### Set Metadata Factor Levels
+```{r}
+sample_data = setFactorsLevels(sample_data, observational_variables)
+# sample_data %<>%
+#   mutate(AREDS=
+#     ifelse(is.na(AREDS), "MISSING", AREDS) %>%
+#     factor(levels=c('N', 'Y', 'MISSING'))
+#   )
+```
+
+### Variables of interest
+#### Observational Variables
+```{r}
+all_covariates = observational_variables[${linear_regression_predictors['All']}]
+age_lt_90_covariates = observational_variables[${linear_regression_predictors['Age_lt_90']}]
+genotypes = ${genotypes}
+phenotypes = ${phenotypes}
+```
+
+#### Remove Age
+```{r}
+all_covariates$Age = NULL
+age_lt_90_covariates$Age = NULL
+```
+
+* **All Variables:** `r all_covariates %>% names()`
+* **Age < 90 Variables:** `r age_lt_90_covariates %>% names()`
+
+## All Subgroups Case/Control Only
+### Create Workbook
+```{r}
+deseq_results_wb = createWorkbook()
+```
+
+#### Run and add worksheets
+```{r}
+results_df = runDeseqFromPathwayCounts(
+  pathway_counts=pathway_counts_table,
+  sample_data,
+  variables="CaseString",
+  include_covariates = 'All'
+  )
+
+padj_col = "CaseString_AMD_vs_Control.padj"
+
+results_df =
+  results_df %>%
+  select(pathway, !!padj_col, everything()) %>%
+  arrange(!!as.name(padj_col))
+
+addWorksheet(
+  wb=deseq_results_wb, 
+  sheetName=""
+  )
+
+openxlsx::writeData(
+  wb=deseq_results_wb, 
+  sheet="", 
+  x=results_df
+  )
+  
+setColWidths(
+  wb=deseq_results_wb, 
+  sheet="", 
+  cols=1, 
+  widths = "auto"
+)
+
+freezePane(
+  deseq_results_wb, 
+  sheet="", 
+  firstCol=T,
+  firstRow=T
+)
+```
+
+#### Save Workbook
+```{r}
+filename = makeDataFileName(
+  'all_subgroups_case_vs_control.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(filename)
+
+saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
+```
+
+## All Subgroups -- All Variables
+### Create Workbook
+```{r}
+deseq_results_wb = createWorkbook()
+```
+
+### Run and add worksheets
+```{r}
+results_df = runDeseqFromPathwayCounts(
+  pathway_counts=pathway_counts_table,
+  sample_data,
+  variables=all_covariates %>% names(),
+  include_covariates = 'All'
+  )
+  
+padj_col = "CaseString_AMD_vs_Control.padj"
+  
+results_df =
+  results_df %>%
+  select(pathway, !!padj_col, starts_with("CaseString"), everything()) %>%
+  arrange(!!as.name(padj_col))
+
+addWorksheet(
+  wb=deseq_results_wb, 
+  sheetName=""
+  )
+
+openxlsx::writeData(
+  wb=deseq_results_wb, 
+  sheet="", 
+  x=results_df
+  )
+  
+setColWidths(
+  wb=deseq_results_wb, 
+  sheet="", 
+  cols=1, 
+  widths = "auto"
+)
+
+freezePane(
+  deseq_results_wb, 
+  sheet="", 
+  firstCol=T,
+  firstRow=T
+)
+```
+
+### Save Workbook
+```{r}
+filename = makeDataFileName(
+  'all_subgroups_with_covariates.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(filename)
+
+saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
+```
+
+
+## Age < 90 Case/Control Only
+### Create Workbook
+```{r}
+deseq_results_wb = createWorkbook()
+```
+
+#### Run and add worksheets
+```{r}
+results_df = runDeseqFromCounts(
+  counts_table=pathway_counts_table,
+  sample_data %>% filter(Age < 90),
+  variables="CaseString",
+  include_covariates = 'All'
+  )
+
+padj_col = "CaseString_AMD_vs_Control.padj"
+
+results_df =
+  results_df %>%
+  select(pathway, !!padj_col, everything()) %>%
+  arrange(!!as.name(padj_col))
+
+addWorksheet(
+  wb=deseq_results_wb, 
+  sheetName=""
+  )
+
+openxlsx::writeData(
+  wb=deseq_results_wb, 
+  sheet="", 
+  x=results_df
+  )
+  
+setColWidths(
+  wb=deseq_results_wb, 
+  sheet="", 
+  cols=1, 
+  widths = "auto"
+)
+
+freezePane(
+  deseq_results_wb, 
+  sheet="", 
+  firstCol=T,
+  firstRow=T
+)
+```
+
+#### Save Workbook
+```{r}
+filename = makeDataFileName(
+  'all_subgroups_case_vs_control.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(filename)
+
+saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
+```
+
+## Age < 90 -- All Variables
+### Create Workbook
+```{r}
+deseq_results_wb = createWorkbook()
+```
+
+### Run and add worksheets
+```{r}
+results_df = runDeseqFromCounts(
+  counts_table=pathway_counts_table,
+  sample_data %>% filter(Age < 90),
+  variables=age_lt_90_covariates %>% names(),
+  include_covariates = 'All'
+  )
+  
+padj_col = "CaseString_AMD_vs_Control.padj"
+  
+results_df =
+  results_df %>%
+  select(pathway, !!padj_col, starts_with("CaseString"), everything()) %>%
+  arrange(!!as.name(padj_col))
+
+addWorksheet(
+  wb=deseq_results_wb, 
+  sheetName=""
+  )
+
+openxlsx::writeData(
+  wb=deseq_results_wb, 
+  sheet="", 
+  x=results_df
+  )
+  
+setColWidths(
+  wb=deseq_results_wb, 
+  sheet="", 
+  cols=1, 
+  widths = "auto"
+)
+
+freezePane(
+  deseq_results_wb, 
+  sheet="", 
+  firstCol=T,
+  firstRow=T
+)
+```
+
+### Save Workbook
+```{r}
+filename = makeDataFileName(
+  'all_subgroups_with_covariates.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "rank"
+)
+
+print(filename)
+
+saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
+```
+

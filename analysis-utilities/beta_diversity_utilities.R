@@ -31,7 +31,8 @@ makeNMDSPlot = function(
     ### plotting
     ggplot(aes_string(x=mds_axes[[1]], y=mds_axes[[2]], color=color)) +
     geom_point() +
-    ggtitle(paste('nMDS', title_extra))
+    ggtitle(paste('nMDS', title_extra)) +
+    scale_color_manual(values=c('red', 'blue'))
 
   if (elipses)
   {
@@ -86,7 +87,8 @@ makePCOAPlot = function(
     principal_components %>%
     ggplot(aes_string(x=axes_cols[[1]], y=axes_cols[[2]], color=color)) +
     geom_point() +
-    ggtitle(sprintf("PCoA %s Distance %s", capitalized_method, title_extra))
+    ggtitle(sprintf("PCoA %s Distance %s", capitalized_method, title_extra)) +
+    scale_color_manual(values=c('red', 'blue'))
 
 
   if (elipses)
@@ -140,7 +142,8 @@ plotUnifracPCoA = function(
     color=color,
     title=title_string,
     axes=axes
-  )
+  )  +
+    scale_color_manual(values=c('red', 'blue'))
 }
 
 plotUnifracOrd = function(
@@ -219,10 +222,11 @@ plotUnifracOrd = function(
     # print(legend_labels)
 
     plt = plt +
-      scale_color_discrete(
+      scale_color_manual(
         name = name,
         breaks=c(case, control),
-        labels=legend_labels
+        labels=legend_labels,
+        values=c('red', 'blue')
       )
   }
 }
@@ -296,7 +300,6 @@ plotUnifracPCoA = function(
   axes=1:2
 )
 {
-
   subset_string = ifelse(subset=="", 'NONE', subset)
   weighted_string = ifelse(weighted, 'WEIGHTED', 'UNWEIGHTED'
   )
@@ -317,7 +320,8 @@ plotUnifracPCoA = function(
     color=color,
     title=title_string,
     axes=axes
-  )
+  ) +
+    scale_color_manual(values=c('red', 'blue'))
 }
 
 plotOrd3D = function(
