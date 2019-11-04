@@ -112,23 +112,15 @@ system('rm -rf ${tables_dir}/picrust_out')
 
 
 ### Create Run String
+```
+${picrust_run_string_template}
+```
+
 ```{r}
-run_string_template = "
-picrust2_pipeline.py \\\\
+num_procs = ${num_procs}
+tables_dir = "${tables_dir}"
 
-  -s {asv_fna_filename} \\\\
-
-  -i {asv_counts_table_filename} \\\\
-
-  -o ${tables_dir}/picrust_out \\\\
-
-  -p ${num_procs} \\\\
-
-  --verbose  \\\\
-
-  --remove_intermediate
-"
-
+run_string_template = "${picrust_run_string_template}"
 run_string = glue(run_string_template)
 
 print("Run String:")

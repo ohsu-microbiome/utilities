@@ -84,6 +84,7 @@ library(DESeq2)
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/deseq_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+source('~/utilities/analysis-utilities/pathway_utilities.R')
 ```
 
 ### Set Knitr Options
@@ -93,15 +94,28 @@ ${knitr_options}
 
 ### Load Data
 ```{r}
-pathway_counts_table_file = file.path(
-  "${tables_dir}",
+# pathway_counts_table_file = file.path(
+#   "${tables_dir}",
+#   "picrust_out",
+#   "pathways_out",
+#   "miseq-${miseq_run_number}_path_abun_unstrat.xlsx"
+# )
+# 
+# pathway_counts_table = read.xlsx(
+#   pathway_counts_table_file,
+#   colNames=T
+#   )
+
+
+ko_counts_table_file = file.path(
+  "/home/balter/miseq-239/analysis/picrust2//tables",
   "picrust_out",
-  "pathways_out",
-  "miseq-${miseq_run_number}_path_abun_unstrat.xlsx"
+  "KO_metagenome_out",
+  "miseq-239_pred_metagenome_unstrat.xlsx"
 )
 
-pathway_counts_table = read.xlsx(
-  pathway_counts_table_file,
+ko_counts_table = read.xlsx(
+  ko_counts_table_file,
   colNames=T
   )
 
@@ -140,6 +154,12 @@ pathway_counts_table =
   pathway_counts_table %>%
   remove_rownames() %>%
   mutate_at(vars(sample_names), ~floor(.+0.00000001))
+
+ko_counts_table = 
+  ko_counts_table %>%
+  remove_rownames() %>%
+  mutate_at(vars(sample_names), ~floor(.+0.00000001)) %>%
+  rename(KO=function.)
 ```
 
 
@@ -179,11 +199,19 @@ deseq_results_wb = createWorkbook()
 
 #### Run and add worksheets
 ```{r}
+# results_df = runDeseqFromPathwayCounts(
+#   pathway_counts=pathway_counts_table,
+#   sample_data,
+#   variables="CaseString",
+#   include_covariates = 'All'
+#   )
+
 results_df = runDeseqFromPathwayCounts(
-  pathway_counts=pathway_counts_table,
+  pathway_counts=ko_counts_table,
   sample_data,
   variables="CaseString",
-  include_covariates = 'All'
+  include_covariates = 'All',
+  pathway_colname='KO'
   )
 
 padj_col = "CaseString_AMD_vs_Control.padj"
@@ -306,7 +334,7 @@ deseq_results_wb = createWorkbook()
 
 #### Run and add worksheets
 ```{r}
-results_df = runDeseqFromCounts(
+results_df = runDeseqFromPathwayCounts(
   counts_table=pathway_counts_table,
   sample_data %>% filter(Age < 90),
   variables="CaseString",
@@ -369,7 +397,7 @@ deseq_results_wb = createWorkbook()
 
 ### Run and add worksheets
 ```{r}
-results_df = runDeseqFromCounts(
+results_df = runDeseqFromPathwayCounts(
   counts_table=pathway_counts_table,
   sample_data %>% filter(Age < 90),
   variables=age_lt_90_covariates %>% names(),

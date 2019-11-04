@@ -1,0 +1,11 @@
+name: node
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - libgcc-ng=9.1.0=hdf63c60_0
+  - libstdcxx-ng=9.1.0=hdf63c60_0
+  - nodejs=11.14.0=he1b5a44_1
+prefix: /home/balter/conda/envs/node
+

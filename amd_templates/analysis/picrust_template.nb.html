@@ -1782,12 +1782,14 @@ summary {
 </ul></li>
 <li><a href="#run-picrust2"><span class="toc-section-number">1.2</span> Run PICRUSt2</a><ul>
 <li><a href="#construct-filenames"><span class="toc-section-number">1.2.1</span> Construct Filenames</a></li>
-<li><a href="#create-run-string"><span class="toc-section-number">1.2.2</span> Create Run String</a></li>
-<li><a href="#run-picrust2-1"><span class="toc-section-number">1.2.3</span> Run PICRUSt2</a></li>
+<li><a href="#delete-existing-output-directory"><span class="toc-section-number">1.2.2</span> Delete existing output directory</a></li>
+<li><a href="#create-run-string"><span class="toc-section-number">1.2.3</span> Create Run String</a></li>
+<li><a href="#run-picrust2-1"><span class="toc-section-number">1.2.4</span> Run PICRUSt2</a></li>
 </ul></li>
 <li><a href="#convert-files-to-xslx"><span class="toc-section-number">1.3</span> Convert Files to XSLX</a><ul>
-<li><a href="#get-list-of-tsv-files"><span class="toc-section-number">1.3.1</span> Get list of TSV Files</a></li>
-<li><a href="#load-tsv-files-and-save-as-xlsx"><span class="toc-section-number">1.3.2</span> Load TSV files and Save as XLSX</a></li>
+<li><a href="#unzip-all-gzipped-files"><span class="toc-section-number">1.3.1</span> Unzip all gzipped files</a></li>
+<li><a href="#get-list-of-tsv-files"><span class="toc-section-number">1.3.2</span> Get list of TSV Files</a></li>
+<li><a href="#load-tsv-files-and-save-as-xlsx"><span class="toc-section-number">1.3.3</span> Load TSV files and Save as XLSX</a></li>
 </ul></li>
 </ul></li>
 </ul>
@@ -1842,8 +1844,8 @@ use_allbac = ${use_allbac}</code></pre>
 <h3><span class="header-section-number">1.1.2</span> Start Conda ENV</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudigncmVncmVzc2lvbicpXG5gYGAifQ== -->
-<pre class="r"><code>startCondaEnv(&#39;regression&#39;)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudigncGljcnVzdDInKVxuYGBgIn0= -->
+<pre class="r"><code>startCondaEnv(&#39;picrust2&#39;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -1888,7 +1890,7 @@ source(&#39;~/utilities/amd_templates/setup/amd_project_utilities.R&#39;)</code>
 <h3><span class="header-section-number">1.2.1</span> Construct Filenames</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYXN2X2ZuYV9maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoXG4gICdhc3ZzLmZuYScsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcIiR7Y2x1c3RlcmluZ19sZXZlbH1cIlxuKVxuXG5wcmludChzcHJpbnRmKCdhc3ZfZm5hX2ZpbGVuYW1lOiAlcycsIGFzdl9mbmFfZmlsZW5hbWUpKVxuXG5hc3ZfbWFzdGVyX3RhYmxlX2ZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZShcbiAgJ2Fzdl9tYXN0ZXJfdGFibGUudHN2JyxcbiAgXCIke3RhYmxlc19kaXJ9XCIsXG4gIFwiJHthbmFseXNpc190eXBlfVwiLFxuICBcIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9XCIsXG4gIFwiJHtjbHVzdGVyaW5nX2xldmVsfVwiXG4pXG5cbnByaW50KHNwcmludGYoJ2Fzdl9tYXN0ZXJfdGFibGVfZmlsZW5hbWU6ICVzJywgYXN2X21hc3Rlcl90YWJsZV9maWxlbmFtZSkpXG5cbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYXN2X2ZuYV9maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoXG4gICdhc3ZzLmZuYScsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcIiR7Y2x1c3RlcmluZ19sZXZlbH1cIlxuKVxuXG5wcmludChzcHJpbnRmKCdhc3ZfZm5hX2ZpbGVuYW1lOiAlcycsIGFzdl9mbmFfZmlsZW5hbWUpKVxuXG5hc3ZfY291bnRzX3RhYmxlX2ZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZShcbiAgJ2Fzdl9jb3VudHMudHN2JyxcbiAgXCIke3RhYmxlc19kaXJ9XCIsXG4gIFwiJHthbmFseXNpc190eXBlfVwiLFxuICBcIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9XCIsXG4gIFwiJHtjbHVzdGVyaW5nX2xldmVsfVwiXG4pXG5cbnByaW50KHNwcmludGYoJ2Fzdl9jb3VudHNfdGFibGVfZmlsZW5hbWU6ICVzJywgYXN2X2NvdW50c190YWJsZV9maWxlbmFtZSkpXG5cbmBgYCJ9 -->
 <pre class="r"><code>asv_fna_filename = makeDataFileName(
   &#39;asvs.fna&#39;,
   &quot;${tables_dir}&quot;,
@@ -1899,48 +1901,51 @@ source(&#39;~/utilities/amd_templates/setup/amd_project_utilities.R&#39;)</code>
 
 print(sprintf(&#39;asv_fna_filename: %s&#39;, asv_fna_filename))
 
-asv_master_table_filename = makeDataFileName(
-  &#39;asv_master_table.tsv&#39;,
+asv_counts_table_filename = makeDataFileName(
+  &#39;asv_counts.tsv&#39;,
   &quot;${tables_dir}&quot;,
   &quot;${analysis_type}&quot;,
   &quot;${miseq_project_prefix}&quot;,
   &quot;${clustering_level}&quot;
 )
 
-print(sprintf(&#39;asv_master_table_filename: %s&#39;, asv_master_table_filename))
+print(sprintf(&#39;asv_counts_table_filename: %s&#39;, asv_counts_table_filename))
 </code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="create-run-string" class="section level3">
-<h3><span class="header-section-number">1.2.2</span> Create Run String</h3>
+<div id="delete-existing-output-directory" class="section level3">
+<h3><span class="header-section-number">1.2.2</span> Delete existing output directory</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucnVuX3N0cmluZ190ZW1wbGF0ZSA9IFwiXG5waWNydXN0Ml9waXBlbGluZS5weSBcXFxcXG4gIC1zIHthc3ZfZm5hX2ZpbGVuYW1lfSBcXFxcXG4gIC1pIHthc3ZfbWFzdGVyX3RhYmxlX2ZpbGVuYW1lfSBcXFxcXG4gIC1vICR7dGFibGVzX2Rpcn0gXFxcXFxuICAtcCAke251bV9wcm9jc31cblwiXG5cbnJ1bl9zdHJpbmcgPSBnbHVlKHJ1bl9zdHJpbmdfdGVtcGxhdGUpXG5cbnByaW50KFwiUnVuIFN0cmluZzpcIilcbnByaW50KHJ1bl9zdHJpbmcpXG5gYGAifQ== -->
-<pre class="r"><code>run_string_template = &quot;
-picrust2_pipeline.py \\
-  -s {asv_fna_filename} \\
-  -i {asv_master_table_filename} \\
-  -o ${tables_dir} \\
-  -p ${num_procs}
-&quot;
-
-run_string = glue(run_string_template)
-
-print(&quot;Run String:&quot;)
-print(run_string)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3lzdGVtKCdybSAtcmYgJHt0YWJsZXNfZGlyfS9waWNydXN0X291dCcpXG5gYGAifQ== -->
+<pre class="r"><code>system(&#39;rm -rf ${tables_dir}/picrust_out&#39;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="run-picrust2-1" class="section level3">
-<h3><span class="header-section-number">1.2.3</span> Run PICRUSt2</h3>
+<div id="create-run-string" class="section level3">
+<h3><span class="header-section-number">1.2.3</span> Create Run String</h3>
+<pre><code>${picrust_run_string_template}</code></pre>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucHJpbnQoXCJzZW5kaW5nIHJ1biBzdHJpbmcgdG8gc3lzdGVtXCIpXG5zeXN0ZW0oY2F0KHJ1bl9zdHJpbmcpKVxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnVtX3Byb2NlcyA9ICR7bnVtX3Byb2NzfVxuYGBgIn0= -->
+<pre class="r"><code>num_proces = ${num_procs}</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3I6IHVuZXhwZWN0ZWQgJyQnIGluIFwibnVtX3Byb2NlcyA9ICRcIlxuIn0= -->
+<pre><code>Error: unexpected &#39;$&#39; in &quot;num_proces = $&quot;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="run-picrust2-1" class="section level3">
+<h3><span class="header-section-number">1.2.4</span> Run PICRUSt2</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucHJpbnQoXCJzZW5kaW5nIHJ1biBzdHJpbmcgdG8gc3lzdGVtXCIpXG5zeXN0ZW0ocnVuX3N0cmluZylcbmBgYCJ9 -->
 <pre class="r"><code>print(&quot;sending run string to system&quot;)
-system(cat(run_string))</code></pre>
+system(run_string)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -1948,12 +1953,29 @@ system(cat(run_string))</code></pre>
 </div>
 <div id="convert-files-to-xslx" class="section level2">
 <h2><span class="header-section-number">1.3</span> Convert Files to XSLX</h2>
-<div id="get-list-of-tsv-files" class="section level3">
-<h3><span class="header-section-number">1.3.1</span> Get list of TSV Files</h3>
+<div id="unzip-all-gzipped-files" class="section level3">
+<h3><span class="header-section-number">1.3.1</span> Unzip all gzipped files</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudHN2X2ZpbGVzID0gc3lzdGVtKCdmaW5kICR7dGFibGVzX2Rpcn0gLW5hbWUgXCIqLnRzdlwiJylcbnByaW50KFwidHN2IGZpbGVzXCIpXG5wcmludCh0c3ZfZmlsZXMpXG5gYGAifQ== -->
-<pre class="r"><code>tsv_files = system(&#39;find ${tables_dir} -name &quot;*.tsv&quot;&#39;)
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY21kID0gJ2ZpbmQgJHt0YWJsZXNfZGlyfSAtdHlwZSBmIC1uYW1lIFwiKi5nelwiIC1leGVjIGd1bnppcCB7fSArJ1xucHJpbnQoY21kKVxuXG5zeXN0ZW0oY21kKVxuYGBgIn0= -->
+<pre class="r"><code>cmd = &#39;find ${tables_dir} -type f -name &quot;*.gz&quot; -exec gunzip {} +&#39;
+print(cmd)
+
+system(cmd)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="get-list-of-tsv-files" class="section level3">
+<h3><span class="header-section-number">1.3.2</span> Get list of TSV Files</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY21kID0gJ2ZpbmQgJHt0YWJsZXNfZGlyfSAtbmFtZSBcIioudHN2XCInXG5wcmludChjbWQpXG5cbnRzdl9maWxlcyA9IHN5c3RlbShjbWQsIGludGVybj1UKVxuXG5wcmludChcInRzdiBmaWxlc1wiKVxucHJpbnQodHN2X2ZpbGVzKVxuYGBgIn0= -->
+<pre class="r"><code>cmd = &#39;find ${tables_dir} -name &quot;*.tsv&quot;&#39;
+print(cmd)
+
+tsv_files = system(cmd, intern=T)
+
 print(&quot;tsv files&quot;)
 print(tsv_files)</code></pre>
 <!-- rnb-source-end -->
@@ -1961,10 +1983,10 @@ print(tsv_files)</code></pre>
 <!-- rnb-text-begin -->
 </div>
 <div id="load-tsv-files-and-save-as-xlsx" class="section level3">
-<h3><span class="header-section-number">1.3.2</span> Load TSV files and Save as XLSX</h3>
+<h3><span class="header-section-number">1.3.3</span> Load TSV files and Save as XLSX</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZm9yIChmaWxlbmFtZSBpbiB0c3ZfZmlsZXMpXG57XG4gIFxuICBkYXRhID0gcmVhZC5kZWxpbShcbiAgICBmaWxlbmFtZSxcbiAgICBzZXA9J1xcdCcsXG4gICAgc3RyaW5nc0FzRmFjdG9ycz1GXG4gIClcbiAgXG4gIG5ld19maWxlbmFtZSA9IGdzdWIoJ3RzdicsICd4bHN4JywgZmlsZW5hbWUpXG4gIHByaW50KG5ld19maWxlbmFtZSlcblxuICB3cml0ZS54bHN4KFxuICAgIGRhdGEsXG4gICAgZmlsZT1uZXdfZmlsZW5hbWUsXG4gICAgY29sLm5hbWVzPVQsXG4gICAgcm93Lm5hbWVzPUZcbiAgKVxuXG59XG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZm9yIChmaWxlbmFtZSBpbiB0c3ZfZmlsZXMpXG57XG4gIFxuICBkYXRhID0gcmVhZC5kZWxpbShcbiAgICBmaWxlbmFtZSxcbiAgICBzZXA9J1xcdCcsXG4gICAgc3RyaW5nc0FzRmFjdG9ycz1GXG4gIClcblxuICBiYXNlX25hbWUgPSBiYXNlbmFtZShmaWxlbmFtZSlcbiAgZGlyX25hbWUgPSBkaXJuYW1lKGZpbGVuYW1lKVxuICBcbiAgbmV3X2ZpbGVuYW1lID0gZmlsZS5wYXRoKFxuICAgIGRpcl9uYW1lLFxuICAgIHBhc3RlMCgnbWlzZXEtJHttaXNlcV9ydW5fbnVtYmVyfV8nLCBnc3ViKCd0c3YnLCAneGxzeCcsIGJhc2VfbmFtZSkpXG4gIClcbiAgXG4gIHByaW50KG5ld19maWxlbmFtZSlcblxuICB3cml0ZS54bHN4KFxuICAgIGRhdGEsXG4gICAgZmlsZT1uZXdfZmlsZW5hbWUsXG4gICAgY29sLm5hbWVzPVQsXG4gICAgcm93Lm5hbWVzPUZcbiAgKVxuXG59XG5gYGAifQ== -->
 <pre class="r"><code>for (filename in tsv_files)
 {
   
@@ -1973,8 +1995,15 @@ print(tsv_files)</code></pre>
     sep=&#39;\t&#39;,
     stringsAsFactors=F
   )
+
+  base_name = basename(filename)
+  dir_name = dirname(filename)
   
-  new_filename = gsub(&#39;tsv&#39;, &#39;xlsx&#39;, filename)
+  new_filename = file.path(
+    dir_name,
+    paste0(&#39;miseq-${miseq_run_number}_&#39;, gsub(&#39;tsv&#39;, &#39;xlsx&#39;, base_name))
+  )
+  
   print(new_filename)
 
   write.xlsx(
@@ -1993,7 +2022,7 @@ print(tsv_files)</code></pre>
 </div>
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAo8L3N0eWxlPgoKYGBge3J9CnNvdXJjZSgnJHtwcm9qZWN0X21ldGFkYXRhX2ZpbGV9JykKYW5hbHlzaXNfdHlwZSA9ICIke2FuYWx5c2lzX3R5cGV9IgpjbHVzdGVyaW5nX2xldmVsID0gIiR7Y2x1c3RlcmluZ19sZXZlbH0iCnRhYmxlc19kaXIgPSAiJHt0YWJsZXNfZGlyfSIKdXNlX2FsbGJhYyA9ICR7dXNlX2FsbGJhY30KYGBgCgojIE1pU2VxLSR7bWlzZXFfcnVuX251bWJlcn0gUElDUlVTdDIgQW5hbHlzaXMgey50YWJzZXR9CgojIyBTZXR1cCAKCiMjIyBbQ2xvc2VdCgojIyMgU3RhcnQgQ29uZGEgRU5WCmBgYHtyfQpzdGFydENvbmRhRW52KCdyZWdyZXNzaW9uJykKYGBgCgojIyMgTG9hZCBMaWJyYXJpZXMKYGBge3J9CmxpYnJhcnkocm1hcmtkb3duKQpsaWJyYXJ5KHRpZHl2ZXJzZSkKbGlicmFyeShtYWdyaXR0cikKbGlicmFyeShnZ3Bsb3QyKQpsaWJyYXJ5KGdnYmVlc3dhcm0pCmxpYnJhcnkob3Blbnhsc3gpCmxpYnJhcnkoRFQpCmxpYnJhcnkocGhlYXRtYXApCmxpYnJhcnkoa2FibGVFeHRyYSkKbGlicmFyeShnbHVlKQoKIyMjIEN1c3RvbSBsaWJyYXJpZXMgdGhhdCBjYW4gYmUgbG9hZGVkIGZyb20gR2l0SHViCnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL2dlbmVyYWxfYXN2X2RhdGFfYW5hbHlzaXNfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FtZF90ZW1wbGF0ZXMvc2V0dXAvYW1kX3Byb2plY3RfdXRpbGl0aWVzLlInKQpgYGAKCgojIyMgU2V0IEtuaXRyIE9wdGlvbnMKYGBge3J9CiR7a25pdHJfb3B0aW9uc30KYGBgCgojIyBSdW4gUElDUlVTdDIKCiMjIyBDb25zdHJ1Y3QgRmlsZW5hbWVzCmBgYHtyfQphc3ZfZm5hX2ZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZSgKICAnYXN2cy5mbmEnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAiJHtjbHVzdGVyaW5nX2xldmVsfSIKKQoKcHJpbnQoc3ByaW50ZignYXN2X2ZuYV9maWxlbmFtZTogJXMnLCBhc3ZfZm5hX2ZpbGVuYW1lKSkKCmFzdl9tYXN0ZXJfdGFibGVfZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKAogICdhc3ZfbWFzdGVyX3RhYmxlLnRzdicsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICIke2NsdXN0ZXJpbmdfbGV2ZWx9IgopCgpwcmludChzcHJpbnRmKCdhc3ZfbWFzdGVyX3RhYmxlX2ZpbGVuYW1lOiAlcycsIGFzdl9tYXN0ZXJfdGFibGVfZmlsZW5hbWUpKQoKYGBgCgojIyMgQ3JlYXRlIFJ1biBTdHJpbmcKYGBge3J9CnJ1bl9zdHJpbmdfdGVtcGxhdGUgPSAiCnBpY3J1c3QyX3BpcGVsaW5lLnB5IFxcCiAgLXMge2Fzdl9mbmFfZmlsZW5hbWV9IFxcCiAgLWkge2Fzdl9tYXN0ZXJfdGFibGVfZmlsZW5hbWV9IFxcCiAgLW8gJHt0YWJsZXNfZGlyfSBcXAogIC1wICR7bnVtX3Byb2NzfQoiCgpydW5fc3RyaW5nID0gZ2x1ZShydW5fc3RyaW5nX3RlbXBsYXRlKQoKcHJpbnQoIlJ1biBTdHJpbmc6IikKcHJpbnQocnVuX3N0cmluZykKYGBgCgojIyMgUnVuIFBJQ1JVU3QyCmBgYHtyfQpwcmludCgic2VuZGluZyBydW4gc3RyaW5nIHRvIHN5c3RlbSIpCnN5c3RlbShjYXQocnVuX3N0cmluZykpCmBgYAoKIyMgQ29udmVydCBGaWxlcyB0byBYU0xYCgojIyMgR2V0IGxpc3Qgb2YgVFNWIEZpbGVzCmBgYHtyfQp0c3ZfZmlsZXMgPSBzeXN0ZW0oJ2ZpbmQgJHt0YWJsZXNfZGlyfSAtbmFtZSAiKi50c3YiJykKcHJpbnQoInRzdiBmaWxlcyIpCnByaW50KHRzdl9maWxlcykKYGBgCgojIyMgTG9hZCBUU1YgZmlsZXMgYW5kIFNhdmUgYXMgWExTWApgYGB7cn0KZm9yIChmaWxlbmFtZSBpbiB0c3ZfZmlsZXMpCnsKICAKICBkYXRhID0gcmVhZC5kZWxpbSgKICAgIGZpbGVuYW1lLAogICAgc2VwPSdcdCcsCiAgICBzdHJpbmdzQXNGYWN0b3JzPUYKICApCiAgCiAgbmV3X2ZpbGVuYW1lID0gZ3N1YigndHN2JywgJ3hsc3gnLCBmaWxlbmFtZSkKICBwcmludChuZXdfZmlsZW5hbWUpCgogIHdyaXRlLnhsc3goCiAgICBkYXRhLAogICAgZmlsZT1uZXdfZmlsZW5hbWUsCiAgICBjb2wubmFtZXM9VCwKICAgIHJvdy5uYW1lcz1GCiAgKQoKfQpgYGAKCgoKCgoKCgo=</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAo8L3N0eWxlPgoKYGBge3J9CnNvdXJjZSgnJHtwcm9qZWN0X21ldGFkYXRhX2ZpbGV9JykKYW5hbHlzaXNfdHlwZSA9ICIke2FuYWx5c2lzX3R5cGV9IgpjbHVzdGVyaW5nX2xldmVsID0gIiR7Y2x1c3RlcmluZ19sZXZlbH0iCnRhYmxlc19kaXIgPSAiJHt0YWJsZXNfZGlyfSIKdXNlX2FsbGJhYyA9ICR7dXNlX2FsbGJhY30KYGBgCgojIE1pU2VxLSR7bWlzZXFfcnVuX251bWJlcn0gUElDUlVTdDIgQW5hbHlzaXMgey50YWJzZXR9CgojIyBTZXR1cCAKCiMjIyBbQ2xvc2VdCgojIyMgU3RhcnQgQ29uZGEgRU5WCmBgYHtyfQpzdGFydENvbmRhRW52KCdwaWNydXN0MicpCmBgYAoKIyMjIExvYWQgTGlicmFyaWVzCmBgYHtyfQpsaWJyYXJ5KHJtYXJrZG93bikKbGlicmFyeSh0aWR5dmVyc2UpCmxpYnJhcnkobWFncml0dHIpCmxpYnJhcnkoZ2dwbG90MikKbGlicmFyeShnZ2JlZXN3YXJtKQpsaWJyYXJ5KG9wZW54bHN4KQpsaWJyYXJ5KERUKQpsaWJyYXJ5KHBoZWF0bWFwKQpsaWJyYXJ5KGthYmxlRXh0cmEpCmxpYnJhcnkoZ2x1ZSkKCiMjIyBDdXN0b20gbGlicmFyaWVzIHRoYXQgY2FuIGJlIGxvYWRlZCBmcm9tIEdpdEh1Ygpzb3VyY2UoJ34vdXRpbGl0aWVzL2FuYWx5c2lzLXV0aWxpdGllcy9nZW5lcmFsX2Fzdl9kYXRhX2FuYWx5c2lzX3V0aWxpdGllcy5SJykKc291cmNlKCd+L3V0aWxpdGllcy9hbWRfdGVtcGxhdGVzL3NldHVwL2FtZF9wcm9qZWN0X3V0aWxpdGllcy5SJykKYGBgCgoKIyMjIFNldCBLbml0ciBPcHRpb25zCmBgYHtyfQoke2tuaXRyX29wdGlvbnN9CmBgYAoKIyMgUnVuIFBJQ1JVU3QyCgojIyMgQ29uc3RydWN0IEZpbGVuYW1lcwpgYGB7cn0KYXN2X2ZuYV9maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FzdnMuZm5hJywKICAiJHt0YWJsZXNfZGlyfSIsCiAgIiR7YW5hbHlzaXNfdHlwZX0iLAogICIke21pc2VxX3Byb2plY3RfcHJlZml4fSIsCiAgIiR7Y2x1c3RlcmluZ19sZXZlbH0iCikKCnByaW50KHNwcmludGYoJ2Fzdl9mbmFfZmlsZW5hbWU6ICVzJywgYXN2X2ZuYV9maWxlbmFtZSkpCgphc3ZfY291bnRzX3RhYmxlX2ZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZSgKICAnYXN2X2NvdW50cy50c3YnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAiJHtjbHVzdGVyaW5nX2xldmVsfSIKKQoKcHJpbnQoc3ByaW50ZignYXN2X2NvdW50c190YWJsZV9maWxlbmFtZTogJXMnLCBhc3ZfY291bnRzX3RhYmxlX2ZpbGVuYW1lKSkKCmBgYAoKIyMjIERlbGV0ZSBleGlzdGluZyBvdXRwdXQgZGlyZWN0b3J5CmBgYHtyfQpzeXN0ZW0oJ3JtIC1yZiAke3RhYmxlc19kaXJ9L3BpY3J1c3Rfb3V0JykKYGBgCgoKIyMjIENyZWF0ZSBSdW4gU3RyaW5nCmBgYAoke3BpY3J1c3RfcnVuX3N0cmluZ190ZW1wbGF0ZX0KYGBgCgpgYGB7cn0KbnVtX3Byb2NzID0gJHtudW1fcHJvY3N9CnRhYmxlc19kaXIgPSAiJHt0YWJsZXNfZGlyfSIKCnJ1bl9zdHJpbmdfdGVtcGxhdGUgPSAiJHtwaWNydXN0X3J1bl9zdHJpbmdfdGVtcGxhdGV9IgpydW5fc3RyaW5nID0gZ2x1ZShydW5fc3RyaW5nX3RlbXBsYXRlKQoKcHJpbnQoIlJ1biBTdHJpbmc6IikKcHJpbnQocnVuX3N0cmluZykKYGBgCgojIyMgUnVuIFBJQ1JVU3QyCmBgYHtyfQpwcmludCgic2VuZGluZyBydW4gc3RyaW5nIHRvIHN5c3RlbSIpCnN5c3RlbShydW5fc3RyaW5nKQpgYGAKCiMjIENvbnZlcnQgRmlsZXMgdG8gWFNMWAojIyMgVW56aXAgYWxsIGd6aXBwZWQgZmlsZXMKYGBge3J9CmNtZCA9ICdmaW5kICR7dGFibGVzX2Rpcn0gLXR5cGUgZiAtbmFtZSAiKi5neiIgLWV4ZWMgZ3VuemlwIHt9ICsnCnByaW50KGNtZCkKCnN5c3RlbShjbWQpCmBgYAoKIyMjIEdldCBsaXN0IG9mIFRTViBGaWxlcwpgYGB7cn0KY21kID0gJ2ZpbmQgJHt0YWJsZXNfZGlyfSAtbmFtZSAiKi50c3YiJwpwcmludChjbWQpCgp0c3ZfZmlsZXMgPSBzeXN0ZW0oY21kLCBpbnRlcm49VCkKCnByaW50KCJ0c3YgZmlsZXMiKQpwcmludCh0c3ZfZmlsZXMpCmBgYAoKIyMjIExvYWQgVFNWIGZpbGVzIGFuZCBTYXZlIGFzIFhMU1gKYGBge3J9CmZvciAoZmlsZW5hbWUgaW4gdHN2X2ZpbGVzKQp7CiAgCiAgZGF0YSA9IHJlYWQuZGVsaW0oCiAgICBmaWxlbmFtZSwKICAgIHNlcD0nXHQnLAogICAgc3RyaW5nc0FzRmFjdG9ycz1GCiAgKQoKICBiYXNlX25hbWUgPSBiYXNlbmFtZShmaWxlbmFtZSkKICBkaXJfbmFtZSA9IGRpcm5hbWUoZmlsZW5hbWUpCiAgCiAgbmV3X2ZpbGVuYW1lID0gZmlsZS5wYXRoKAogICAgZGlyX25hbWUsCiAgICBwYXN0ZTAoJ21pc2VxLSR7bWlzZXFfcnVuX251bWJlcn1fJywgZ3N1YigndHN2JywgJ3hsc3gnLCBiYXNlX25hbWUpKQogICkKICAKICBwcmludChuZXdfZmlsZW5hbWUpCgogIHdyaXRlLnhsc3goCiAgICBkYXRhLAogICAgZmlsZT1uZXdfZmlsZW5hbWUsCiAgICBjb2wubmFtZXM9VCwKICAgIHJvdy5uYW1lcz1GCiAgKQoKfQpgYGAKCgoKCgoKCgo=</div>
 
 
 

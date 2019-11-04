@@ -1188,15 +1188,17 @@ runDeseqFromPathwayCounts = function(
   pathway_counts,
   sample_data,
   variables,
-  include_covariates='All'
+  include_covariates='All',
+  pathway_colname=""
 )
 {
 
   ### Data for testing
-  # pathway_counts = pathway_counts_table
+  # pathway_counts = ko_counts_table
   # sample_data = sample_data
   # variables = "CaseString"
   # include_covariates="All"
+  # pathway_colname="function."
 
 
   sample_names = sample_data$SampleName
@@ -1210,13 +1212,13 @@ runDeseqFromPathwayCounts = function(
 
   print(design_formula)
 
-  pathway_names = pathway_counts_table$pathway
+  pathway_names = pathway_counts %>% pull(!!pathway_colname)
 
   dds = DESeqDataSetFromMatrix(
     countData=
       pathway_counts %>%
-      select(sample_names, pathway) %>%
-      column_to_rownames('pathway'),
+      select(sample_names, !!pathway_colname) %>%
+      column_to_rownames(pathway_colname),
     colData=sample_data,
     design=design_formula
   )
@@ -1245,7 +1247,9 @@ runDeseqFromPathwayCounts = function(
     contrast_names_to_use = contrast_names
   }
 
-  deseq_results_df = data.frame(pathway=pathway_names, stringsAsFactors=F)
+  deseq_results_df =
+    data.frame(tempname=pathway_names, stringsAsFactors=F) %>%
+    rename(!!pathway_colname:=tempname)
 
   for (name in contrast_names_to_use)
   {
@@ -1257,13 +1261,13 @@ runDeseqFromPathwayCounts = function(
       format='DataFrame'
     ) %>%
       data.frame(stringsAsFactors=F) %>%
-      rownames_to_column('pathway') %>%
+      rownames_to_column(pathway_colname) %>%
       arrange(padj) %>%
       # rename(L2FC=log2FoldChange) %>%
-      select(pathway, padj, L2FC=log2FoldChange, pvalue, everything()) %>%
-      rename_at(setdiff(names(.), 'pathway'), function(x){paste0(name,'.',x)})
+      select(!!pathway_colname, padj, L2FC=log2FoldChange, pvalue, everything()) %>%
+      rename_at(setdiff(names(.), pathway_colname), function(x){paste0(name,'.',x)})
 
-    deseq_results_df = inner_join(deseq_results_df, name_results, by='pathway')
+    deseq_results_df = inner_join(deseq_results_df, name_results, by=pathway_colname)
   }
 
   return(deseq_results_df)

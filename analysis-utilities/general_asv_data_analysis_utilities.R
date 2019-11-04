@@ -421,6 +421,9 @@ applyPrevalenceFilter = function(
   prevalence_cutoff
 )
 {
+
+  # feature_abundance = filtered_counts
+
   print("in applyPrevalenceFilter")
   prevalence_filtered_abundance =
     feature_abundance %>%
@@ -433,17 +436,16 @@ applyPrevalenceFilter = function(
       fract_nonzero=num_nonzero_numeric/num_numeric
     ) %>%
     ### Keep only features appearing in more than 10% of samples
-    filter(fract_nonzero>=prevalence_cutoff)
-  # %>%
-  #   ### Drop temporary columns
-  #   select(-num_numeric, -num_nonzero_numeric, -fract_nonzero)
+    filter(fract_nonzero>=prevalence_cutoff) %>%
+    ### Drop temporary columns
+    select(-num_numeric, -num_nonzero_numeric, -fract_nonzero)
   # print("dim prevalence filtered abundance")
   # print(dim(prevalence_filtered_abundance))
 
   num_features_prevalence_dropped =
     dim(feature_abundance)[1] - dim(prevalence_filtered_abundance)[1]
 
-  print(paste0('Num prevalence filtered features dropped: ', num_features_prevalence_dropped))
+  print(sprintf('Num prevalence filtered features dropped: %d', num_features_prevalence_dropped))
 
   return(prevalence_filtered_abundance)
 }
@@ -455,11 +457,20 @@ applyRelativeAbundanceFilter = function(
 {
   print("in applyRelativeAbundanceFilter")
 
+  # feature_abundance = counts
+
   relative_abundance_filtered_counts =
     feature_abundance %>%
     ### Set counts with relative abundance less than cutoff to 0
-    mutate_if(is.numeric, list(~ifelse(./sum(.)<relative_abundance_cutoff, 0, .))) %>%
-    # mutate_at(.vars=sample_names, list(~ifelse(./sum(.)<relative_abundance_cutoff, 0, .))) %>%
+    # mutate_if(is.numeric, list(~ifelse(./sum(.)<relative_abundance_cutoff, 0, .))) %>%
+    mutate_if(is.numeric, function(x)
+    {
+      if(sum(x)>0)
+      {
+        ifelse(x/sum(x) < relative_abundance_cutoff, 0, x)
+      }else
+      {0}
+    }) %>%
     ### Add a rowsum column
     mutate(rowsum=apply(select_if(., is.numeric), 1, sum)) %>%
     ### Drop rows that now have all zero counts
@@ -481,9 +492,17 @@ applyMinCountFilter = function(
   min_counts
 )
 {
+  print("in applyMinCountFilter")
+  print(min_counts)
+
+  # feature_abundance = counts
+
   feature_abundance =
     feature_abundance %>%
-    mutate_if(is.numeric, ~ifelse(. < min_counts, 0, .))
+    mutate_if(is.numeric, function(x)
+    {
+      ifelse(x<min_count_cutoff, 0, x)
+    })
 
   return(feature_abundance)
 }
@@ -492,9 +511,11 @@ getRelativeAbundance = function(counts)
 {
   print("in getRelativeAbundance")
 
+  # counts %>% select_if(is.numeric) %>% colSums() %>% print()
+
   relative_abundance =
     counts %>%
-    mutate_if(is.numeric, list(~ ./sum(.)))
+    mutate_if(is.numeric, function(x) if(sum(x)>0) {x/sum(x)}else{0})
 
   return(relative_abundance)
 }
@@ -632,7 +653,7 @@ getFilteredTaxaCounts = function(
 
 }
 
-getFilteredTaxaCountsDev = function(
+getFilteredTaxaCountsDev1 = function(
   asv_table,
   taxonomy_table,
   sample_data,
@@ -722,6 +743,9 @@ getFilteredTaxaCountsDev = function(
       group_by(.dots=ranks_to_glom) %>%
       summarize_all(sum) %>%
       ungroup()
+  } else
+  {
+    print("Aggregating by ASVs")
   }
 
   # else
@@ -744,21 +768,21 @@ getFilteredTaxaCountsDev = function(
   # print(dim(counts))
   # print("Filtering taxa")
   # print("Relative Abundance Filter")
-
-  filters_list = list(
-    min_count = list(
-      filter_function=applyMinCountFilter,
-      parameter=min_count_cutoff
-      ),
-    relative_abundance = list(
-      filter_function=applyRelativeAbundanceFilter,
-      parameter=relative_abundance_cutoff
-      ),
-    prevalence = list(
-      filter_function=applyPrevalenceFilter,
-      parameter=prevalence_cutoff
-    )
-  )
+#
+#   filters_list = list(
+#     min_count = list(
+#       filter_function=applyMinCountFilter,
+#       parameter=min_count_cutoff
+#       ),
+#     relative_abundance = list(
+#       filter_function=applyRelativeAbundanceFilter,
+#       parameter=relative_abundance_cutoff
+#       ),
+#     prevalence = list(
+#       filter_function=applyPrevalenceFilter,
+#       parameter=prevalence_cutoff
+#     )
+#   )
 
   # filtered_counts =
   #   counts %>%
@@ -766,16 +790,24 @@ getFilteredTaxaCountsDev = function(
   #   applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
   #   applyPrevalenceFilter(prevalence_cutoff)
 
-  filters_list = filters_list[filter_order]
-  print(names(filters_list))
+  # filters_list = filters_list[filter_order]
+  # print(names(filters_list))
+  #
+  # filtered_counts = counts
+  # for (filter in filters_list)
+  # {
+  #   print(names(filter))
+  #   print(filter$parameter)
+  #   filtered_counts = filter$filter_function(filtered_counts, filter$parameter)
+  # }
 
-  filtered_counts = counts
-  for (filter in filters_list)
-  {
-    print(names(filter))
-    print(filter$parameter)
-    filtered_counts = filter$filter_function(filtered_counts, filter$parameter)
-  }
+
+  filtered_counts =
+    counts %>%
+    applyMinCountFilter(min_count_cutoff) %>%
+    applyRelativeAbundanceFilter(relative_abundance_cutoff)
+  # %>%
+  #   applyPrevalenceFilter(prevalence_cutoff)
 
   print(sprintf('filtered_counts exists: %s', 'filtered_counts' %in% ls()))
 
@@ -813,6 +845,164 @@ getFilteredTaxaCountsDev = function(
       )
     # print('glommed taxa names')
   }
+
+  return(filtered_counts %>% data.frame())
+
+}
+
+getFilteredTaxaCountsDev = function(
+  asv_table,
+  taxonomy_table,
+  sample_data,
+  cluster_by=NA,
+  relative_abundance_cutoff=0,
+  prevalence_cutoff=0,
+  min_count_cutoff=0,
+  filter_order = c('min_count', 'prevalence', 'relative_abundance'),
+  filter_by='Taxa',
+  clean_taxa=T,  ### remove NAs in lowest rank
+  n_max_by_mean=F,
+  id_col="SampleName", ### sample_data column that containes the unique sample IDs
+  add_glommed_names=T,
+  make_unique=T,
+  normalize=F
+)
+{
+  print("in getFilteredTaxaCounts")
+
+  ### Data for testing
+  # cluster_by = 'ASV'
+  # relative_abundance_cutoff = 0.02
+  # prevalence_cutoff = 0.1
+  # min_count_cutoff = 20
+  # filter_by = 'ASV'
+  # clean_taxa = T
+  # id_col = 'SampleName'
+  # add_glommed_names=F
+  # normalize=T
+  # n_max_by_mean=F
+
+  sample_names = as.character(sample_data[,id_col])
+  asv_table = asv_table %>% select('ASVs', sample_names)
+
+  # if (normalize)
+  # {
+  #   asv_table =
+  #     asv_table %>%
+  #     mutate_at(sample_names, ~./sum(.))
+  # }
+
+  if (clean_taxa & cluster_by != 'ASV')
+  {
+    ### Remove any taxa that are NA at the lowest level.
+    ### No point in having ASVs aggregated to the same genus
+    ### if that genus is NA.
+    clean_taxonomy_table =
+      taxonomy_table %>%
+      # filter(sprintf("!is.na(%s)", lowest_rank))
+      filter(!is.na(!!sym(cluster_by)))
+
+    # print("dim clean tax table")
+    # print(dim(clean_taxonomy_table))
+  } else
+  {
+    clean_taxonomy_table = taxonomy_table
+  }
+
+  # print(sprintf("lowest_rank = %s", lowest_rank))
+  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus', 'ASV')
+
+  lowest_rank_index = match(cluster_by, all_ranks)
+  ### get just the ranks that will be used in
+  ### 1. The glommed name
+  ### 2. The step of aggregating sums
+  ranks_to_glom = all_ranks[1:lowest_rank_index]
+  short_ranks = all_ranks[c(1,lowest_rank_index)]
+  print("ranks to glom")
+  print(ranks_to_glom)
+
+  sample_names = as.character(sample_data[,id_col])
+  # print(sprintf("length sample_names = %d", length(sample_names)))
+
+  print("creating asv taxa counts table")
+  counts = inner_join(asv_table, clean_taxonomy_table, by="ASVs")
+
+  if (!is.na(cluster_by) & toupper(cluster_by) != 'ASV')
+  {
+    print("Aggregating by ranks")
+    ### Aggregate counts by ranks being kept
+    counts =
+      counts %>%
+      ### Drop the ASVs
+      select(!!c(sample_names, ranks_to_glom)) %>%
+      # select(-ASVs) %>%
+      ### Group and sum
+      group_by(.dots=ranks_to_glom) %>%
+      summarize_all(sum) %>%
+      ungroup()
+  } else
+  {
+    print("Aggregating by ASVs")
+  }
+
+
+  print("current dim")
+  print(dim(counts))
+
+  print("filtering counts")
+  filtered_counts =
+    counts %>%
+    applyMinCountFilter(min_count_cutoff) %>%
+    applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
+    applyPrevalenceFilter(prevalence_cutoff)
+
+  print("current dim")
+  print(dim(filtered_counts))
+
+ filtered_counts %>%
+   select(age_ordered_samples) %>%
+   colSums() %>%
+   is.na() %>%
+   which()
+
+
+  if (normalize)
+  {
+    filtered_counts = getRelativeAbundance(filtered_counts)
+  }
+
+  if (n_max_by_mean != F)
+  {
+    ### Keep only the n_max_by_mean features
+    filtered_counts =
+      filtered_counts %>%
+      ### Create a column of row means
+      mutate(mean=rowMeans(
+        select(., sample_names)/sum(select(., sample_names))
+      )) %>%
+      ### Order by the means (ascending)
+      arrange(mean) %>%
+      ### Take the highest ones (n_max_by_mean)
+      tail(n_max_by_mean) %>%
+      ### Drop the mean column
+      select(-mean)
+  }
+
+  if (add_glommed_names)
+  {
+    filtered_counts = addGlommedTaxaNames(
+      filtered_counts,
+      cluster_by,
+      make_unique=make_unique
+    )
+    # print('glommed taxa names')
+  }
+
+ # filtered_counts %>%
+ #   select(age_ordered_samples) %>%
+ #   colSums() %>%
+ #   is.na() %>%
+ #   which()
 
   return(filtered_counts %>% data.frame())
 
