@@ -2571,14 +2571,13 @@ plotEffectSize2 = function(
   )
 {
   ### Data for testing
-  # data=data
-  # effect_size_col="log2FoldChange"
-  # effect_size_legend_title="Abundance in Case"
-  # feature_col="Genus"
-  # feature_axis_title = 'blah'
-  # alpha_col='pvals'
+  # data=sig_data
+  # effect_size_col=effect_size_col
+  # effect_size_legend_title=paste0("Abundance in ", varname)
+  # feature_col="PathwayName"
+  # alpha_col=padj_col
   # alpha_legend_title="Adjusted P-Values"
-  # plot_title="Case/Control Log2 Fold Change"
+  # plot_title=paste0(varname, " + Gender + Tissue_code: Log2 Fold Change")
 
   if (effect_size_legend_title == "")
   {
@@ -2595,10 +2594,15 @@ plotEffectSize2 = function(
     alpha_legend_title = alpha_col
   }
 
-  min_alpha = min(data[[alpha_col]]) %>% round(1)
-  max_alpha = max(data[[alpha_col]]) %>% round(1)
+  min_alpha = min(data[[alpha_col]]) %>% signif(2)
+  max_alpha = max(data[[alpha_col]]) %>% signif(2)
+
+  print(alpha_col)
+  print(data %>% pull(alpha_col))
 
   print(sprintf('min_alpha: %s  max_alpha: %s', min_alpha, max_alpha))
+  alpha_breaks = seq(min_alpha, max_alpha, length=5)
+  print(alpha_breaks)
 
   plt =
     data %>%
@@ -2629,7 +2633,7 @@ plotEffectSize2 = function(
     ) +
     ggtitle(plot_title)
 
-  print(plt)
+  # print(plt)
 
   return(plt)
 }

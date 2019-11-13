@@ -1773,8 +1773,8 @@ summary {
 
 <div id="TOC">
 <ul>
-<li><a href="#miseq-miseq_run_number-deseq2-analysis"><span class="toc-section-number">1</span> MiSeq-${miseq_run_number} DESeq2 Analysis</a><ul>
-<li><a href="#clustering"><span class="toc-section-number">1.1</span> Clustering</a></li>
+<li><a href="#miseq-miseq_run_number-piphillin-differential-abundance-plots"><span class="toc-section-number">1</span> MiSeq-${miseq_run_number} piphillin Differential Abundance Plots</a><ul>
+<li><a href="#clustering-level"><span class="toc-section-number">1.1</span> Clustering Level</a></li>
 <li><a href="#filtering"><span class="toc-section-number">1.2</span> Filtering</a></li>
 <li><a href="#setup"><span class="toc-section-number">1.3</span> Setup</a><ul>
 <li><a href="#close"><span class="toc-section-number">1.3.1</span> [Close]</a></li>
@@ -1782,25 +1782,16 @@ summary {
 <li><a href="#load-libraries"><span class="toc-section-number">1.3.3</span> Load Libraries</a></li>
 <li><a href="#set-knitr-options"><span class="toc-section-number">1.3.4</span> Set Knitr Options</a></li>
 <li><a href="#load-data"><span class="toc-section-number">1.3.5</span> Load Data</a></li>
-<li><a href="#integerize-pathway-counts"><span class="toc-section-number">1.3.6</span> Integerize pathway counts</a></li>
-<li><a href="#set-metadata-factor-levels"><span class="toc-section-number">1.3.7</span> Set Metadata Factor Levels</a></li>
-<li><a href="#variables-of-interest"><span class="toc-section-number">1.3.8</span> Variables of interest</a></li>
+<li><a href="#variables-of-interest"><span class="toc-section-number">1.3.6</span> Variables of interest</a></li>
 </ul></li>
-<li><a href="#all-subgroups-casecontrol-only"><span class="toc-section-number">1.4</span> All Subgroups Case/Control Only</a><ul>
-<li><a href="#create-workbook"><span class="toc-section-number">1.4.1</span> Create Workbook</a></li>
-</ul></li>
-<li><a href="#all-subgroups-all-variables"><span class="toc-section-number">1.5</span> All Subgroups – All Variables</a><ul>
-<li><a href="#create-workbook-1"><span class="toc-section-number">1.5.1</span> Create Workbook</a></li>
-<li><a href="#run-and-add-worksheets-1"><span class="toc-section-number">1.5.2</span> Run and add worksheets</a></li>
-<li><a href="#save-workbook-1"><span class="toc-section-number">1.5.3</span> Save Workbook</a></li>
-</ul></li>
-<li><a href="#age-90-casecontrol-only"><span class="toc-section-number">1.6</span> Age &lt; 90 Case/Control Only</a><ul>
-<li><a href="#create-workbook-2"><span class="toc-section-number">1.6.1</span> Create Workbook</a></li>
-</ul></li>
-<li><a href="#age-90-all-variables"><span class="toc-section-number">1.7</span> Age &lt; 90 – All Variables</a><ul>
-<li><a href="#create-workbook-3"><span class="toc-section-number">1.7.1</span> Create Workbook</a></li>
-<li><a href="#run-and-add-worksheets-3"><span class="toc-section-number">1.7.2</span> Run and add worksheets</a></li>
-<li><a href="#save-workbook-3"><span class="toc-section-number">1.7.3</span> Save Workbook</a></li>
+<li><a href="#plots"><span class="toc-section-number">1.4</span> Plots</a><ul>
+<li><a href="#close-1"><span class="toc-section-number">1.4.1</span> [ ] Close</a></li>
+<li><a href="#all-subgroups-casecontrol"><span class="toc-section-number">1.4.2</span> All Subgroups – Case/Control</a></li>
+<li><a href="#all-subgroups-with-covariates"><span class="toc-section-number">1.4.3</span> All Subgroups – With Covariates</a></li>
+<li><a href="#age-90-casecontrol"><span class="toc-section-number">1.4.4</span> Age &lt; 90 – Case/Control</a></li>
+<li><a href="#age-90-with-covariates"><span class="toc-section-number">1.4.5</span> Age &lt; 90 – With Covariates</a></li>
+<li><a href="#amd-only-individual-variables"><span class="toc-section-number">1.4.6</span> AMD Only – individual variables</a></li>
+<li><a href="#amd-only-genotypes-phenotypes-and-areds-with-controls"><span class="toc-section-number">1.4.7</span> AMD Only – Genotypes, Phenotypes, and AREDS with Controls</a></li>
 </ul></li>
 </ul></li>
 </ul>
@@ -1832,10 +1823,6 @@ summary {
     font-size: 1.4rem;
   }
   
-  .dataTable {
-    font-size: 9pt;
-  }
-  
 </style>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
@@ -1848,11 +1835,12 @@ summary {
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="miseq-miseq_run_number-deseq2-analysis" class="section level1 tabset">
-<h1><span class="header-section-number">1</span> MiSeq-${miseq_run_number} DESeq2 Analysis</h1>
-<div id="clustering" class="section level2">
-<h2><span class="header-section-number">1.1</span> Clustering</h2>
-<p>Data clustered at the ${CLUSTERING_LEVEL} level.</p>
+<div id="miseq-miseq_run_number-piphillin-differential-abundance-plots" class="section level1 tabset">
+<h1><span class="header-section-number">1</span> MiSeq-${miseq_run_number} piphillin Differential Abundance Plots</h1>
+<p>Regression coefficients as effect size.</p>
+<div id="clustering-level" class="section level2">
+<h2><span class="header-section-number">1.1</span> Clustering Level</h2>
+<p>Data clustered at the ${CLUSTERING_LEVEL} Level.</p>
 </div>
 <div id="filtering" class="section level2">
 <h2><span class="header-section-number">1.2</span> Filtering</h2>
@@ -1862,7 +1850,7 @@ summary {
 <li><strong>Min Count Cutoff:</strong> ${min_count_cutoff}</li>
 </ul>
 </div>
-<div id="setup" class="section level2">
+<div id="setup" class="section level2 tabset">
 <h2><span class="header-section-number">1.3</span> Setup</h2>
 <div id="close" class="section level3">
 <h3><span class="header-section-number">1.3.1</span> [Close]</h3>
@@ -1871,9 +1859,6 @@ summary {
 <h3><span class="header-section-number">1.3.2</span> Start Conda ENV</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudignZGVzZXEnLCBsaWI9J34vUjM1JylcbmBgYCJ9 -->
-<pre class="r"><code>startCondaEnv(&#39;deseq&#39;, lib=&#39;~/R35&#39;)</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -1881,22 +1866,6 @@ summary {
 <h3><span class="header-section-number">1.3.3</span> Load Libraries</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShybWFya2Rvd24pXG5saWJyYXJ5KHRpZHl2ZXJzZSlcbmxpYnJhcnkobWFncml0dHIpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KG9wZW54bHN4KVxubGlicmFyeShEVClcbmxpYnJhcnkoa2FibGVFeHRyYSlcbmxpYnJhcnkoREVTZXEyKVxuXG4jIyMgQ3VzdG9tIGxpYnJhcmllcyB0aGF0IGNhbiBiZSBsb2FkZWQgZnJvbSBHaXRIdWJcbnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL2dlbmVyYWxfYXN2X2RhdGFfYW5hbHlzaXNfdXRpbGl0aWVzLlInKVxuc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZGVzZXFfdXRpbGl0aWVzLlInKVxuc291cmNlKCd+L3V0aWxpdGllcy9hbWRfdGVtcGxhdGVzL3NldHVwL2FtZF9wcm9qZWN0X3V0aWxpdGllcy5SJylcbnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL3BhdGh3YXlfdXRpbGl0aWVzLlInKVxuYGBgIn0= -->
-<pre class="r"><code>library(rmarkdown)
-library(tidyverse)
-library(magrittr)
-library(ggplot2)
-library(openxlsx)
-library(DT)
-library(kableExtra)
-library(DESeq2)
-
-### Custom libraries that can be loaded from GitHub
-source(&#39;~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R&#39;)
-source(&#39;~/utilities/analysis-utilities/deseq_utilities.R&#39;)
-source(&#39;~/utilities/amd_templates/setup/amd_project_utilities.R&#39;)
-source(&#39;~/utilities/analysis-utilities/pathway_utilities.R&#39;)</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -1904,9 +1873,6 @@ source(&#39;~/utilities/analysis-utilities/pathway_utilities.R&#39;)</code></pre
 <h3><span class="header-section-number">1.3.4</span> Set Knitr Options</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuJHtrbml0cl9vcHRpb25zfVxuYGBgIn0= -->
-<pre class="r"><code>${knitr_options}</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -1914,451 +1880,103 @@ source(&#39;~/utilities/analysis-utilities/pathway_utilities.R&#39;)</code></pre
 <h3><span class="header-section-number">1.3.5</span> Load Data</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBwYXRod2F5X2NvdW50c190YWJsZV9maWxlID0gZmlsZS5wYXRoKFxuIyAgIFwiJHt0YWJsZXNfZGlyfVwiLFxuIyAgIFwicGljcnVzdF9vdXRcIixcbiMgICBcInBhdGh3YXlzX291dFwiLFxuIyAgIFwibWlzZXEtJHttaXNlcV9ydW5fbnVtYmVyfV9wYXRoX2FidW5fdW5zdHJhdC54bHN4XCJcbiMgKVxuIyBcbiMgcGF0aHdheV9jb3VudHNfdGFibGUgPSByZWFkLnhsc3goXG4jICAgcGF0aHdheV9jb3VudHNfdGFibGVfZmlsZSxcbiMgICBjb2xOYW1lcz1UXG4jICAgKVxuXG5cbmtvX2NvdW50c190YWJsZV9maWxlID0gZmlsZS5wYXRoKFxuICBcIiR7dGFibGVzX2Rpcn1cIixcbiAgXCJwaWNydXN0X291dFwiLFxuICBcIktPX21ldGFnZW5vbWVfb3V0XCIsXG4gIFwibWlzZXEtMjM5X3ByZWRfbWV0YWdlbm9tZV91bnN0cmF0Lnhsc3hcIlxuKVxuXG5rb19jb3VudHNfdGFibGUgPSByZWFkLnhsc3goXG4gIGtvX2NvdW50c190YWJsZV9maWxlLFxuICBjb2xOYW1lcz1UXG4gIClcblxuc2FtcGxlX2RhdGEgPSByZWFkLnhsc3goXG4gICcke3NhbXBsZV9kYXRhX2ZpbGV9JyxcbiAgY29sTmFtZXM9VFxuICApXG5cbmlmIChcIklHQVwiICVpbiUgY29sbmFtZXMoc2FtcGxlX2RhdGEpICYgdXNlX2FsbGJhYylcbntcbiAgc2FtcGxlX2RhdGEgPSBcbiAgICBzYW1wbGVfZGF0YSAlPiVcbiAgICBmaWx0ZXIoSUdBPT0nQWxsQmFjJylcblxuICBzYW1wbGVfbmFtZXMgPSBzYW1wbGVfZGF0YSRTYW1wbGVOYW1lXG4gIFxuICBhc3ZfdGFibGUgPSBcbiAgICBhc3ZfdGFibGUgJT4lXG4gICAgc2VsZWN0KCdBU1ZzJywgZW5kc193aXRoKCdBbGxCYWMnKSlcbn1cblxuc2FtcGxlX2RhdGFfY29sdW1ucyA9IGNvbG5hbWVzKHNhbXBsZV9kYXRhKVxuc2FtcGxlX25hbWVzID0gc2FtcGxlX2RhdGEkU2FtcGxlTmFtZVxuXG5zb3VyY2UoZmlsZS5wYXRoKFxuICBcIiR7cHJvamVjdF9yb290fVwiLCBcbiAgXCIke21ldGFkYXRhX2Rpcn1cIiwgXG4gICdvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcy5SJ1xuICApKVxuXG5gYGAifQ== -->
-<pre class="r"><code># pathway_counts_table_file = file.path(
-#   &quot;${tables_dir}&quot;,
-#   &quot;picrust_out&quot;,
-#   &quot;pathways_out&quot;,
-#   &quot;miseq-${miseq_run_number}_path_abun_unstrat.xlsx&quot;
-# )
-# 
-# pathway_counts_table = read.xlsx(
-#   pathway_counts_table_file,
-#   colNames=T
-#   )
-
-
-ko_counts_table_file = file.path(
-  &quot;${tables_dir}&quot;,
-  &quot;picrust_out&quot;,
-  &quot;KO_metagenome_out&quot;,
-  &quot;miseq-239_pred_metagenome_unstrat.xlsx&quot;
-)
-
-ko_counts_table = read.xlsx(
-  ko_counts_table_file,
-  colNames=T
-  )
-
-sample_data = read.xlsx(
-  &#39;${sample_data_file}&#39;,
-  colNames=T
-  )
-
-if (&quot;IGA&quot; %in% colnames(sample_data) &amp; use_allbac)
-{
-  sample_data = 
-    sample_data %&gt;%
-    filter(IGA==&#39;AllBac&#39;)
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %&gt;%
-    select(&#39;ASVs&#39;, ends_with(&#39;AllBac&#39;))
-}
-
-sample_data_columns = colnames(sample_data)
-sample_names = sample_data$SampleName
-
-source(file.path(
-  &quot;${project_root}&quot;, 
-  &quot;${metadata_dir}&quot;, 
-  &#39;observational_variables.R&#39;
-  ))
-</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="integerize-pathway-counts" class="section level3">
-<h3><span class="header-section-number">1.3.6</span> Integerize pathway counts</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGF0aHdheV9jb3VudHNfdGFibGUgPSBcbiAgcGF0aHdheV9jb3VudHNfdGFibGUgJT4lXG4gIHJlbW92ZV9yb3duYW1lcygpICU+JVxuICBtdXRhdGVfYXQodmFycyhzYW1wbGVfbmFtZXMpLCB+Zmxvb3IoLiswLjAwMDAwMDAxKSlcbmtvX2NvdW50c190YWJsZSA9IFxuICBrb19jb3VudHNfdGFibGUgJT4lXG4gIHJlbW92ZV9yb3duYW1lcygpICU+JVxuICBtdXRhdGVfYXQodmFycyhzYW1wbGVfbmFtZXMpLCB+Zmxvb3IoLiswLjAwMDAwMDAxKSlcbmBgYCJ9 -->
-<pre class="r"><code>pathway_counts_table = 
-  pathway_counts_table %&gt;%
-  remove_rownames() %&gt;%
-  mutate_at(vars(sample_names), ~floor(.+0.00000001))
-ko_counts_table = 
-  ko_counts_table %&gt;%
-  remove_rownames() %&gt;%
-  mutate_at(vars(sample_names), ~floor(.+0.00000001))</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="set-metadata-factor-levels" class="section level3">
-<h3><span class="header-section-number">1.3.7</span> Set Metadata Factor Levels</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2FtcGxlX2RhdGEgPSBzZXRGYWN0b3JzTGV2ZWxzKHNhbXBsZV9kYXRhLCBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcylcbiMgc2FtcGxlX2RhdGEgJTw+JVxuIyAgIG11dGF0ZShBUkVEUz1cbiMgICAgIGlmZWxzZShpcy5uYShBUkVEUyksIFwiTUlTU0lOR1wiLCBBUkVEUykgJT4lXG4jICAgICBmYWN0b3IobGV2ZWxzPWMoJ04nLCAnWScsICdNSVNTSU5HJykpXG4jICAgKVxuYGBgIn0= -->
-<pre class="r"><code>sample_data = setFactorsLevels(sample_data, observational_variables)
-# sample_data %&lt;&gt;%
-#   mutate(AREDS=
-#     ifelse(is.na(AREDS), &quot;MISSING&quot;, AREDS) %&gt;%
-#     factor(levels=c(&#39;N&#39;, &#39;Y&#39;, &#39;MISSING&#39;))
-#   )</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
 <div id="variables-of-interest" class="section level3">
-<h3><span class="header-section-number">1.3.8</span> Variables of interest</h3>
+<h3><span class="header-section-number">1.3.6</span> Variables of interest</h3>
 <div id="observational-variables" class="section level4">
-<h4><span class="header-section-number">1.3.8.1</span> Observational Variables</h4>
+<h4><span class="header-section-number">1.3.6.1</span> Observational Variables</h4>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX2NvdmFyaWF0ZXMgPSBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1ske2xpbmVhcl9yZWdyZXNzaW9uX3ByZWRpY3RvcnNbJ0FsbCddfV1cbmFnZV9sdF85MF9jb3ZhcmlhdGVzID0gb2JzZXJ2YXRpb25hbF92YXJpYWJsZXNbJHtsaW5lYXJfcmVncmVzc2lvbl9wcmVkaWN0b3JzWydBZ2VfbHRfOTAnXX1dXG5nZW5vdHlwZXMgPSAke2dlbm90eXBlc31cbnBoZW5vdHlwZXMgPSAke3BoZW5vdHlwZXN9XG5gYGAifQ== -->
-<pre class="r"><code>all_covariates = observational_variables[${linear_regression_predictors[&#39;All&#39;]}]
-age_lt_90_covariates = observational_variables[${linear_regression_predictors[&#39;Age_lt_90&#39;]}]
-genotypes = ${genotypes}
-phenotypes = ${phenotypes}</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
 <div id="remove-age" class="section level4">
-<h4><span class="header-section-number">1.3.8.2</span> Remove Age</h4>
+<h4><span class="header-section-number">1.3.6.2</span> Remove Age</h4>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX2NvdmFyaWF0ZXMkQWdlID0gTlVMTFxuYWdlX2x0XzkwX2NvdmFyaWF0ZXMkQWdlID0gTlVMTFxuYGBgIn0= -->
-<pre class="r"><code>all_covariates$Age = NULL
-age_lt_90_covariates$Age = NULL</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <ul>
-<li><strong>All Variables:</strong> CaseString, Gender, Tissue_code</li>
-<li><strong>Age &lt; 90 Variables:</strong> CaseString, Gender, Tissue_code</li>
+<li><strong>Genotype variables:</strong> CFHrs10737680, CFHrs1061170, ARMS2rs10490924, SKIV2Lrs429608</li>
+<li><strong>Phenotype variables:</strong> GA_No_CNV_Either_Eye, CNV_Either_Eye</li>
+<li><strong>Treatment variables:</strong> AREDS</li>
+<li><strong>Other covariates:</strong> Gender, Tissue_code</li>
 </ul>
 </div>
 </div>
 </div>
-<div id="all-subgroups-casecontrol-only" class="section level2">
-<h2><span class="header-section-number">1.4</span> All Subgroups Case/Control Only</h2>
-<div id="create-workbook" class="section level3">
-<h3><span class="header-section-number">1.4.1</span> Create Workbook</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKClcbmBgYCJ9 -->
-<pre class="r"><code>deseq_results_wb = createWorkbook()</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<div id="run-and-add-worksheets" class="section level4">
-<h4><span class="header-section-number">1.4.1.1</span> Run and add worksheets</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyByZXN1bHRzX2RmID0gcnVuRGVzZXFGcm9tUGF0aHdheUNvdW50cyhcbiMgICBwYXRod2F5X2NvdW50cz1wYXRod2F5X2NvdW50c190YWJsZSxcbiMgICBzYW1wbGVfZGF0YSxcbiMgICB2YXJpYWJsZXM9XCJDYXNlU3RyaW5nXCIsXG4jICAgaW5jbHVkZV9jb3ZhcmlhdGVzID0gJ0FsbCdcbiMgICApXG5cbnJlc3VsdHNfZGYgPSBydW5EZXNlcUZyb21QYXRod2F5Q291bnRzKFxuICBwYXRod2F5X2NvdW50cz1rb19jb3VudHNfdGFibGUsXG4gIHNhbXBsZV9kYXRhLFxuICB2YXJpYWJsZXM9XCJDYXNlU3RyaW5nXCIsXG4gIGluY2x1ZGVfY292YXJpYXRlcyA9ICdBbGwnLFxuICBwYXRod2F5X2NvbG5hbWU9J0tPJ1xuICApXG5cbnBhZGpfY29sID0gXCJDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGpcIlxuXG5yZXN1bHRzX2RmID1cbiAgcmVzdWx0c19kZiAlPiVcbiAgc2VsZWN0KHBhdGh3YXksICEhcGFkal9jb2wsIGV2ZXJ5dGhpbmcoKSkgJT4lXG4gIGFycmFuZ2UoISFhcy5uYW1lKHBhZGpfY29sKSlcblxuYWRkV29ya3NoZWV0KFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXROYW1lPVwiXCJcbiAgKVxuXG5vcGVueGxzeDo6d3JpdGVEYXRhKFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIHg9cmVzdWx0c19kZlxuICApXG4gIFxuc2V0Q29sV2lkdGhzKFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIGNvbHM9MSwgXG4gIHdpZHRocyA9IFwiYXV0b1wiXG4pXG5cbmZyZWV6ZVBhbmUoXG4gIGRlc2VxX3Jlc3VsdHNfd2IsIFxuICBzaGVldD1cIlwiLCBcbiAgZmlyc3RDb2w9VCxcbiAgZmlyc3RSb3c9VFxuKVxuYGBgIn0= -->
-<pre class="r"><code># results_df = runDeseqFromPathwayCounts(
-#   pathway_counts=pathway_counts_table,
-#   sample_data,
-#   variables=&quot;CaseString&quot;,
-#   include_covariates = &#39;All&#39;
-#   )
-
-results_df = runDeseqFromPathwayCounts(
-  pathway_counts=ko_counts_table,
-  sample_data,
-  variables=&quot;CaseString&quot;,
-  include_covariates = &#39;All&#39;,
-  pathway_colname=&#39;KO&#39;
-  )
-
-padj_col = &quot;CaseString_AMD_vs_Control.padj&quot;
-
-results_df =
-  results_df %&gt;%
-  select(pathway, !!padj_col, everything()) %&gt;%
-  arrange(!!as.name(padj_col))
-
-addWorksheet(
-  wb=deseq_results_wb, 
-  sheetName=&quot;&quot;
-  )
-
-openxlsx::writeData(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  x=results_df
-  )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  cols=1, 
-  widths = &quot;auto&quot;
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  firstCol=T,
-  firstRow=T
-)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
+<div id="plots" class="section level2 tabset">
+<h2><span class="header-section-number">1.4</span> Plots</h2>
+<div id="close-1" class="section level3">
+<h3><span class="header-section-number">1.4.1</span> [ ] Close</h3>
 </div>
-<div id="save-workbook" class="section level4">
-<h4><span class="header-section-number">1.4.1.2</span> Save Workbook</h4>
+<div id="all-subgroups-casecontrol" class="section level3">
+<h3><span class="header-section-number">1.4.2</span> All Subgroups – Case/Control</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc19jYXNlX3ZzX2NvbnRyb2wueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKVxuYGBgIn0= -->
-<pre class="r"><code>filename = makeDataFileName(
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud2JfZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc19jYXNlX3ZzX2NvbnRyb2wueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuYGBgIn0= -->
+<pre class="r"><code>wb_filename = makeDataFileName(
   &#39;all_subgroups_case_vs_control.xlsx&#39;,
   &quot;${tables_dir}&quot;,
   &quot;${analysis_type}&quot;,
   &quot;${miseq_project_prefix}&quot;,
   &quot;rank&quot;
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-</div>
-</div>
-<div id="all-subgroups-all-variables" class="section level2">
-<h2><span class="header-section-number">1.5</span> All Subgroups – All Variables</h2>
-<div id="create-workbook-1" class="section level3">
-<h3><span class="header-section-number">1.5.1</span> Create Workbook</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKClcbmBgYCJ9 -->
-<pre class="r"><code>deseq_results_wb = createWorkbook()</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="run-and-add-worksheets-1" class="section level3">
-<h3><span class="header-section-number">1.5.2</span> Run and add worksheets</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0c19kZiA9IHJ1bkRlc2VxRnJvbVBhdGh3YXlDb3VudHMoXG4gIHBhdGh3YXlfY291bnRzPXBhdGh3YXlfY291bnRzX3RhYmxlLFxuICBzYW1wbGVfZGF0YSxcbiAgdmFyaWFibGVzPWFsbF9jb3ZhcmlhdGVzICU+JSBuYW1lcygpLFxuICBpbmNsdWRlX2NvdmFyaWF0ZXMgPSAnQWxsJ1xuICApXG4gIFxucGFkal9jb2wgPSBcIkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wucGFkalwiXG4gIFxucmVzdWx0c19kZiA9XG4gIHJlc3VsdHNfZGYgJT4lXG4gIHNlbGVjdChwYXRod2F5LCAhIXBhZGpfY29sLCBzdGFydHNfd2l0aChcIkNhc2VTdHJpbmdcIiksIGV2ZXJ5dGhpbmcoKSkgJT4lXG4gIGFycmFuZ2UoISFhcy5uYW1lKHBhZGpfY29sKSlcblxuYWRkV29ya3NoZWV0KFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXROYW1lPVwiXCJcbiAgKVxuXG5vcGVueGxzeDo6d3JpdGVEYXRhKFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIHg9cmVzdWx0c19kZlxuICApXG4gIFxuc2V0Q29sV2lkdGhzKFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIGNvbHM9MSwgXG4gIHdpZHRocyA9IFwiYXV0b1wiXG4pXG5cbmZyZWV6ZVBhbmUoXG4gIGRlc2VxX3Jlc3VsdHNfd2IsIFxuICBzaGVldD1cIlwiLCBcbiAgZmlyc3RDb2w9VCxcbiAgZmlyc3RSb3c9VFxuKVxuYGBgIn0= -->
-<pre class="r"><code>results_df = runDeseqFromPathwayCounts(
-  pathway_counts=pathway_counts_table,
-  sample_data,
-  variables=all_covariates %&gt;% names(),
-  include_covariates = &#39;All&#39;
-  )
-  
-padj_col = &quot;CaseString_AMD_vs_Control.padj&quot;
-  
-results_df =
-  results_df %&gt;%
-  select(pathway, !!padj_col, starts_with(&quot;CaseString&quot;), everything()) %&gt;%
-  arrange(!!as.name(padj_col))
-
-addWorksheet(
-  wb=deseq_results_wb, 
-  sheetName=&quot;&quot;
-  )
-
-openxlsx::writeData(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  x=results_df
-  )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  cols=1, 
-  widths = &quot;auto&quot;
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  firstCol=T,
-  firstRow=T
 )</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwiZmlsZW5hbWUgY3JlYXRlZDogJHt0YWJsZXNfZGlyfS8ke21pc2VxX3Byb2plY3RfcHJlZml4fV8ke2FuYWx5c2lzX3R5cGV9X3JhbmtfY2x1c3RfYWxsX3N1Ymdyb3Vwc19jYXNlX3ZzX2NvbnRyb2wueGxzeFwiXG4ifQ== -->
+<pre><code>[1] &quot;filename created: ${tables_dir}/${miseq_project_prefix}_${analysis_type}_rank_clust_all_subgroups_case_vs_control.xlsx&quot;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucHJpbnQod2JfZmlsZW5hbWUpXG5gYGAifQ== -->
+<pre class="r"><code>print(wb_filename)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwiJHt0YWJsZXNfZGlyfS8ke21pc2VxX3Byb2plY3RfcHJlZml4fV8ke2FuYWx5c2lzX3R5cGV9X3JhbmtfY2x1c3RfYWxsX3N1Ymdyb3Vwc19jYXNlX3ZzX2NvbnRyb2wueGxzeFwiXG4ifQ== -->
+<pre><code>[1] &quot;${tables_dir}/${miseq_project_prefix}_${analysis_type}_rank_clust_all_subgroups_case_vs_control.xlsx&quot;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGF0YSA9IFxuICByZWFkV29ya2Jvb2sod2JfZmlsZW5hbWUpIFxuYGBgIn0= -->
+<pre class="r"><code>data = 
+  readWorkbook(wb_filename) </code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gcmVhZC54bHN4LmRlZmF1bHQoeGxzeEZpbGUgPSB4bHN4RmlsZSwgc2hlZXQgPSBzaGVldCwgc3RhcnRSb3cgPSBzdGFydFJvdywgIDogXG4gIEZpbGUgZG9lcyBub3QgZXhpc3QuXG4ifQ== -->
+<pre><code>Error in read.xlsx.default(xlsxFile = xlsxFile, sheet = sheet, startRow = startRow,  : 
+  File does not exist.</code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="save-workbook-1" class="section level3">
-<h3><span class="header-section-number">1.5.3</span> Save Workbook</h3>
+<div id="all-subgroups-with-covariates" class="section level3">
+<h3><span class="header-section-number">1.4.3</span> All Subgroups – With Covariates</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc193aXRoX2NvdmFyaWF0ZXMueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKVxuYGBgIn0= -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;all_subgroups_with_covariates.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;rank&quot;
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-</div>
-<div id="age-90-casecontrol-only" class="section level2">
-<h2><span class="header-section-number">1.6</span> Age &lt; 90 Case/Control Only</h2>
-<div id="create-workbook-2" class="section level3">
-<h3><span class="header-section-number">1.6.1</span> Create Workbook</h3>
+<div id="age-90-casecontrol" class="section level3">
+<h3><span class="header-section-number">1.4.4</span> Age &lt; 90 – Case/Control</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKClcbmBgYCJ9 -->
-<pre class="r"><code>deseq_results_wb = createWorkbook()</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="run-and-add-worksheets-2" class="section level4">
-<h4><span class="header-section-number">1.6.1.1</span> Run and add worksheets</h4>
+</div>
+<div id="age-90-with-covariates" class="section level3">
+<h3><span class="header-section-number">1.4.5</span> Age &lt; 90 – With Covariates</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0c19kZiA9IHJ1bkRlc2VxRnJvbVBhdGh3YXlDb3VudHMoXG4gIGNvdW50c190YWJsZT1wYXRod2F5X2NvdW50c190YWJsZSxcbiAgc2FtcGxlX2RhdGEgJT4lIGZpbHRlcihBZ2UgPCA5MCksXG4gIHZhcmlhYmxlcz1cIkNhc2VTdHJpbmdcIixcbiAgaW5jbHVkZV9jb3ZhcmlhdGVzID0gJ0FsbCdcbiAgKVxuXG5wYWRqX2NvbCA9IFwiQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqXCJcblxucmVzdWx0c19kZiA9XG4gIHJlc3VsdHNfZGYgJT4lXG4gIHNlbGVjdChwYXRod2F5LCAhIXBhZGpfY29sLCBldmVyeXRoaW5nKCkpICU+JVxuICBhcnJhbmdlKCEhYXMubmFtZShwYWRqX2NvbCkpXG5cbmFkZFdvcmtzaGVldChcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0TmFtZT1cIlwiXG4gIClcblxub3Blbnhsc3g6OndyaXRlRGF0YShcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0PVwiXCIsIFxuICB4PXJlc3VsdHNfZGZcbiAgKVxuICBcbnNldENvbFdpZHRocyhcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0PVwiXCIsIFxuICBjb2xzPTEsIFxuICB3aWR0aHMgPSBcImF1dG9cIlxuKVxuXG5mcmVlemVQYW5lKFxuICBkZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIGZpcnN0Q29sPVQsXG4gIGZpcnN0Um93PVRcbilcbmBgYCJ9 -->
-<pre class="r"><code>results_df = runDeseqFromPathwayCounts(
-  counts_table=pathway_counts_table,
-  sample_data %&gt;% filter(Age &lt; 90),
-  variables=&quot;CaseString&quot;,
-  include_covariates = &#39;All&#39;
-  )
-
-padj_col = &quot;CaseString_AMD_vs_Control.padj&quot;
-
-results_df =
-  results_df %&gt;%
-  select(pathway, !!padj_col, everything()) %&gt;%
-  arrange(!!as.name(padj_col))
-
-addWorksheet(
-  wb=deseq_results_wb, 
-  sheetName=&quot;&quot;
-  )
-
-openxlsx::writeData(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  x=results_df
-  )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  cols=1, 
-  widths = &quot;auto&quot;
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  firstCol=T,
-  firstRow=T
-)</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="save-workbook-2" class="section level4">
-<h4><span class="header-section-number">1.6.1.2</span> Save Workbook</h4>
+<div id="amd-only-individual-variables" class="section level3">
+<h3><span class="header-section-number">1.4.6</span> AMD Only – individual variables</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc19jYXNlX3ZzX2NvbnRyb2wueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKVxuYGBgIn0= -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;all_subgroups_case_vs_control.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;rank&quot;
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-</div>
-</div>
-<div id="age-90-all-variables" class="section level2">
-<h2><span class="header-section-number">1.7</span> Age &lt; 90 – All Variables</h2>
-<div id="create-workbook-3" class="section level3">
-<h3><span class="header-section-number">1.7.1</span> Create Workbook</h3>
+<div id="amd-only-genotypes-phenotypes-and-areds-with-controls" class="section level3">
+<h3><span class="header-section-number">1.4.7</span> AMD Only – Genotypes, Phenotypes, and AREDS with Controls</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKClcbmBgYCJ9 -->
-<pre class="r"><code>deseq_results_wb = createWorkbook()</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="run-and-add-worksheets-3" class="section level3">
-<h3><span class="header-section-number">1.7.2</span> Run and add worksheets</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0c19kZiA9IHJ1bkRlc2VxRnJvbVBhdGh3YXlDb3VudHMoXG4gIGNvdW50c190YWJsZT1wYXRod2F5X2NvdW50c190YWJsZSxcbiAgc2FtcGxlX2RhdGEgJT4lIGZpbHRlcihBZ2UgPCA5MCksXG4gIHZhcmlhYmxlcz1hZ2VfbHRfOTBfY292YXJpYXRlcyAlPiUgbmFtZXMoKSxcbiAgaW5jbHVkZV9jb3ZhcmlhdGVzID0gJ0FsbCdcbiAgKVxuICBcbnBhZGpfY29sID0gXCJDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGpcIlxuICBcbnJlc3VsdHNfZGYgPVxuICByZXN1bHRzX2RmICU+JVxuICBzZWxlY3QocGF0aHdheSwgISFwYWRqX2NvbCwgc3RhcnRzX3dpdGgoXCJDYXNlU3RyaW5nXCIpLCBldmVyeXRoaW5nKCkpICU+JVxuICBhcnJhbmdlKCEhYXMubmFtZShwYWRqX2NvbCkpXG5cbmFkZFdvcmtzaGVldChcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0TmFtZT1cIlwiXG4gIClcblxub3Blbnhsc3g6OndyaXRlRGF0YShcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0PVwiXCIsIFxuICB4PXJlc3VsdHNfZGZcbiAgKVxuICBcbnNldENvbFdpZHRocyhcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0PVwiXCIsIFxuICBjb2xzPTEsIFxuICB3aWR0aHMgPSBcImF1dG9cIlxuKVxuXG5mcmVlemVQYW5lKFxuICBkZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIGZpcnN0Q29sPVQsXG4gIGZpcnN0Um93PVRcbilcbmBgYCJ9 -->
-<pre class="r"><code>results_df = runDeseqFromPathwayCounts(
-  counts_table=pathway_counts_table,
-  sample_data %&gt;% filter(Age &lt; 90),
-  variables=age_lt_90_covariates %&gt;% names(),
-  include_covariates = &#39;All&#39;
-  )
-  
-padj_col = &quot;CaseString_AMD_vs_Control.padj&quot;
-  
-results_df =
-  results_df %&gt;%
-  select(pathway, !!padj_col, starts_with(&quot;CaseString&quot;), everything()) %&gt;%
-  arrange(!!as.name(padj_col))
-
-addWorksheet(
-  wb=deseq_results_wb, 
-  sheetName=&quot;&quot;
-  )
-
-openxlsx::writeData(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  x=results_df
-  )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  cols=1, 
-  widths = &quot;auto&quot;
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  firstCol=T,
-  firstRow=T
-)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="save-workbook-3" class="section level3">
-<h3><span class="header-section-number">1.7.3</span> Save Workbook</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc193aXRoX2NvdmFyaWF0ZXMueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKVxuYGBgIn0= -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;all_subgroups_with_covariates.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;rank&quot;
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
@@ -2366,7 +1984,7 @@ saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
 </div>
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAogIC5kYXRhVGFibGUgewogICAgZm9udC1zaXplOiA5cHQ7CiAgfQogIAo8L3N0eWxlPgoKYGBge3J9CnNvdXJjZSgnJHtwcm9qZWN0X21ldGFkYXRhX2ZpbGV9JykKYW5hbHlzaXNfdHlwZSA9ICIke2FuYWx5c2lzX3R5cGV9IgpjbHVzdGVyaW5nX2xldmVsID0gIiR7Y2x1c3RlcmluZ19sZXZlbH0iCnRhYmxlc19kaXIgPSAiJHt0YWJsZXNfZGlyfSIKdXNlX2FsbGJhYyA9ICR7dXNlX2FsbGJhY30KYW5hbHlzaXNfdGl0bGUgPSB0b29sczo6dG9UaXRsZUNhc2UoZ3N1YigiXyIsICIgIiwgYW5hbHlzaXNfdHlwZSkpCmBgYAoKIyBNaVNlcS0ke21pc2VxX3J1bl9udW1iZXJ9IERFU2VxMiBBbmFseXNpcyB7LnRhYnNldH0KCiMjIENsdXN0ZXJpbmcKRGF0YSBjbHVzdGVyZWQgYXQgdGhlIGByIHRvdXBwZXIoIiR7Y2x1c3RlcmluZ19sZXZlbH0iKWAgbGV2ZWwuCgojIyBGaWx0ZXJpbmcKKiAqKlJlbGF0aXZlIEFidW5kYW5jZSBDdXRvZmY6KiogJHtyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmfQoqICoqUHJldmFsZW5jZSBDdXRvZmY6KiogJHtwcmV2YWxlbmNlX2N1dG9mZn0KKiAqKk1pbiBDb3VudCBDdXRvZmY6KiogJHttaW5fY291bnRfY3V0b2ZmfQoKCiMjIFNldHVwIAoKIyMjIFtDbG9zZV0KCiMjIyBTdGFydCBDb25kYSBFTlYKYGBge3J9CnN0YXJ0Q29uZGFFbnYoJ2Rlc2VxJywgbGliPSd+L1IzNScpCmBgYAoKIyMjIExvYWQgTGlicmFyaWVzCmBgYHtyfQpsaWJyYXJ5KHJtYXJrZG93bikKbGlicmFyeSh0aWR5dmVyc2UpCmxpYnJhcnkobWFncml0dHIpCmxpYnJhcnkoZ2dwbG90MikKbGlicmFyeShvcGVueGxzeCkKbGlicmFyeShEVCkKbGlicmFyeShrYWJsZUV4dHJhKQpsaWJyYXJ5KERFU2VxMikKCiMjIyBDdXN0b20gbGlicmFyaWVzIHRoYXQgY2FuIGJlIGxvYWRlZCBmcm9tIEdpdEh1Ygpzb3VyY2UoJ34vdXRpbGl0aWVzL2FuYWx5c2lzLXV0aWxpdGllcy9nZW5lcmFsX2Fzdl9kYXRhX2FuYWx5c2lzX3V0aWxpdGllcy5SJykKc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZGVzZXFfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FtZF90ZW1wbGF0ZXMvc2V0dXAvYW1kX3Byb2plY3RfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FuYWx5c2lzLXV0aWxpdGllcy9wYXRod2F5X3V0aWxpdGllcy5SJykKYGBgCgojIyMgU2V0IEtuaXRyIE9wdGlvbnMKYGBge3J9CiR7a25pdHJfb3B0aW9uc30KYGBgCgojIyMgTG9hZCBEYXRhCmBgYHtyfQojIHBhdGh3YXlfY291bnRzX3RhYmxlX2ZpbGUgPSBmaWxlLnBhdGgoCiMgICAiJHt0YWJsZXNfZGlyfSIsCiMgICAicGljcnVzdF9vdXQiLAojICAgInBhdGh3YXlzX291dCIsCiMgICAibWlzZXEtJHttaXNlcV9ydW5fbnVtYmVyfV9wYXRoX2FidW5fdW5zdHJhdC54bHN4IgojICkKIyAKIyBwYXRod2F5X2NvdW50c190YWJsZSA9IHJlYWQueGxzeCgKIyAgIHBhdGh3YXlfY291bnRzX3RhYmxlX2ZpbGUsCiMgICBjb2xOYW1lcz1UCiMgICApCgoKa29fY291bnRzX3RhYmxlX2ZpbGUgPSBmaWxlLnBhdGgoCiAgIiR7dGFibGVzX2Rpcn0iLAogICJwaWNydXN0X291dCIsCiAgIktPX21ldGFnZW5vbWVfb3V0IiwKICAibWlzZXEtMjM5X3ByZWRfbWV0YWdlbm9tZV91bnN0cmF0Lnhsc3giCikKCmtvX2NvdW50c190YWJsZSA9IHJlYWQueGxzeCgKICBrb19jb3VudHNfdGFibGVfZmlsZSwKICBjb2xOYW1lcz1UCiAgKQoKc2FtcGxlX2RhdGEgPSByZWFkLnhsc3goCiAgJyR7c2FtcGxlX2RhdGFfZmlsZX0nLAogIGNvbE5hbWVzPVQKICApCgppZiAoIklHQSIgJWluJSBjb2xuYW1lcyhzYW1wbGVfZGF0YSkgJiB1c2VfYWxsYmFjKQp7CiAgc2FtcGxlX2RhdGEgPSAKICAgIHNhbXBsZV9kYXRhICU+JQogICAgZmlsdGVyKElHQT09J0FsbEJhYycpCgogIHNhbXBsZV9uYW1lcyA9IHNhbXBsZV9kYXRhJFNhbXBsZU5hbWUKICAKICBhc3ZfdGFibGUgPSAKICAgIGFzdl90YWJsZSAlPiUKICAgIHNlbGVjdCgnQVNWcycsIGVuZHNfd2l0aCgnQWxsQmFjJykpCn0KCnNhbXBsZV9kYXRhX2NvbHVtbnMgPSBjb2xuYW1lcyhzYW1wbGVfZGF0YSkKc2FtcGxlX25hbWVzID0gc2FtcGxlX2RhdGEkU2FtcGxlTmFtZQoKc291cmNlKGZpbGUucGF0aCgKICAiJHtwcm9qZWN0X3Jvb3R9IiwgCiAgIiR7bWV0YWRhdGFfZGlyfSIsIAogICdvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcy5SJwogICkpCgpgYGAKCiMjIyBJbnRlZ2VyaXplIHBhdGh3YXkgY291bnRzCmBgYHtyfQpwYXRod2F5X2NvdW50c190YWJsZSA9IAogIHBhdGh3YXlfY291bnRzX3RhYmxlICU+JQogIHJlbW92ZV9yb3duYW1lcygpICU+JQogIG11dGF0ZV9hdCh2YXJzKHNhbXBsZV9uYW1lcyksIH5mbG9vciguKzAuMDAwMDAwMDEpKQoKa29fY291bnRzX3RhYmxlID0gCiAga29fY291bnRzX3RhYmxlICU+JQogIHJlbW92ZV9yb3duYW1lcygpICU+JQogIG11dGF0ZV9hdCh2YXJzKHNhbXBsZV9uYW1lcyksIH5mbG9vciguKzAuMDAwMDAwMDEpKSAlPiUKICByZW5hbWUoS089ZnVuY3Rpb24uKQpgYGAKCgojIyMgU2V0IE1ldGFkYXRhIEZhY3RvciBMZXZlbHMKYGBge3J9CnNhbXBsZV9kYXRhID0gc2V0RmFjdG9yc0xldmVscyhzYW1wbGVfZGF0YSwgb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMpCiMgc2FtcGxlX2RhdGEgJTw+JQojICAgbXV0YXRlKEFSRURTPQojICAgICBpZmVsc2UoaXMubmEoQVJFRFMpLCAiTUlTU0lORyIsIEFSRURTKSAlPiUKIyAgICAgZmFjdG9yKGxldmVscz1jKCdOJywgJ1knLCAnTUlTU0lORycpKQojICAgKQpgYGAKCiMjIyBWYXJpYWJsZXMgb2YgaW50ZXJlc3QKIyMjIyBPYnNlcnZhdGlvbmFsIFZhcmlhYmxlcwpgYGB7cn0KYWxsX2NvdmFyaWF0ZXMgPSBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1ske2xpbmVhcl9yZWdyZXNzaW9uX3ByZWRpY3RvcnNbJ0FsbCddfV0KYWdlX2x0XzkwX2NvdmFyaWF0ZXMgPSBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1ske2xpbmVhcl9yZWdyZXNzaW9uX3ByZWRpY3RvcnNbJ0FnZV9sdF85MCddfV0KZ2Vub3R5cGVzID0gJHtnZW5vdHlwZXN9CnBoZW5vdHlwZXMgPSAke3BoZW5vdHlwZXN9CmBgYAoKIyMjIyBSZW1vdmUgQWdlCmBgYHtyfQphbGxfY292YXJpYXRlcyRBZ2UgPSBOVUxMCmFnZV9sdF85MF9jb3ZhcmlhdGVzJEFnZSA9IE5VTEwKYGBgCgoqICoqQWxsIFZhcmlhYmxlczoqKiBgciBhbGxfY292YXJpYXRlcyAlPiUgbmFtZXMoKWAKKiAqKkFnZSA8IDkwIFZhcmlhYmxlczoqKiBgciBhZ2VfbHRfOTBfY292YXJpYXRlcyAlPiUgbmFtZXMoKWAKCiMjIEFsbCBTdWJncm91cHMgQ2FzZS9Db250cm9sIE9ubHkKIyMjIENyZWF0ZSBXb3JrYm9vawpgYGB7cn0KZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKCkKYGBgCgojIyMjIFJ1biBhbmQgYWRkIHdvcmtzaGVldHMKYGBge3J9CiMgcmVzdWx0c19kZiA9IHJ1bkRlc2VxRnJvbVBhdGh3YXlDb3VudHMoCiMgICBwYXRod2F5X2NvdW50cz1wYXRod2F5X2NvdW50c190YWJsZSwKIyAgIHNhbXBsZV9kYXRhLAojICAgdmFyaWFibGVzPSJDYXNlU3RyaW5nIiwKIyAgIGluY2x1ZGVfY292YXJpYXRlcyA9ICdBbGwnCiMgICApCgpyZXN1bHRzX2RmID0gcnVuRGVzZXFGcm9tUGF0aHdheUNvdW50cygKICBwYXRod2F5X2NvdW50cz1rb19jb3VudHNfdGFibGUsCiAgc2FtcGxlX2RhdGEsCiAgdmFyaWFibGVzPSJDYXNlU3RyaW5nIiwKICBpbmNsdWRlX2NvdmFyaWF0ZXMgPSAnQWxsJywKICBwYXRod2F5X2NvbG5hbWU9J0tPJwogICkKCnBhZGpfY29sID0gIkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wucGFkaiIKCnJlc3VsdHNfZGYgPQogIHJlc3VsdHNfZGYgJT4lCiAgc2VsZWN0KHBhdGh3YXksICEhcGFkal9jb2wsIGV2ZXJ5dGhpbmcoKSkgJT4lCiAgYXJyYW5nZSghIWFzLm5hbWUocGFkal9jb2wpKQoKYWRkV29ya3NoZWV0KAogIHdiPWRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0TmFtZT0iIgogICkKCm9wZW54bHN4Ojp3cml0ZURhdGEoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIHg9cmVzdWx0c19kZgogICkKICAKc2V0Q29sV2lkdGhzKAogIHdiPWRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0PSIiLCAKICBjb2xzPTEsIAogIHdpZHRocyA9ICJhdXRvIgopCgpmcmVlemVQYW5lKAogIGRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0PSIiLCAKICBmaXJzdENvbD1ULAogIGZpcnN0Um93PVQKKQpgYGAKCiMjIyMgU2F2ZSBXb3JrYm9vawpgYGB7cn0KZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKAogICdhbGxfc3ViZ3JvdXBzX2Nhc2VfdnNfY29udHJvbC54bHN4JywKICAiJHt0YWJsZXNfZGlyfSIsCiAgIiR7YW5hbHlzaXNfdHlwZX0iLAogICIke21pc2VxX3Byb2plY3RfcHJlZml4fSIsCiAgInJhbmsiCikKCnByaW50KGZpbGVuYW1lKQoKc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKQpgYGAKCiMjIEFsbCBTdWJncm91cHMgLS0gQWxsIFZhcmlhYmxlcwojIyMgQ3JlYXRlIFdvcmtib29rCmBgYHtyfQpkZXNlcV9yZXN1bHRzX3diID0gY3JlYXRlV29ya2Jvb2soKQpgYGAKCiMjIyBSdW4gYW5kIGFkZCB3b3Jrc2hlZXRzCmBgYHtyfQpyZXN1bHRzX2RmID0gcnVuRGVzZXFGcm9tUGF0aHdheUNvdW50cygKICBwYXRod2F5X2NvdW50cz1wYXRod2F5X2NvdW50c190YWJsZSwKICBzYW1wbGVfZGF0YSwKICB2YXJpYWJsZXM9YWxsX2NvdmFyaWF0ZXMgJT4lIG5hbWVzKCksCiAgaW5jbHVkZV9jb3ZhcmlhdGVzID0gJ0FsbCcKICApCiAgCnBhZGpfY29sID0gIkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wucGFkaiIKICAKcmVzdWx0c19kZiA9CiAgcmVzdWx0c19kZiAlPiUKICBzZWxlY3QocGF0aHdheSwgISFwYWRqX2NvbCwgc3RhcnRzX3dpdGgoIkNhc2VTdHJpbmciKSwgZXZlcnl0aGluZygpKSAlPiUKICBhcnJhbmdlKCEhYXMubmFtZShwYWRqX2NvbCkpCgphZGRXb3Jrc2hlZXQoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXROYW1lPSIiCiAgKQoKb3Blbnhsc3g6OndyaXRlRGF0YSgKICB3Yj1kZXNlcV9yZXN1bHRzX3diLCAKICBzaGVldD0iIiwgCiAgeD1yZXN1bHRzX2RmCiAgKQogIApzZXRDb2xXaWR0aHMoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIGNvbHM9MSwgCiAgd2lkdGhzID0gImF1dG8iCikKCmZyZWV6ZVBhbmUoCiAgZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIGZpcnN0Q29sPVQsCiAgZmlyc3RSb3c9VAopCmBgYAoKIyMjIFNhdmUgV29ya2Jvb2sKYGBge3J9CmZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZSgKICAnYWxsX3N1Ymdyb3Vwc193aXRoX2NvdmFyaWF0ZXMueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICJyYW5rIgopCgpwcmludChmaWxlbmFtZSkKCnNhdmVXb3JrYm9vayhkZXNlcV9yZXN1bHRzX3diLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VCkKYGBgCgoKIyMgQWdlIDwgOTAgQ2FzZS9Db250cm9sIE9ubHkKIyMjIENyZWF0ZSBXb3JrYm9vawpgYGB7cn0KZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKCkKYGBgCgojIyMjIFJ1biBhbmQgYWRkIHdvcmtzaGVldHMKYGBge3J9CnJlc3VsdHNfZGYgPSBydW5EZXNlcUZyb21QYXRod2F5Q291bnRzKAogIGNvdW50c190YWJsZT1wYXRod2F5X2NvdW50c190YWJsZSwKICBzYW1wbGVfZGF0YSAlPiUgZmlsdGVyKEFnZSA8IDkwKSwKICB2YXJpYWJsZXM9IkNhc2VTdHJpbmciLAogIGluY2x1ZGVfY292YXJpYXRlcyA9ICdBbGwnCiAgKQoKcGFkal9jb2wgPSAiQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqIgoKcmVzdWx0c19kZiA9CiAgcmVzdWx0c19kZiAlPiUKICBzZWxlY3QocGF0aHdheSwgISFwYWRqX2NvbCwgZXZlcnl0aGluZygpKSAlPiUKICBhcnJhbmdlKCEhYXMubmFtZShwYWRqX2NvbCkpCgphZGRXb3Jrc2hlZXQoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXROYW1lPSIiCiAgKQoKb3Blbnhsc3g6OndyaXRlRGF0YSgKICB3Yj1kZXNlcV9yZXN1bHRzX3diLCAKICBzaGVldD0iIiwgCiAgeD1yZXN1bHRzX2RmCiAgKQogIApzZXRDb2xXaWR0aHMoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIGNvbHM9MSwgCiAgd2lkdGhzID0gImF1dG8iCikKCmZyZWV6ZVBhbmUoCiAgZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIGZpcnN0Q29sPVQsCiAgZmlyc3RSb3c9VAopCmBgYAoKIyMjIyBTYXZlIFdvcmtib29rCmBgYHtyfQpmaWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FsbF9zdWJncm91cHNfY2FzZV92c19jb250cm9sLnhsc3gnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAicmFuayIKKQoKcHJpbnQoZmlsZW5hbWUpCgpzYXZlV29ya2Jvb2soZGVzZXFfcmVzdWx0c193YiwgZmlsZT1maWxlbmFtZSwgb3ZlcndyaXRlPVQpCmBgYAoKIyMgQWdlIDwgOTAgLS0gQWxsIFZhcmlhYmxlcwojIyMgQ3JlYXRlIFdvcmtib29rCmBgYHtyfQpkZXNlcV9yZXN1bHRzX3diID0gY3JlYXRlV29ya2Jvb2soKQpgYGAKCiMjIyBSdW4gYW5kIGFkZCB3b3Jrc2hlZXRzCmBgYHtyfQpyZXN1bHRzX2RmID0gcnVuRGVzZXFGcm9tUGF0aHdheUNvdW50cygKICBjb3VudHNfdGFibGU9cGF0aHdheV9jb3VudHNfdGFibGUsCiAgc2FtcGxlX2RhdGEgJT4lIGZpbHRlcihBZ2UgPCA5MCksCiAgdmFyaWFibGVzPWFnZV9sdF85MF9jb3ZhcmlhdGVzICU+JSBuYW1lcygpLAogIGluY2x1ZGVfY292YXJpYXRlcyA9ICdBbGwnCiAgKQogIApwYWRqX2NvbCA9ICJDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGoiCiAgCnJlc3VsdHNfZGYgPQogIHJlc3VsdHNfZGYgJT4lCiAgc2VsZWN0KHBhdGh3YXksICEhcGFkal9jb2wsIHN0YXJ0c193aXRoKCJDYXNlU3RyaW5nIiksIGV2ZXJ5dGhpbmcoKSkgJT4lCiAgYXJyYW5nZSghIWFzLm5hbWUocGFkal9jb2wpKQoKYWRkV29ya3NoZWV0KAogIHdiPWRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0TmFtZT0iIgogICkKCm9wZW54bHN4Ojp3cml0ZURhdGEoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIHg9cmVzdWx0c19kZgogICkKICAKc2V0Q29sV2lkdGhzKAogIHdiPWRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0PSIiLCAKICBjb2xzPTEsIAogIHdpZHRocyA9ICJhdXRvIgopCgpmcmVlemVQYW5lKAogIGRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0PSIiLCAKICBmaXJzdENvbD1ULAogIGZpcnN0Um93PVQKKQpgYGAKCiMjIyBTYXZlIFdvcmtib29rCmBgYHtyfQpmaWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FsbF9zdWJncm91cHNfd2l0aF9jb3ZhcmlhdGVzLnhsc3gnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAicmFuayIKKQoKcHJpbnQoZmlsZW5hbWUpCgpzYXZlV29ya2Jvb2soZGVzZXFfcmVzdWx0c193YiwgZmlsZT1maWxlbmFtZSwgb3ZlcndyaXRlPVQpCmBgYAoK</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAo8L3N0eWxlPgoKYGBge3J9CnNvdXJjZSgnJHtwcm9qZWN0X21ldGFkYXRhX2ZpbGV9JykKYW5hbHlzaXNfdHlwZSA9ICIke2FuYWx5c2lzX3R5cGV9IgpjbHVzdGVyaW5nX2xldmVsID0gIiR7Y2x1c3RlcmluZ19sZXZlbH0iCnRhYmxlc19kaXIgPSAiJHt0YWJsZXNfZGlyfSIKYW5hbHlzaXNfdHlwZV90aXRsZSA9IHRvb2xzOjp0b1RpdGxlQ2FzZShnc3ViKCJfIiwgIiAiLCBhbmFseXNpc190eXBlKSkKcmFuayA9ICIke2NsdXN0ZXJpbmdfbGV2ZWx9IgpgYGAKCiMgTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSBgciBhbmFseXNpc190eXBlYCBEaWZmZXJlbnRpYWwgQWJ1bmRhbmNlIFBsb3Rzey50YWJzZXR9ClJlZ3Jlc3Npb24gY29lZmZpY2llbnRzIGFzIGVmZmVjdCBzaXplLgoKCiMjIENsdXN0ZXJpbmcgTGV2ZWwKRGF0YSBjbHVzdGVyZWQgYXQgdGhlIGByIHRvdXBwZXIoJyR7Y2x1c3RlcmluZ19sZXZlbH0nKWAgTGV2ZWwuCgojIyBGaWx0ZXJpbmcKKiAqKlJlbGF0aXZlIEFidW5kYW5jZSBDdXRvZmY6KiogJHtyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmfQoqICoqUHJldmFsZW5jZSBDdXRvZmY6KiogJHtwcmV2YWxlbmNlX2N1dG9mZn0KKiAqKk1pbiBDb3VudCBDdXRvZmY6KiogJHttaW5fY291bnRfY3V0b2ZmfQoKIyMgU2V0dXAgey50YWJzZXR9CgojIyMgW0Nsb3NlXQoKIyMjIFN0YXJ0IENvbmRhIEVOVgpgYGB7cn0Kc3RhcnRDb25kYUVudignZGVzZXEnLCBsaWI9In4vUjM1IikKYGBgCgojIyMgTG9hZCBMaWJyYXJpZXMKYGBge3J9CiMgbGlicmFyeShybWFya2Rvd24pCmxpYnJhcnkodGlkeXZlcnNlKQpsaWJyYXJ5KG1hZ3JpdHRyKQpsaWJyYXJ5KGdncGxvdDIpCmxpYnJhcnkoZ2diZWVzd2FybSkKbGlicmFyeShvcGVueGxzeCkKbGlicmFyeShEVCkKbGlicmFyeShwaGVhdG1hcCkKbGlicmFyeShrYWJsZUV4dHJhKQojIGxpYnJhcnkodmVnYW4pCmxpYnJhcnkobmxtZSkKbGlicmFyeSh0b29scykKCiMjIyBDdXN0b20gbGlicmFyaWVzIHRoYXQgY2FuIGJlIGxvYWRlZCBmcm9tIEdpdEh1Ygpzb3VyY2UoJ34vdXRpbGl0aWVzL2FuYWx5c2lzLXV0aWxpdGllcy9nZW5lcmFsX2Fzdl9kYXRhX2FuYWx5c2lzX3V0aWxpdGllcy5SJykKc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZGVzZXFfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FtZF90ZW1wbGF0ZXMvc2V0dXAvYW1kX3Byb2plY3RfdXRpbGl0aWVzLlInKQpgYGAKCiMjIyBTZXQgS25pdHIgT3B0aW9ucwpgYGB7cn0KJHtrbml0cl9vcHRpb25zfQpgYGAKCiMjIyBMb2FkIERhdGEKYGBge3J9CnNhbXBsZV9kYXRhID0gcmVhZC54bHN4KCcke3NhbXBsZV9kYXRhX2ZpbGV9JykKCnNvdXJjZShmaWxlLnBhdGgoCiAgIiR7cHJvamVjdF9yb290fSIsIAogICIke21ldGFkYXRhX2Rpcn0iLCAKICAnb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMuUicKICApKQoKYGBgCgoKIyMjIFZhcmlhYmxlcyBvZiBpbnRlcmVzdAojIyMjIE9ic2VydmF0aW9uYWwgVmFyaWFibGVzCmBgYHtyfQpnZW5vdHlwZXMgPSAke2dlbm90eXBlc30KcGhlbm90eXBlcyA9ICR7cGhlbm90eXBlc30Ka2V5X2NvdmFyaWF0ZXMgPSAke2tleV9jb3ZhcmlhdGVzfQp0cmVhdG1lbnRzID0gJHt0cmVhdG1lbnRzfQphbWRfb25seV92YXJpYWJsZXMgPSBjKGtleV9jb3ZhcmlhdGVzLCB0cmVhdG1lbnRzLCBwaGVub3R5cGVzLCBnZW5vdHlwZXMpICU+JSB1bmlxdWUoKQpgYGAKCiMjIyMgUmVtb3ZlIEFnZQpgYGB7cn0Ka2V5X2NvdmFyaWF0ZXMgJTw+JSBzZXRkaWZmKCdBZ2UnKQphbWRfb25seV92YXJpYWJsZXMgJTw+JSBzZXRkaWZmKCdBZ2UnKQphbWRfb25seV92YXJpYWJsZXMgJTw+JSBzZXRkaWZmKCdBZ2UnKQpgYGAKCiogKipHZW5vdHlwZSB2YXJpYWJsZXM6KiogYHIgZ2Vub3R5cGVzYAoqICoqUGhlbm90eXBlIHZhcmlhYmxlczoqKiBgciBwaGVub3R5cGVzYAoqICoqVHJlYXRtZW50IHZhcmlhYmxlczoqKiBgciB0cmVhdG1lbnRzYAoqICoqT3RoZXIgY292YXJpYXRlczoqKiAgYHIga2V5X2NvdmFyaWF0ZXNgCgojIyBQbG90cyB7LnRhYnNldH0KIyMjIFsgXSBDbG9zZQoKIyMjIEFsbCBTdWJncm91cHMgLS0gQ2FzZS9Db250cm9sCmBgYHtyLCBmaWcud2lkdGg9MTB9CndiX2ZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZSgKICAnYWxsX3N1Ymdyb3Vwc19jYXNlX3ZzX2NvbnRyb2wueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICJyYW5rIgopCgpwcmludCh3Yl9maWxlbmFtZSkKCmRhdGEgPSAKICByZWFkV29ya2Jvb2sod2JfZmlsZW5hbWUpIAoKIyBzaWdfZGF0YSA9IGRhdGEgJT4lIGZpbHRlcihDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGogPD0gMC4yKQpzaWdfZGF0YSA9IGRhdGEgJT4lIGFycmFuZ2UoQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqKSAlPiUgaGVhZCgyMCkKCmlmIChkaW0oc2lnX2RhdGEpWzFdIDwgMSkKewogIAp9IGVsc2UKewogIHBsb3RFZmZlY3RTaXplMigKICAgIGRhdGE9c2lnX2RhdGEsCiAgICBlZmZlY3Rfc2l6ZV9jb2w9IkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wuTDJGQyIsCiAgICBlZmZlY3Rfc2l6ZV9sZWdlbmRfdGl0bGU9IkFidW5kYW5jZSBpbiBBTUQiLAogICAgZmVhdHVyZV9jb2w9IlBhdGh3YXlOYW1lIiwKICAgIGFscGhhX2NvbD0nQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqJywKICAgIGFscGhhX2xlZ2VuZF90aXRsZT0iQWRqdXN0ZWQgUC1WYWx1ZXMiLAogICAgcGxvdF90aXRsZT1wYXN0ZTAocmFuaywiOiBBTUQvQ29udHJvbDogTG9nMiBGb2xkIENoYW5nZSIpCiAgKQp9CiAgCgpgYGAKCiMjIyBBbGwgU3ViZ3JvdXBzIC0tIFdpdGggQ292YXJpYXRlcwpgYGB7ciwgZmlnLndpZHRoPTEwfQp3Yl9maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FsbF9zdWJncm91cHNfd2l0aF9jb3ZhcmlhdGVzLnhsc3gnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAicmFuayIKKQoKcHJpbnQod2JfZmlsZW5hbWUpCgpkYXRhID0gCiAgcmVhZFdvcmtib29rKHdiX2ZpbGVuYW1lKSAKCiMgc2lnX2RhdGEgPSBkYXRhICU+JSBmaWx0ZXIoQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqIDw9IDAuMikKc2lnX2RhdGEgPSBkYXRhICU+JSBhcnJhbmdlKENhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wucGFkaikgJT4lIGhlYWQoMjApCgoKaWYgKGRpbShzaWdfZGF0YSlbMV0gPCAxKQp7CiAgCn0gZWxzZQp7CgogIHBsb3RFZmZlY3RTaXplMigKICAgIGRhdGE9c2lnX2RhdGEsCiAgICBlZmZlY3Rfc2l6ZV9jb2w9IkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wuTDJGQyIsCiAgICBlZmZlY3Rfc2l6ZV9sZWdlbmRfdGl0bGU9IkFidW5kYW5jZSBpbiBBTUQiLAogICAgZmVhdHVyZV9jb2w9IlBhdGh3YXlOYW1lIiwKICAgIGFscGhhX2NvbD0nQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqJywKICAgIGFscGhhX2xlZ2VuZF90aXRsZT0iQWRqdXN0ZWQgUC1WYWx1ZXMiLAogICAgcGxvdF90aXRsZT1wYXN0ZTAocmFuaywiOiBBTUQvQ29udHJvbCArIEdlbmRlciArIFRpc3N1ZV9jb2RlOiBMb2cyIEZvbGQgQ2hhbmdlIikKICApCn0KYGBgCgoKIyMjIEFnZSA8IDkwIC0tIENhc2UvQ29udHJvbApgYGB7ciwgZmlnLndpZHRoPTEwfQp3Yl9maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FnZV9sdF85MF9jYXNlX3ZzX2NvbnRyb2wueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICJyYW5rIgopCgpwcmludCh3Yl9maWxlbmFtZSkKCmRhdGEgPSAKICByZWFkV29ya2Jvb2sod2JfZmlsZW5hbWUpIAoKIyBzaWdfZGF0YSA9IGRhdGEgJT4lIGZpbHRlcihDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGogPD0gMC4yKQpzaWdfZGF0YSA9IGRhdGEgJT4lIGFycmFuZ2UoQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqKSAlPiUgaGVhZCgyMCkKCmlmIChkaW0oc2lnX2RhdGEpWzFdIDwgMSkKewogIAp9IGVsc2UKewogIHBsb3RFZmZlY3RTaXplMigKICAgIGRhdGE9c2lnX2RhdGEsCiAgICBlZmZlY3Rfc2l6ZV9jb2w9IkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wuTDJGQyIsCiAgICBlZmZlY3Rfc2l6ZV9sZWdlbmRfdGl0bGU9IkFidW5kYW5jZSBpbiBBTUQiLAogICAgZmVhdHVyZV9jb2w9IlBhdGh3YXlOYW1lIiwKICAgIGFscGhhX2NvbD0nQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqJywKICAgIGFscGhhX2xlZ2VuZF90aXRsZT0iQWRqdXN0ZWQgUC1WYWx1ZXMiLAogICAgcGxvdF90aXRsZT1wYXN0ZTAocmFuaywiOiBBTUQvQ29udHJvbDogTG9nMiBGb2xkIENoYW5nZSIpCiAgKQp9CmBgYAoKIyMjIEFnZSA8IDkwIC0tIFdpdGggQ292YXJpYXRlcwpgYGB7ciwgZmlnLndpZHRoPTEwfQp3Yl9maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FnZV9sdF85MF93aXRoX2NvdmFyaWF0ZXMueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICJyYW5rIgopCgpwcmludCh3Yl9maWxlbmFtZSkKCmRhdGEgPSAKICByZWFkV29ya2Jvb2sod2JfZmlsZW5hbWUpIAoKIyBzaWdfZGF0YSA9IGRhdGEgJT4lIGZpbHRlcihDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGogPD0gMC4yKQpzaWdfZGF0YSA9IGRhdGEgJT4lIGFycmFuZ2UoQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqKSAlPiUgaGVhZCgyMCkKCmlmIChkaW0oc2lnX2RhdGEpWzFdIDwgMSkKewogIAp9IGVsc2UKeyAKICBwbG90RWZmZWN0U2l6ZTIoCiAgICBkYXRhPXNpZ19kYXRhLAogICAgZWZmZWN0X3NpemVfY29sPSJDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLkwyRkMiLAogICAgZWZmZWN0X3NpemVfbGVnZW5kX3RpdGxlPSJBYnVuZGFuY2UgaW4gQU1EIiwKICAgIGZlYXR1cmVfY29sPSJQYXRod2F5TmFtZSIsCiAgICBhbHBoYV9jb2w9J0Nhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wucGFkaicsCiAgICBhbHBoYV9sZWdlbmRfdGl0bGU9IkFkanVzdGVkIFAtVmFsdWVzIiwKICAgIHBsb3RfdGl0bGU9cGFzdGUwKHJhbmssIjogQU1EL0NvbnRyb2wgKyBHZW5kZXIgKyBUaXNzdWVfY29kZTogTG9nMiBGb2xkIENoYW5nZSIpCiAgKQp9CmBgYAoKCiMjIyBBTUQgT25seSAtLSBpbmRpdmlkdWFsIHZhcmlhYmxlcwpgYGB7ciwgZmlnLndpZHRoPTEwfQp3Yl9maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FtZF9vbmx5X2luZGl2aWR1YWxfdmFyaWFibGVzLnhsc3gnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAicmFuayIKKQoKcHJpbnQod2JfZmlsZW5hbWUpCgoKZm9yICh2YXJuYW1lIGluIGFtZF9vbmx5X3ZhcmlhYmxlcykKewogIGRhdGEgPSAKICAgIHJlYWRXb3JrYm9vayh3Yl9maWxlbmFtZSwgc2hlZXQ9dmFybmFtZSkgCiAgCiAgbWF0Y2hfc3RyaW5nID0gcGFzdGUwKHZhcm5hbWUsICcuKlxcLnBhZGonKQogIHBhZGpfY29sID0gZ3JlcChtYXRjaF9zdHJpbmcsIGNvbG5hbWVzKGRhdGEpLCB2YWx1ZT1UKQogIAogIG1hdGNoX3N0cmluZyA9IHBhc3RlMCh2YXJuYW1lLCAnLipcXC5MMkZDJykKICBlZmZlY3Rfc2l6ZV9jb2wgPSBncmVwKG1hdGNoX3N0cmluZywgY29sbmFtZXMoZGF0YSksIHZhbHVlPVQpCiAgCiAgIyBzaWdfZGF0YSA9IGRhdGEgJT4lIGZpbHRlcighIWFzLm5hbWUocGFkal9jb2wpIDw9IDAuMikKICBzaWdfZGF0YSA9IGRhdGEgJT4lIGFycmFuZ2UoISFhcy5uYW1lKHBhZGpfY29sKSkgJT4lIGhlYWQoMjApCgogIGlmIChkaW0oc2lnX2RhdGEpWzFdIDwgMSkKICB7CiAgICAKICB9IGVsc2UKICB7CiAgICBmb3IgKGkgaW4gMTpsZW5ndGgocGFkal9jb2wpKQogICAgewogICAgICBwcmludChpKQogICAgICBwcmludChwYWRqX2NvbFtpXSkKICAgICAgcHJpbnQoZWZmZWN0X3NpemVfY29sW2ldKQogICAgICAKICAgICAgcHJpbnQoZGltKHNpZ19kYXRhKSkKICAgICAgCiAgICAgIHBsb3RFZmZlY3RTaXplMigKICAgICAgICBkYXRhPXNpZ19kYXRhLAogICAgICAgIGVmZmVjdF9zaXplX2NvbD1lZmZlY3Rfc2l6ZV9jb2xbaV0sCiAgICAgICAgZWZmZWN0X3NpemVfbGVnZW5kX3RpdGxlPXBhc3RlMCgiQWJ1bmRhbmNlIGluICIsIHZhcm5hbWUpLAogICAgICAgIGZlYXR1cmVfY29sPSJQYXRod2F5TmFtZSIsCiAgICAgICAgYWxwaGFfY29sPXBhZGpfY29sW2ldLAogICAgICAgIGFscGhhX2xlZ2VuZF90aXRsZT0iQWRqdXN0ZWQgUC1WYWx1ZXMiLAogICAgICAgIHBsb3RfdGl0bGU9cGFzdGUwKHZhcm5hbWUsICIgKyBHZW5kZXIgKyBUaXNzdWVfY29kZTogTG9nMiBGb2xkIENoYW5nZSIpCiAgICAgICkgJT4lIHByaW50KCkKICAgIH0gIAogIH0KICAKfQpgYGAKCgojIyMgQU1EIE9ubHkgLS0gR2Vub3R5cGVzLCBQaGVub3R5cGVzLCBhbmQgQVJFRFMgd2l0aCBDb250cm9scwpgYGB7ciwgZmlnLndpZHRoPTEwfQp3Yl9maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FtZF9vbmx5X3ZhcmlhYmxlc193aXRoX2NvbnRyb2xzLnhsc3gnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAicmFuayIKKQoKcHJpbnQod2JfZmlsZW5hbWUpCgpmb3IgKHZhcm5hbWUgaW4gYyhnZW5vdHlwZXMsIHBoZW5vdHlwZXMsIHRyZWF0bWVudHMpKQp7CiAgIyByYW5rID0gJ0dlbnVzJwogIGRhdGEgPSAKICAgIHJlYWRXb3JrYm9vayh3Yl9maWxlbmFtZSwgc2hlZXQ9dmFybmFtZSkgCiAgCiAgbWF0Y2hfc3RyaW5nID0gcGFzdGUwKHZhcm5hbWUsICcuKlxcLnBhZGonKQogIHBhZGpfY29sID0gZ3JlcChtYXRjaF9zdHJpbmcsIGNvbG5hbWVzKGRhdGEpLCB2YWx1ZT1UKQogIAogIG1hdGNoX3N0cmluZyA9IHBhc3RlMCh2YXJuYW1lLCAnLipcXC5MMkZDJykKICBlZmZlY3Rfc2l6ZV9jb2wgPSBncmVwKG1hdGNoX3N0cmluZywgY29sbmFtZXMoZGF0YSksIHZhbHVlPVQpCiAgCiAgIyBzaWdfZGF0YSA9IGRhdGEgJT4lIGZpbHRlcighIWFzLm5hbWUocGFkal9jb2wpIDw9IDAuMikKICBzaWdfZGF0YSA9IGRhdGEgJT4lIGFycmFuZ2UoISFhcy5uYW1lKHBhZGpfY29sKSkgJT4lIGhlYWQoMjApCgogIGlmIChkaW0oc2lnX2RhdGEpWzFdIDwgMSkKICB7CiAgICAKICB9IGVsc2UKICB7CiAgICBmb3IgKGkgaW4gMTpsZW5ndGgocGFkal9jb2wpKQogICAgewogICAgICBwcmludChpKQogICAgICBwcmludChwYWRqX2NvbFtpXSkKICAgICAgcHJpbnQoZWZmZWN0X3NpemVfY29sW2ldKQogICAgICAKICAgICAgcHJpbnQoZGltKHNpZ19kYXRhKSkKICAgICAgcGxvdEVmZmVjdFNpemUyKAogICAgICAgIGRhdGE9c2lnX2RhdGEsCiAgICAgICAgZWZmZWN0X3NpemVfY29sPWVmZmVjdF9zaXplX2NvbFtpXSwKICAgICAgICBlZmZlY3Rfc2l6ZV9sZWdlbmRfdGl0bGU9cGFzdGUwKCJBYnVuZGFuY2UgaW4gIiwgdmFybmFtZSksCiAgICAgICAgZmVhdHVyZV9jb2w9IlBhdGh3YXlOYW1lIiwKICAgICAgICBhbHBoYV9jb2w9cGFkal9jb2xbaV0sCiAgICAgICAgYWxwaGFfbGVnZW5kX3RpdGxlPSJBZGp1c3RlZCBQLVZhbHVlcyIsCiAgICAgICAgcGxvdF90aXRsZT1wYXN0ZTAodmFybmFtZSwgIiArIEdlbmRlciArIFRpc3N1ZV9jb2RlOiBMb2cyIEZvbGQgQ2hhbmdlIikKICAgICAgKSAlPiUgcHJpbnQoKQogICAgfQogIH0KfQpgYGAKCgo=</div>
 
 
 
@@ -2413,7 +2031,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("picrust_deseq_all_template.Rmd");
+  window.initializeSourceEmbed("piphillin_deseq_diff_abund_plots_template.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

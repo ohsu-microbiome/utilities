@@ -66,7 +66,7 @@ Data clustered at the `r toupper("${clustering_level}")` level.
 
 ### Start Conda ENV
 ```{r}
-startCondaEnv('deseq', lib='~/R35')
+startCondaEnv('piphillin', lib='~/R35')
 ```
 
 ### Load Libraries
@@ -79,10 +79,12 @@ library(openxlsx)
 library(DT)
 library(kableExtra)
 library(DESeq2)
+library(KEGGREST)
 
 ### Custom libraries that can be loaded from GitHub
 source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
 source('~/utilities/analysis-utilities/deseq_utilities.R')
+source('~/utilities/analysis-utilities/pathway_utilities.R')
 source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ```
 
@@ -93,24 +95,26 @@ ${knitr_options}
 
 ### Load Data
 ```{r}
-asv_table = 
-  read.delim(
-    '${asv_table_file}', 
-    header=T, 
-    sep='\t',
-    stringsAsFactors=F
-    )
+piphillin_results_dir = "${piphillin_results_dir}"
+print(piphillin_results_dir)
 
-taxonomy_table = 
-  read.delim(
-    '${taxonomy_table_file}', 
-    header=T, 
-    sep='\t',
-    stringsAsFactors=F
-    ) %>%
-  mutate_all(as.character())
+ko_abundance_table_file = file.path(
+  "${piphillin_results_dir}",
+  "kegg",
+  "ko_pathway_abund_table_unnorm.xlsx"
+)
 
-sample_data = read.xlsx('${sample_data_file}')
+ko_abundance_table = read.xlsx(
+  ko_abundance_table_file,
+  colNames=T
+  )
+
+sample_data = read.xlsx(
+  '${sample_data_file}',
+  colNames=T
+  )
+
+sample_data %<>% filter(CaseString == 'AMD')
 
 if ("IGA" %in% colnames(sample_data) & use_allbac)
 {
@@ -128,17 +132,22 @@ if ("IGA" %in% colnames(sample_data) & use_allbac)
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
 
-sample_data %<>% filter(CaseString == 'AMD')
-
 source(file.path(
   "${project_root}", 
   "${metadata_dir}", 
   'observational_variables.R'
   ))
 
-load(file.path(dada2_table_dir, '${phylogenetic_tree_file}'))
 ```
 
+### Integerize pathway counts
+```{r}
+ko_abundance_table = 
+  ko_abundance_table %>%
+  remove_rownames() %>%
+  mutate_at(vars(sample_names), ~floor(.+1)) %>%
+  mutate(PathwayName = getKEGGPathways(Pathway))
+```
 
 ### Set Metadata Factor Levels
 ```{r}
@@ -181,57 +190,40 @@ deseq_results_wb = createWorkbook()
 ### Run and add worksheets
 ```{r}
 
-lowest_rank = 'Genus'
-
 for (varname in amd_only_variables)
 {
   
   var = observational_variables[[varname]]
   
-  taxa_counts = getFilteredTaxaCountsDev(
-    asv_table=asv_table,
-    taxonomy_table=taxonomy_table,
-    sample_data=sample_data,
-    cluster_by=lowest_rank,
-    relative_abundance_cutoff=relative_abundance_cutoff,
-    prevalence_cutoff=prevalence_cutoff,
-    min_count_cutoff=0,
-    filter_by='Taxa',
-    clean_taxa=T,  ### remove NAs in lowest rank
-    n_max_by_mean=F,
-    id_col="SampleName", ### metadata column that containes the unique sample IDs
-    add_glommed_names=T,
-    normalize=F
-  )
-  
   if (var$case != "" && var$control != "")
   {
     var_sample_data =
       sample_data %>% 
-      filter(!!as.name(varname) %in% c(var$case, var$control))
+      filter(
+        !!as.name(varname) %in% c(var$case, var$control),
+        !is.na(!!as.name(varname))
+      )
   } else
   {
     var_sample_data = sample_data
   }
-    
-  results_df = runDeseqFromTables_dev(
-    asv_table,
-    taxonomy_table,
-    var_sample_data,
-    varname,
-    lowest_rank=lowest_rank,
-    relative_abundance_cutoff=relative_abundance_cutoff,
-    prevalence_cutoff=prevalence_cutoff,
-    include_covariates = 'All'
+  
+  results_df = runDeseqFromPathwayCounts(
+    pathway_counts=ko_abundance_table,
+    sample_data=var_sample_data,
+    variables=varname ,
+    include_covariates = 'All',
+    pathway_colname='Pathway'
     )
   
-    match_string = paste0(varname, '.*\\.padj')
-    padj_col = grep(match_string, colnames(results_df), value=T)
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(results_df), value=T)
   
   results_df =
     results_df %>%
-    select(Taxon, !!padj_col, starts_with(varname), everything()) %>%
-    arrange(!!as.name(padj_col))
+    arrange(!!as.name(padj_col)) %>%
+    left_join(ko_abundance_table %>% select(Pathway, PathwayName), by='Pathway') %>%
+    select(Pathway, PathwayName, !!padj_col, everything())
   
   addWorksheet(
     wb=deseq_results_wb, 
@@ -292,32 +284,13 @@ for (varname in c(genotypes, phenotypes, treatments))
   
   risk = vars[[varname]]$case
   non_risk = vars[[varname]]$control
-  
-  taxa_counts = getFilteredTaxaCountsDev(
-    asv_table=asv_table,
-    taxonomy_table=taxonomy_table,
-    sample_data=sample_data,
-    cluster_by=lowest_rank,
-    relative_abundance_cutoff=relative_abundance_cutoff,
-    prevalence_cutoff=prevalence_cutoff,
-    min_count_cutoff=0,
-    filter_by='Taxa',
-    clean_taxa=T,  ### remove NAs in lowest rank
-    n_max_by_mean=F,
-    id_col="SampleName", ### metadata column that containes the unique sample IDs
-    add_glommed_names=T,
-    normalize=F
-  )
-    
-  results_df = runDeseqFromTables_dev(
-    asv_table,
-    taxonomy_table,
-    sample_data %>% filter(!!as.name(varname) %in% c(risk, non_risk)),
-    vars %>% names(),
-    lowest_rank=lowest_rank,
-    relative_abundance_cutoff=relative_abundance_cutoff,
-    prevalence_cutoff=prevalence_cutoff,
-    include_covariates = 'All'
+
+  results_df = runDeseqFromPathwayCounts(
+    pathway_counts=ko_abundance_table,
+    sample_data=var_sample_data,
+    variables=c(varname, key_covariates) ,
+    include_covariates = 'All',
+    pathway_colname='Pathway'
     )
   
   match_string = paste0(varname, '.*\\.padj')
@@ -325,8 +298,9 @@ for (varname in c(genotypes, phenotypes, treatments))
   
   results_df =
     results_df %>%
-    select(Taxon, !!padj_col, starts_with(varname), everything()) %>%
-    arrange(!!as.name(padj_col))
+    arrange(!!as.name(padj_col)) %>%
+    left_join(ko_abundance_table %>% select(Pathway, PathwayName), by='Pathway') %>%
+    select(Pathway, PathwayName, !!padj_col, everything())
     
   addWorksheet(
     wb=deseq_results_wb, 
@@ -370,3 +344,4 @@ print(filename)
 
 saveWorkbook(deseq_results_wb, file=filename, overwrite=T)
 ```
+

@@ -1,0 +1,420 @@
+---
+title: "MiSeq-${miseq_run_number}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_title = "${analysis_title}"
+```
+
+# MiSeq-${miseq_run_number} `r analysis_title` Logistic Regression Analysis {.tabset}
+## Clustering Level
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+## Filtering
+* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+## Setup
+### Start Conda ENV
+```{r}
+startCondaEnv('regression')
+```
+
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(nlme)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+
+```
+
+### Load Data
+```{r}
+filename = makeDataFileName(
+  'master_table.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(filename)
+
+feature_name = "${feature_name}"
+
+all_master_table = readWorkbook(filename, sheet=paste(feature_name, 'Master Table'))
+age_lt_90_master_table = all_master_table %>% filter(Age < 90)
+amd_only_master_table = all_master_table %>% filter(CaseString == 'AMD')
+
+feature_list = readWorkbook(filename, sheet=feature_name) %>% pull(feature_name)
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+```
+
+## Variables
+
+### Set Metadata Factor Levels
+```{r}
+all_master_table = setFactorsLevels(
+  all_master_table, 
+  observational_variables
+  )
+
+age_lt_90_master_table = setFactorsLevels(
+  age_lt_90_master_table, 
+  observational_variables
+  )
+```
+
+#### Observational Variables
+
+```{r}
+all_variables = observational_variables[${logistic_regression_predictors['All']}]
+age_lt_90_variables = observational_variables[${logistic_regression_predictors['Age_lt_90']}]
+```
+
+* **All Subgroup Predictros:** ${logistic_regression_predictors['All']}
+* **Age < 90 Predictors:** ${logistic_regression_predictors['Age_lt_90']}
+
+### Raw Variables
+```{r}
+raw_exp_vars = ${raw_exp_vars}
+print(raw_exp_vars)
+```
+
+### calculated_exp_vars
+```{r}
+calculated_exp_vars = ${calculated_exp_vars}
+print(calculated_exp_vars)
+```
+
+### Filter Covariates
+Determine which covariates have sufficient samples with each value or of perfect separation.
+```{r}
+# num_samples_threshold = 5
+# 
+# all_variables = filterVarsBySampleThreshold2(
+#   master_table=all_master_table,
+#   threshold=num_samples_threshold,
+#   variable_list=all_variables
+#   )
+# 
+# age_lt_90_variables = filterVarsBySampleThreshold2(
+#   master_table=age_lt_90_master_table %>% filter(Age<90),
+#   threshold=num_samples_threshold,
+#   variable_list=age_lt_90_variables
+#   )
+
+### Remaining Covariates
+# `r #all_variables %>% names()`
+# `r #age_lt_90_variables %>% names()`
+```
+
+## All Subgroups
+
+#### Calculate Stats
+```{r}
+covariates = all_variables
+
+logistic_regression_stats = getLogisticRegressionStats(
+  base_predictor_vars=covariates,
+  additional_predictors=c(raw_exp_vars, calculated_exp_vars),
+  logistic_response_var='CaseString',
+  master_table=all_master_table,
+  stats=c('pvalue', 'effect_size', 'std_error'),
+  response_var_name='Index'
+)
+
+contrasts = makeContrastNames(covariates, all_master_table)
+
+all_logistic_regression_stats = data.frame(Main=character())
+
+for (contrast in c('Main', contrasts))
+{
+  print(contrast)
+  
+  pval_name = paste0(contrast, '.pval')
+  odds_name = paste0(contrast, '.odds')
+  print(pval_name)
+  print(odds_name)
+  all_logistic_regression_stats %<>% 
+    mutate(
+      !!pval_name := numeric(),
+      !!odds_name := numeric()
+    )
+}
+
+
+for(var in names(logistic_regression_stats))
+{
+  print(sprintf('var=%s', var))
+  
+  var_data = logistic_regression_stats[[var]]
+  print('var_data')
+  print(var_data)
+  
+  stats_list = list()
+  stats_list[['Main']] = var
+      
+  pval_name = paste0('Main', '.pval')
+  odds_name = paste0('Main', '.odds')
+  
+  stats_list[[pval_name]] = 
+    var_data %>%
+    filter(contrast == !!var) %>%
+    pull(pvalue)
+  stats_list[[odds_name]] = 
+    var_data %>% 
+    filter(contrast == !!var) %>%
+    pull(effect_size) %>%
+    exp()
+  
+  for (contrast in contrasts)
+  {
+    print(sprintf('contrast=%s', contrast))
+    
+    pval_name = paste0(contrast, '.pval')
+    odds_name = paste0(contrast, '.odds')
+    
+    stats_list[[pval_name]] = 
+      var_data %>%
+      filter(contrast == !!contrast) %>%
+      pull(pvalue)
+    stats_list[[odds_name]] = 
+      var_data %>% 
+      filter(contrast == !!contrast) %>%
+      pull(effect_size) %>%
+      exp()
+    
+    print('stats_list')
+    print(stats_list)
+  }
+    
+  all_logistic_regression_stats %<>% add_row(!!!stats_list)
+}
+
+```
+
+### Write Tables
+```{r}
+all_wb = createWorkbook()
+
+addWorksheet(
+  all_wb, 
+  sheetName="Logistic Regression"
+  )
+
+openxlsx::writeData(
+  all_wb, 
+  sheet="Logistic Regression", 
+  all_logistic_regression_stats
+  )
+
+addWorksheet(
+  all_wb, 
+  sheetName="Main Variables"
+  )
+
+openxlsx::writeData(
+  all_wb,
+  sheet="Main Variables",
+  c(raw_exp_vars, calculated_exp_vars)
+  )
+
+filename = makeDataFileName(
+  'all_logistic_regression.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+saveWorkbook(all_wb, file=filename, overwrite=T)
+```
+
+## Age < 90
+
+#### Calculate Stats
+```{r}
+
+covariates = age_lt_90_variables
+
+logistic_regression_stats = getLogisticRegressionStats(
+  base_predictor_vars=covariates,
+  additional_predictors=c(raw_exp_vars, calculated_exp_vars),
+  logistic_response_var='CaseString',
+  master_table=age_lt_90_master_table,
+  stats=c('pvalue', 'effect_size', 'std_error'),
+  response_var_name='Index'
+)
+
+contrasts = makeContrastNames(covariates, all_master_table)
+
+age_lt_90_logistic_regression_stats = data.frame(Main=character())
+
+for (contrast in c('Main', contrasts))
+{
+  print(contrast)
+  
+  pval_name = paste0(contrast, '.pval')
+  odds_name = paste0(contrast, '.odds')
+  print(pval_name)
+  print(odds_name)
+  age_lt_90_logistic_regression_stats %<>% 
+    mutate(
+      !!pval_name := numeric(),
+      !!odds_name := numeric()
+    )
+}
+
+
+for(var in names(logistic_regression_stats))
+{
+  print(sprintf('var=%s', var))
+  
+  var_data = logistic_regression_stats[[var]]
+  print('var_data')
+  print(var_data)
+  
+  stats_list = list()
+  stats_list[['Main']] = var
+      
+  pval_name = paste0('Main', '.pval')
+  odds_name = paste0('Main', '.odds')
+  
+  stats_list[[pval_name]] = 
+    var_data %>%
+    filter(contrast == !!var) %>%
+    pull(pvalue)
+  stats_list[[odds_name]] = 
+    var_data %>% 
+    filter(contrast == !!var) %>%
+    pull(effect_size) %>%
+    exp()
+  
+  for (contrast in contrasts)
+  {
+    print(sprintf('contrast=%s', contrast))
+    
+    pval_name = paste0(contrast, '.pval')
+    odds_name = paste0(contrast, '.odds')
+    
+    stats_list[[pval_name]] = 
+      var_data %>%
+      filter(contrast == !!contrast) %>%
+      pull(pvalue)
+    stats_list[[odds_name]] = 
+      var_data %>% 
+      filter(contrast == !!contrast) %>%
+      pull(effect_size) %>%
+      exp()
+    
+    print('stats_list')
+    print(stats_list)
+  }
+    
+  age_lt_90_logistic_regression_stats %<>% add_row(!!!stats_list)
+}
+
+```
+
+
+### Write Tables
+```{r}
+age_lt_90_wb = createWorkbook()
+
+addWorksheet(
+  age_lt_90_wb, 
+  sheetName="Logistic Regression"
+  )
+
+openxlsx::writeData(
+  age_lt_90_wb, 
+  sheet="Logistic Regression", 
+  age_lt_90_logistic_regression_stats
+  )
+
+addWorksheet(
+  age_lt_90_wb, 
+  sheetName="Main Variables"
+  )
+
+openxlsx::writeData(
+  age_lt_90_wb,
+  sheet="Main Variables",
+  c(raw_exp_vars, calculated_exp_vars)
+  )
+
+filename = makeDataFileName(
+  'age_lt_90_logistic_regression.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+saveWorkbook(age_lt_90_wb, file=filename, overwrite=T)
+```
+

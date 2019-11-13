@@ -79,6 +79,29 @@ source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ${knitr_options}
 ```
 
+### Load Sample Data
+```{r}
+sample_data = read.xlsx('${sample_data_file}')
+
+if ("IGA" %in% colnames(sample_data) & use_allbac)
+{
+  sample_data = 
+    sample_data %>%
+    filter(IGA=='AllBac')
+
+  sample_names = sample_data$SampleName
+  
+  asv_table = 
+    asv_table %>%
+    select('ASVs', ends_with('AllBac'))
+}
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+```
+
+
 ## Run PICRUSt2
 
 ### Construct Filenames
@@ -119,18 +142,24 @@ ${picrust_run_string_template}
 ```{r}
 num_procs = ${num_procs}
 tables_dir = "${tables_dir}"
+src_dir = sub('tables', 'src', tables_dir)
 
 run_string_template = "${picrust_run_string_template}"
 run_string = glue(run_string_template)
 
 print("Run String:")
-print(run_string)
+cat(run_string)
+
+run_picrust_file = file.path(src_dir, 'run_picrust.sh')
+write(run_string, run_picrust_file)
 ```
 
 ### Run PICRUSt2
 ```{r}
 print("sending run string to system")
-system(run_string)
+system_call = paste0('bash -i ', run_picrust_file)
+print(system_call)
+system(system_call, intern = FALSE, wait = TRUE, show.output.on.console = TRUE)
 ```
 
 ## Convert Files to XSLX
@@ -183,6 +212,100 @@ for (filename in tsv_files)
 
 }
 ```
+
+## Create Master Table
+### Load KO Abundances
+```{r}
+ko_counts_table_file = file.path(
+  "${tables_dir}",
+  "picrust_out",
+  "KO_metagenome_out",
+  "miseq-239_pred_metagenome_unstrat.xlsx"
+)
+
+ko_counts_table = read.xlsx(
+  ko_counts_table_file,
+  colNames=T
+  )
+
+### Tidy Table
+ko_counts_table = 
+  ko_counts_table %>%
+  remove_rownames() %>%
+  # mutate_at(vars(sample_names), ~floor(.+0.00000001)) %>%
+  rename(KO=function.)
+
+ec_counts_table_file = file.path(
+  "${tables_dir}",
+  "picrust_out",
+  "EC_metagenome_out",
+  "miseq-239_pred_metagenome_unstrat.xlsx"
+)
+
+ec_counts_table = read.xlsx(
+  ec_counts_table_file,
+  colNames=T
+  )
+
+### Tidy Table
+ec_counts_table = 
+  ec_counts_table %>%
+  remove_rownames() %>%
+  # mutate_at(vars(sample_names), ~floor(.+0.00000001)) %>%
+  rename(EC=function.)
+```
+
+### Get Master Tables
+```{r}
+ko_master_table = getMasterTable(
+  taxa_counts=ko_counts_table,
+  metadata=sample_data,
+  key_column='SampleName',
+  taxa_colnames='KO'
+)
+
+ec_master_table = getMasterTable(
+  taxa_counts=ec_counts_table,
+  metadata=sample_data,
+  key_column='SampleName',
+  taxa_colnames='EC'
+)
+```
+
+### Write Master Tables
+```{r}
+wb = createWorkbook()
+
+addWorksheet(wb, sheetName="KO Master Table")
+openxlsx::writeData(wb, sheet="KO Master Table", ko_master_table)
+addWorksheet(wb, sheetName="EC Master Table")
+openxlsx::writeData(wb, sheet="EC Master Table", ec_master_table)
+
+just_ko = 
+  ko_counts_table %>% 
+  select(KO)
+addWorksheet(wb, sheetName="KO")
+openxlsx::writeData(wb, sheet="KO", just_ko)
+
+just_ec = 
+  ec_counts_table %>% 
+  select(EC)
+addWorksheet(wb, sheetName="EC")
+openxlsx::writeData(wb, sheet="EC", just_ec)
+
+filename = makeDataFileName(
+  'master_table.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+print(filename)
+
+saveWorkbook(wb, file=filename, overwrite=T)
+```
+
+
 
 
 
