@@ -959,11 +959,11 @@ getFilteredTaxaCountsDev = function(
   print("current dim")
   print(dim(filtered_counts))
 
- filtered_counts %>%
-   select(age_ordered_samples) %>%
-   colSums() %>%
-   is.na() %>%
-   which()
+ # filtered_counts %>%
+ #   select(age_ordered_samples) %>%
+ #   colSums() %>%
+ #   is.na() %>%
+ #   which()
 
 
   if (normalize)

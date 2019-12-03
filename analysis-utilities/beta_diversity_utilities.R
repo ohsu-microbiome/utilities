@@ -10,16 +10,28 @@ makeNMDSPlot = function(
   axes=c(1,2),
   color,
   title_extra='',
-  elipses=T
+  elipses=T,
+  num_dimensions=0
 )
 {
+
+  if (num_dimensions == 0)
+  {
+    num_dimensions = max(axes)
+  }
+
   community_matrix =
     master_table %>%
     select(SampleName, features) %>%
     column_to_rownames('SampleName') %>%
     as.matrix()
 
-  nmds_data = metaMDS(community_matrix, k=max(axes), engine='monoMDS', autotransform=T)
+  nmds_data = metaMDS(
+    community_matrix,
+    k=num_dimensions,
+    engine='monoMDS',
+    autotransform=T
+    )
 
   mds_axes = paste0('MDS', axes)
 
@@ -235,9 +247,16 @@ getNMDS = function(
   master_table,
   features,
   id_col='SampleName',
-  axes=c(1,2)
+  axes=c(1,2),
+  num_dimensions=0
 )
 {
+
+  if (num_dimensions == 0)
+  {
+    num_dimensions = max(axes)
+  }
+
   community_matrix =
     master_table %>%
     select(!!id_col, features) %>%
@@ -246,7 +265,7 @@ getNMDS = function(
 
   nmds_data = metaMDS(
     community_matrix,
-    k=max(axes),
+    k=num_dimensions,
     engine='monoMDS',
     autotransform=T
     )

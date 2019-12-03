@@ -1189,7 +1189,9 @@ runDeseqFromPathwayCounts = function(
   sample_data,
   variables,
   include_covariates='All',
-  pathway_colname=""
+  pathway_colname="",
+  cooks_cutoff=F,
+  independent_filtering=F
 )
 {
 
@@ -1258,7 +1260,9 @@ runDeseqFromPathwayCounts = function(
     name_results = results(
       deseq_obj,
       name=name,
-      format='DataFrame'
+      format='DataFrame',
+      cooksCutoff=cooks_cutoff,
+      independentFiltering=independent_filtering
     ) %>%
       data.frame(stringsAsFactors=F) %>%
       rownames_to_column(pathway_colname) %>%
