@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -42,22 +42,40 @@ output:
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
+filter_by = "${filter_by}"
 tables_dir = "${tables_dir}"
 analysis_title = "${analysis_title}"
-use_allbac = ${use_allbac}
 
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_title` Data Prep {.tabset}
-## Clustering Level
+# ${miseq_project_prefix} `r analysis_title` Data Prep {.tabset}
+
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+Data filtered by `r toupper('${filter_by}')`
+
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
-## Setup 
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
+
+## Setup
+
 ### Start Conda ENV
 ```{r}
 startCondaEnv('alphadiv')
@@ -68,7 +86,6 @@ startCondaEnv('alphadiv')
 ### Load Libraries
 ```{r}
 library(rmarkdown)
-library(knitr)
 
 library(tidyverse)
 library(magrittr)
@@ -117,23 +134,25 @@ taxonomy_table =
 
 sample_data = read.xlsx('${sample_data_file}')
 
-
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
-
 sample_data_columns = colnames(sample_data)
 
 ```
+
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
+
+```
+
 
 ### Set Filtering
 ```{r}
@@ -149,7 +168,8 @@ genus_taxa_abundance = getFilteredTaxaCounts(
   asv_table,
   taxonomy_table,
   sample_data, 
-  lowest_rank="${clustering_level}",
+  cluster_by="${clustering_level}",
+  filter_by="{filter_by}",
   relative_abundance_cutoff=relative_abundance_cutoff,
   prevalence_cutoff=prevalence_cutoff,
   id_col="SampleName",
@@ -177,33 +197,33 @@ master_table = getMasterTable(
 all_alpha_diversity = calculateAlphaDiversity2(
   master_table,
   genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
+  c('observed', 'shannon', 'simpson', 'invsimpson')
 )
 
 amd_only_alpha_diversity = calculateAlphaDiversity2(
   master_table %>% filter(CaseString=='AMD'),
   genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
+  c('observed', 'shannon', 'simpson', 'invsimpson')
 )
 
 age_lt_90_alpha_diversity = calculateAlphaDiversity2(
   master_table %>% filter(Age<90),
   genus_taxa_abundance$short_glommed_taxa,
-  c('observed', 'shannon', 'simpson')
+  c('observed', 'shannon', 'simpson', 'invsimpson')
 )
 
 all_master_table =
   inner_join(all_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
+  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, InvSimpson=invsimpson, sample_data_columns, everything())
 
 amd_only_master_table =
   inner_join(amd_only_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
+  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, InvSimpson=invsimpson, sample_data_columns, everything())
 
 
 age_lt_90_master_table =
   inner_join(age_lt_90_alpha_diversity, master_table, by='SampleName') %>%
-  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, sample_data_columns, everything())
+  select(SampleName, Observed=observed, Shannon=shannon, Simpson=simpson, InvSimpson=invsimpson, sample_data_columns, everything())
 ```
 
 ### Write Alpha Diversity Tables

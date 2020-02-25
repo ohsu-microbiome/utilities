@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -42,19 +42,33 @@ analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
 analysis_type_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+analysis_subtitle = "${analysis_subtitle}"
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_type` Differential Abundance Plots{.tabset}
+# ${miseq_project_prefix} `r analysis_type` Differential Abundance Plots{.tabset}
 Regression coefficients as effect size.
 
-
-## Clustering Level
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup {.tabset}
 
@@ -93,10 +107,7 @@ ${knitr_options}
 
 ### Load Data
 ```{r}
-sample_data = read.delim(
-  '${sample_data_file}', 
-  stringsAsFactors=F
-  )
+sample_data = read.xlsx('${sample_data_file}')
 
 source(file.path(
   "${project_root}", 
@@ -110,19 +121,17 @@ source(file.path(
 ### Variables of interest
 #### Observational Variables
 ```{r}
-genotypes = ${genotypes}
-phenotypes = ${phenotypes}
-key_covariates = ${key_covariates}
-treatments = ${treatments}
-amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes) %>% unique()
+case = ${case} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+
+linear_predictors = ${linear_predictors} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
+amd_only_variables = linear_predictors %>% setdiff(case)
 ```
 
-#### Remove Age
-```{r}
-key_covariates %<>% setdiff('Age')
-amd_only_variables %<>% setdiff('Age')
-amd_only_variables %<>% setdiff('Age')
-```
 
 * **Genotype variables:** `r genotypes`
 * **Phenotype variables:** `r phenotypes`
@@ -169,8 +178,10 @@ for (rank in all_ranks)
     feature_col="Taxon",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control: Log2 Fold Change")
-  )
+    plot_title=paste0(rank,": AMD/Control: Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
+  
 }
 ```
 
@@ -206,8 +217,10 @@ for (rank in all_ranks)
     feature_col="Taxon",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control + Gender + Tissue_code: Log2 Fold Change")
-  )
+    plot_title=paste0(rank,": AMD/Control + Gender + Tissue_code: Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
+  
 }
 ```
 
@@ -244,8 +257,10 @@ for (rank in all_ranks)
     feature_col="Taxon",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control: Log2 Fold Change")
-  )
+    plot_title=paste0(rank,": AMD/Control: Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
+  
 }
 ```
 
@@ -281,8 +296,10 @@ for (rank in all_ranks)
     feature_col="Taxon",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control + Gender + Tissue_code: Log2 Fold Change")
-  )
+    plot_title=paste0(rank,": AMD/Control + Gender + Tissue_code: Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
+  
 }
 ```
 
@@ -327,8 +344,10 @@ for (varname in amd_only_variables)
     feature_col="Taxon",
     alpha_col=padj_col,
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(varname,": Log2 Fold Change")
-  )
+    plot_title=paste0(varname,": Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
+  
 }
 ```
 
@@ -373,8 +392,10 @@ for (varname in c(genotypes, phenotypes, treatments))
     feature_col="Taxon",
     alpha_col=padj_col,
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(varname, " + Gender + Tissue_code: Log2 Fold Change")
-  )
+    plot_title=paste0(varname, " + Gender + Tissue_code: Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
+  
 }
 ```
 

@@ -102,7 +102,7 @@ getMasterTable = function(
 
   master_table =
     taxa_counts %>%
-    select(join_keys, taxa_colnames) %>%
+    select(!!join_keys, !!taxa_colnames) %>%
     ### Add rownames which will become colnames (headers) when transposed
     column_to_rownames(taxa_colnames) %>%
     ### Transpose and coerce back to dataframe
@@ -355,20 +355,94 @@ clearMem = function(current_file="")
 }
 
 
+# addGlommedTaxaNames = function(
+#   feature_abundance,
+#   lowest_rank='Genus',
+#   make_unique=T
+# )
+# {
+#   print("in addGlommedTaxaNames")
+#
+#   if (lowest_rank == 'ASV')
+#   {
+#     lowest_rank = 'Genus'
+#   }
+#
+#   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+#   lowest_rank_index = match(lowest_rank, all_ranks)
+#
+#   ### get just the ranks that will be used in
+#   ### 1. The glommed name
+#   ### 2. The step of aggregating sums
+#   ranks_to_glom = all_ranks[1:lowest_rank_index]
+#   print("ranks to glom")
+#   print(ranks_to_glom)
+#
+#   print("glomming taxa names")
+#   # print(dim(feature_abundance))
+#
+#   glommed_taxa_counts =
+#     feature_abundance %>%
+#     ### Glom taxa ranks together for additinoal column
+#     unite('glommed_taxa', ranks_to_glom, sep='_', remove=F) %>%
+#     unite('short_glommed_taxa', c('Phylum', lowest_rank), sep="_", remove=F) %>%
+#     {
+#       if (make_unique)
+#       {
+#         mutate(., short_glommed_taxa = make.unique(short_glommed_taxa))
+#       }
+#       else
+#       {
+#         .
+#       }
+#     } %>%
+#     ### Fix hyphens in taxa names so they don't mess up column names later
+#     mutate(
+#       glommed_taxa = gsub('-', '_dash_', glommed_taxa),
+#       short_glommed_taxa = gsub('-', '_dash_', short_glommed_taxa)
+#     ) %>%
+#     # ### Fix slashes in taxa names so they don't mess up column names later
+#     mutate(
+#       glommed_taxa = gsub('/', '_slash_', glommed_taxa),
+#       short_glommed_taxa = gsub('/', '_slash_', short_glommed_taxa)
+#     ) %>%
+#     ### Select again so glommed_taxa is first row (better way?)
+#     ### Could glom earlier and then group by ranks and glommed_taxa
+#     select(c('glommed_taxa', 'short_glommed_taxa'), everything(), ranks_to_glom)  %>%
+#     ### Convert to dataframe (instead of tibble)
+#     data.frame()
+#
+#   # print("dim taxa counts")
+#   # print(dim(glommed_taxa_counts))
+#
+#   return(glommed_taxa_counts)
+# }
+
+
 addGlommedTaxaNames = function(
   feature_abundance,
   lowest_rank='Genus',
-  make_unique=T
+  make_unique=T,
+  taxonomy_table=NULL
 )
 {
+
+  ### Data for testing
+  # feature_abundance=filtered_counts
+  # lowest_rank = "Genus"
+  # make_unique=T
+  # taxonomy_table=NULL
+
   print("in addGlommedTaxaNames")
 
   if (lowest_rank == 'ASV')
   {
     lowest_rank = 'Genus'
   }
+
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
   lowest_rank_index = match(lowest_rank, all_ranks)
+
   ### get just the ranks that will be used in
   ### 1. The glommed name
   ### 2. The step of aggregating sums
@@ -378,6 +452,14 @@ addGlommedTaxaNames = function(
 
   print("glomming taxa names")
   # print(dim(feature_abundance))
+
+
+  if (!is.null(taxonomy_table))
+  {
+    feature_abundance =
+      feature_abundance %>%
+      inner_join(taxonomy_table, by='ASVs')
+  }
 
   glommed_taxa_counts =
     feature_abundance %>%
@@ -406,7 +488,7 @@ addGlommedTaxaNames = function(
     ) %>%
     ### Select again so glommed_taxa is first row (better way?)
     ### Could glom earlier and then group by ranks and glommed_taxa
-    select(c('glommed_taxa', 'short_glommed_taxa'), everything(), ranks_to_glom)  %>%
+    select(glommed_taxa, short_glommed_taxa, everything(), ranks_to_glom)  %>%
     ### Convert to dataframe (instead of tibble)
     data.frame()
 
@@ -415,6 +497,7 @@ addGlommedTaxaNames = function(
 
   return(glommed_taxa_counts)
 }
+
 
 applyPrevalenceFilter = function(
   feature_abundance,
@@ -489,11 +572,11 @@ applyRelativeAbundanceFilter = function(
 
 applyMinCountFilter = function(
   feature_abundance,
-  min_counts
+  min_count_cutoff
 )
 {
   print("in applyMinCountFilter")
-  print(min_counts)
+  print(min_count_cutoff)
 
   # feature_abundance = counts
 
@@ -521,148 +604,345 @@ getRelativeAbundance = function(counts)
 }
 
 
+# getFilteredTaxaCounts = function(
+#   asv_table,
+#   taxonomy_table,
+#   metadata,
+#   lowest_rank=NA,
+#   relative_abundance_cutoff=1,
+#   prevalence_cutoff=1,
+#   clean=T,  ### remove NAs in lowest rank
+#   n_max_by_mean=F,
+#   id_col="SampleName", ### metadata column that containes the unique sample IDs
+#   add_glommed_names=T,
+#   normalize=F
+# )
+# {
+#   print("in getFilteredTaxaCounts")
+#
+#   # metadata = sample_data %>% filter(IGA=='AllBac')
+#   # lowest_rank = 'asv'
+#   # relative_abundance_cutoff = 0.002
+#   # prevalence_cutoff = 0
+#   # clean=T
+#   # id_col='SubjectID'
+#   # add_glommed_names=T
+#   # normalize=T
+#   # n_max_by_mean=F
+#
+#   # print(sprintf("lowest_rank = %s", lowest_rank))
+#   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+#
+#   if (is.na(lowest_rank) | tolower(lowest_rank)=='asv' )
+#   {
+#     print("using ASVs")
+#     use_taxa = F
+#     lowest_rank = 'Genus'
+#   } else
+#   {
+#     lowest_rank = tools::toTitleCase(lowest_rank)
+#     print("using taxa")
+#     use_taxa = T
+#   }
+#
+#   lowest_rank_index = match(lowest_rank, all_ranks)
+#   ### get just the ranks that will be used in
+#   ### 1. The glommed name
+#   ### 2. The step of aggregating sums
+#   ranks_to_glom = all_ranks[1:lowest_rank_index]
+#   short_ranks = all_ranks[c(1,lowest_rank_index)]
+#   print("ranks to glom")
+#   print(ranks_to_glom)
+#
+#   sample_names = as.character(metadata[,id_col])
+#   # print(sprintf("length sample_names = %d", length(sample_names)))
+#
+#   if (clean && use_taxa)
+#   {
+#     ### Remove any taxa that are NA at the lowest level.
+#     ### No point in having ASVs aggregated to the same genus
+#     ### if that genus is NA.
+#     clean_taxonomy_table =
+#       taxonomy_table %>%
+#       filter(Kingdom == 'Bacteria') %>%
+#       filter(!is.na(Phylum)) %>%
+#       # filter(sprintf("!is.na(%s)", lowest_rank))
+#       filter(!is.na(!!sym(lowest_rank)))
+#
+#     print("dim clean tax table")
+#     print(dim(clean_taxonomy_table))
+#   }else
+#   {
+#     clean_taxonomy_table = taxonomy_table
+#   }
+#
+#   print("creating asv taxa counts table")
+#   counts = inner_join(asv_table, clean_taxonomy_table, by="ASVs")
+#
+#   if (use_taxa)
+#   {
+#     # print("Aggregating by ranks")
+#     ### Aggregate counts by ranks being kept
+#     counts =
+#       counts %>%
+#       ### Drop the ASVs
+#       select(!!c(sample_names, ranks_to_glom)) %>%
+#       # select(-ASVs) %>%
+#       ### Group and sum
+#       group_by(.dots=ranks_to_glom) %>%
+#       summarize_all(sum) %>%
+#       ungroup()
+#   }
+#
+#   # print("Filtering taxa")
+#   # print("Relative Abundance Filter")
+#
+#   filtered_counts =
+#     counts %>%
+#     applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
+#     applyPrevalenceFilter(prevalence_cutoff)
+#
+#   # # print("current dim")
+#   # print(dim(filtered_counts))
+#
+#   if (normalize)
+#   {
+#     filtered_counts = getRelativeAbundance(filtered_counts)
+#   }
+#
+#   if (n_max_by_mean != F)
+#   {
+#     ### Keep only the n_max_by_mean features
+#     filtered_counts =
+#       filtered_counts %>%
+#       ### Create a column of row means
+#       mutate(mean=rowMeans(
+#         select(., sample_names)/sum(select(., sample_names))
+#       )) %>%
+#       ### Order by the means (ascending)
+#       arrange(mean) %>%
+#       ### Take the highest ones (n_max_by_mean)
+#       tail(n_max_by_mean) %>%
+#       ### Drop the mean column
+#       select(-mean)
+#   }
+#
+#   if (add_glommed_names)
+#   {
+#     filtered_counts = addGlommedTaxaNames(filtered_counts, lowest_rank)
+#   }
+#
+#   return(filtered_counts %>% data.frame())
+#
+# }
+#
+# getFilteredTaxaCountsDev1 = function(
+#   asv_table,
+#   taxonomy_table,
+#   sample_data,
+#   cluster_by=NA,
+#   relative_abundance_cutoff=0,
+#   prevalence_cutoff=0,
+#   min_count_cutoff=0,
+#   filter_order = c('min_count', 'prevalence', 'relative_abundance'),
+#   filter_by='Taxa',
+#   clean_taxa=T,  ### remove NAs in lowest rank
+#   n_max_by_mean=F,
+#   id_col="SampleName", ### sample_data column that containes the unique sample IDs
+#   add_glommed_names=T,
+#   make_unique=T,
+#   normalize=F
+# )
+# {
+#   print("in getFilteredTaxaCounts")
+#
+#   ### Data for testing
+#   # cluster_by = 'Phylum'
+#   # relative_abundance_cutoff = 0.002
+#   # prevalence_cutoff = 0.1
+#   # min_count_cutoff = 10
+#   # filter_by = 'Taxa'
+#   # clean_taxa = T
+#   # id_col = 'SampleName'
+#   # add_glommed_names=T
+#   # normalize=F
+#   # n_max_by_mean=F
+#
+#   sample_names = as.character(sample_data[,id_col])
+#   asv_table = asv_table %>% select('ASVs', sample_names)
+#
+#   if (normalize)
+#   {
+#     asv_table =
+#       asv_table %>%
+#       mutate_at(sample_names, ~./sum(.))
+#   }
+#
+#   if (clean_taxa & cluster_by != 'ASV')
+#   {
+#     ### Remove any taxa that are NA at the lowest level.
+#     ### No point in having ASVs aggregated to the same genus
+#     ### if that genus is NA.
+#     clean_taxonomy_table =
+#       taxonomy_table %>%
+#       # filter(sprintf("!is.na(%s)", lowest_rank))
+#       filter(!is.na(!!sym(cluster_by)))
+#
+#     # print("dim clean tax table")
+#     # print(dim(clean_taxonomy_table))
+#   } else
+#   {
+#     clean_taxonomy_table = taxonomy_table
+#   }
+#
+#   # print(sprintf("lowest_rank = %s", lowest_rank))
+#   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus', 'ASV')
+#
+#   lowest_rank_index = match(cluster_by, all_ranks)
+#   ### get just the ranks that will be used in
+#   ### 1. The glommed name
+#   ### 2. The step of aggregating sums
+#   ranks_to_glom = all_ranks[1:lowest_rank_index]
+#   short_ranks = all_ranks[c(1,lowest_rank_index)]
+#   print("ranks to glom")
+#   print(ranks_to_glom)
+#
+#   sample_names = as.character(sample_data[,id_col])
+#   # print(sprintf("length sample_names = %d", length(sample_names)))
+#
+#   print("creating asv taxa counts table")
+#   counts = inner_join(asv_table, clean_taxonomy_table, by="ASVs")
+#
+#   if (!is.na(cluster_by) & toupper(cluster_by) != 'ASV')
+#   {
+#     print("Aggregating by ranks")
+#     ### Aggregate counts by ranks being kept
+#     counts =
+#       counts %>%
+#       ### Drop the ASVs
+#       select(!!c(sample_names, ranks_to_glom)) %>%
+#       # select(-ASVs) %>%
+#       ### Group and sum
+#       group_by(.dots=ranks_to_glom) %>%
+#       summarize_all(sum) %>%
+#       ungroup()
+#   } else
+#   {
+#     print("Aggregating by ASVs")
+#   }
+#
+#   # else
+#   # {
+#   #   print("Aggregating by ASVs")
+#   #   print(colnames(counts))
+#   #   counts =
+#   #     counts %>%
+#   #     ### Drop the ASVs
+#   #     # select(!!c(sample_names, all_ranks)) %>%
+#   #     # select(-ASVs) %>%
+#   #     ### Group and sum
+#   #     group_by('ASVs') %>%
+#   #     summarize_all(sum) %>%
+#   #     ungroup() %>%
+#   #     select(sample_names, all_ranks, everything())
+#   # }
+#
+#   # print('dim counts')
+#   # print(dim(counts))
+#   # print("Filtering taxa")
+#   # print("Relative Abundance Filter")
+# #
+# #   filters_list = list(
+# #     min_count = list(
+# #       filter_function=applyMinCountFilter,
+# #       parameter=min_count_cutoff
+# #       ),
+# #     relative_abundance = list(
+# #       filter_function=applyRelativeAbundanceFilter,
+# #       parameter=relative_abundance_cutoff
+# #       ),
+# #     prevalence = list(
+# #       filter_function=applyPrevalenceFilter,
+# #       parameter=prevalence_cutoff
+# #     )
+# #   )
+#
+#   # filtered_counts =
+#   #   counts %>%
+#   #   applyMinCountFilter(min_count_cutoff) %>%
+#   #   applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
+#   #   applyPrevalenceFilter(prevalence_cutoff)
+#
+#   # filters_list = filters_list[filter_order]
+#   # print(names(filters_list))
+#   #
+#   # filtered_counts = counts
+#   # for (filter in filters_list)
+#   # {
+#   #   print(names(filter))
+#   #   print(filter$parameter)
+#   #   filtered_counts = filter$filter_function(filtered_counts, filter$parameter)
+#   # }
+#
+#
+#   filtered_counts =
+#     counts %>%
+#     applyMinCountFilter(min_count_cutoff) %>%
+#     applyRelativeAbundanceFilter(relative_abundance_cutoff)
+#   # %>%
+#   #   applyPrevalenceFilter(prevalence_cutoff)
+#
+#   print(sprintf('filtered_counts exists: %s', 'filtered_counts' %in% ls()))
+#
+#   # print("current dim")
+#   # print(dim(filtered_counts))
+#
+#   if (normalize)
+#   {
+#     filtered_counts = getRelativeAbundance(filtered_counts)
+#   }
+#
+#   if (n_max_by_mean != F)
+#   {
+#     ### Keep only the n_max_by_mean features
+#     filtered_counts =
+#       filtered_counts %>%
+#       ### Create a column of row means
+#       mutate(mean=rowMeans(
+#         select(., sample_names)/sum(select(., sample_names))
+#       )) %>%
+#       ### Order by the means (ascending)
+#       arrange(mean) %>%
+#       ### Take the highest ones (n_max_by_mean)
+#       tail(n_max_by_mean) %>%
+#       ### Drop the mean column
+#       select(-mean)
+#   }
+#
+#   if (add_glommed_names)
+#   {
+#     filtered_counts = addGlommedTaxaNames(
+#       filtered_counts,
+#       cluster_by,
+#       make_unique=make_unique
+#       )
+#     # print('glommed taxa names')
+#   }
+#
+#   return(filtered_counts %>% data.frame())
+#
+# }
+
 getFilteredTaxaCounts = function(
   asv_table,
   taxonomy_table,
-  metadata,
-  lowest_rank=NA,
-  relative_abundance_cutoff=1,
-  prevalence_cutoff=1,
-  clean=T,  ### remove NAs in lowest rank
-  n_max_by_mean=F,
-  id_col="SampleName", ### metadata column that containes the unique sample IDs
-  add_glommed_names=T,
-  normalize=F
-)
-{
-  print("in getFilteredTaxaCounts")
-
-  # metadata = sample_data %>% filter(IGA=='AllBac')
-  # lowest_rank = 'asv'
-  # relative_abundance_cutoff = 0.002
-  # prevalence_cutoff = 0
-  # clean=T
-  # id_col='SubjectID'
-  # add_glommed_names=T
-  # normalize=T
-  # n_max_by_mean=F
-
-  # print(sprintf("lowest_rank = %s", lowest_rank))
-  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
-
-  if (is.na(lowest_rank) | tolower(lowest_rank)=='asv' )
-  {
-    print("using ASVs")
-    use_taxa = F
-    lowest_rank = 'Genus'
-  } else
-  {
-    lowest_rank = tools::toTitleCase(lowest_rank)
-    print("using taxa")
-    use_taxa = T
-  }
-
-  lowest_rank_index = match(lowest_rank, all_ranks)
-  ### get just the ranks that will be used in
-  ### 1. The glommed name
-  ### 2. The step of aggregating sums
-  ranks_to_glom = all_ranks[1:lowest_rank_index]
-  short_ranks = all_ranks[c(1,lowest_rank_index)]
-  print("ranks to glom")
-  print(ranks_to_glom)
-
-  sample_names = as.character(metadata[,id_col])
-  # print(sprintf("length sample_names = %d", length(sample_names)))
-
-  if (clean && use_taxa)
-  {
-    ### Remove any taxa that are NA at the lowest level.
-    ### No point in having ASVs aggregated to the same genus
-    ### if that genus is NA.
-    clean_taxonomy_table =
-      taxonomy_table %>%
-      filter(Kingdom == 'Bacteria') %>%
-      filter(!is.na(Phylum)) %>%
-      # filter(sprintf("!is.na(%s)", lowest_rank))
-      filter(!is.na(!!sym(lowest_rank)))
-
-    print("dim clean tax table")
-    print(dim(clean_taxonomy_table))
-  }else
-  {
-    clean_taxonomy_table = taxonomy_table
-  }
-
-  print("creating asv taxa counts table")
-  counts = inner_join(asv_table, clean_taxonomy_table, by="ASVs")
-
-  if (use_taxa)
-  {
-    # print("Aggregating by ranks")
-    ### Aggregate counts by ranks being kept
-    counts =
-      counts %>%
-      ### Drop the ASVs
-      select(!!c(sample_names, ranks_to_glom)) %>%
-      # select(-ASVs) %>%
-      ### Group and sum
-      group_by(.dots=ranks_to_glom) %>%
-      summarize_all(sum) %>%
-      ungroup()
-  }
-
-  # print("Filtering taxa")
-  # print("Relative Abundance Filter")
-
-  filtered_counts =
-    counts %>%
-    applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
-    applyPrevalenceFilter(prevalence_cutoff)
-
-  # # print("current dim")
-  # print(dim(filtered_counts))
-
-  if (normalize)
-  {
-    filtered_counts = getRelativeAbundance(filtered_counts)
-  }
-
-  if (n_max_by_mean != F)
-  {
-    ### Keep only the n_max_by_mean features
-    filtered_counts =
-      filtered_counts %>%
-      ### Create a column of row means
-      mutate(mean=rowMeans(
-        select(., sample_names)/sum(select(., sample_names))
-      )) %>%
-      ### Order by the means (ascending)
-      arrange(mean) %>%
-      ### Take the highest ones (n_max_by_mean)
-      tail(n_max_by_mean) %>%
-      ### Drop the mean column
-      select(-mean)
-  }
-
-  if (add_glommed_names)
-  {
-    filtered_counts = addGlommedTaxaNames(filtered_counts, lowest_rank)
-  }
-
-  return(filtered_counts %>% data.frame())
-
-}
-
-getFilteredTaxaCountsDev1 = function(
-  asv_table,
-  taxonomy_table,
   sample_data,
   cluster_by=NA,
   relative_abundance_cutoff=0,
   prevalence_cutoff=0,
   min_count_cutoff=0,
   filter_order = c('min_count', 'prevalence', 'relative_abundance'),
-  filter_by='Taxa',
+  filter_by='ASV',
   clean_taxa=T,  ### remove NAs in lowest rank
   n_max_by_mean=F,
   id_col="SampleName", ### sample_data column that containes the unique sample IDs
@@ -674,216 +954,19 @@ getFilteredTaxaCountsDev1 = function(
   print("in getFilteredTaxaCounts")
 
   ### Data for testing
-  # cluster_by = 'Phylum'
+  # cluster_by = 'Genus'
   # relative_abundance_cutoff = 0.002
   # prevalence_cutoff = 0.1
-  # min_count_cutoff = 10
-  # filter_by = 'Taxa'
-  # clean_taxa = T
-  # id_col = 'SampleName'
-  # add_glommed_names=T
-  # normalize=F
-  # n_max_by_mean=F
-
-  sample_names = as.character(sample_data[,id_col])
-  asv_table = asv_table %>% select('ASVs', sample_names)
-
-  if (normalize)
-  {
-    asv_table =
-      asv_table %>%
-      mutate_at(sample_names, ~./sum(.))
-  }
-
-  if (clean_taxa & cluster_by != 'ASV')
-  {
-    ### Remove any taxa that are NA at the lowest level.
-    ### No point in having ASVs aggregated to the same genus
-    ### if that genus is NA.
-    clean_taxonomy_table =
-      taxonomy_table %>%
-      # filter(sprintf("!is.na(%s)", lowest_rank))
-      filter(!is.na(!!sym(cluster_by)))
-
-    # print("dim clean tax table")
-    # print(dim(clean_taxonomy_table))
-  } else
-  {
-    clean_taxonomy_table = taxonomy_table
-  }
-
-  # print(sprintf("lowest_rank = %s", lowest_rank))
-  all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus', 'ASV')
-
-  lowest_rank_index = match(cluster_by, all_ranks)
-  ### get just the ranks that will be used in
-  ### 1. The glommed name
-  ### 2. The step of aggregating sums
-  ranks_to_glom = all_ranks[1:lowest_rank_index]
-  short_ranks = all_ranks[c(1,lowest_rank_index)]
-  print("ranks to glom")
-  print(ranks_to_glom)
-
-  sample_names = as.character(sample_data[,id_col])
-  # print(sprintf("length sample_names = %d", length(sample_names)))
-
-  print("creating asv taxa counts table")
-  counts = inner_join(asv_table, clean_taxonomy_table, by="ASVs")
-
-  if (!is.na(cluster_by) & toupper(cluster_by) != 'ASV')
-  {
-    print("Aggregating by ranks")
-    ### Aggregate counts by ranks being kept
-    counts =
-      counts %>%
-      ### Drop the ASVs
-      select(!!c(sample_names, ranks_to_glom)) %>%
-      # select(-ASVs) %>%
-      ### Group and sum
-      group_by(.dots=ranks_to_glom) %>%
-      summarize_all(sum) %>%
-      ungroup()
-  } else
-  {
-    print("Aggregating by ASVs")
-  }
-
-  # else
-  # {
-  #   print("Aggregating by ASVs")
-  #   print(colnames(counts))
-  #   counts =
-  #     counts %>%
-  #     ### Drop the ASVs
-  #     # select(!!c(sample_names, all_ranks)) %>%
-  #     # select(-ASVs) %>%
-  #     ### Group and sum
-  #     group_by('ASVs') %>%
-  #     summarize_all(sum) %>%
-  #     ungroup() %>%
-  #     select(sample_names, all_ranks, everything())
-  # }
-
-  # print('dim counts')
-  # print(dim(counts))
-  # print("Filtering taxa")
-  # print("Relative Abundance Filter")
-#
-#   filters_list = list(
-#     min_count = list(
-#       filter_function=applyMinCountFilter,
-#       parameter=min_count_cutoff
-#       ),
-#     relative_abundance = list(
-#       filter_function=applyRelativeAbundanceFilter,
-#       parameter=relative_abundance_cutoff
-#       ),
-#     prevalence = list(
-#       filter_function=applyPrevalenceFilter,
-#       parameter=prevalence_cutoff
-#     )
-#   )
-
-  # filtered_counts =
-  #   counts %>%
-  #   applyMinCountFilter(min_count_cutoff) %>%
-  #   applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
-  #   applyPrevalenceFilter(prevalence_cutoff)
-
-  # filters_list = filters_list[filter_order]
-  # print(names(filters_list))
-  #
-  # filtered_counts = counts
-  # for (filter in filters_list)
-  # {
-  #   print(names(filter))
-  #   print(filter$parameter)
-  #   filtered_counts = filter$filter_function(filtered_counts, filter$parameter)
-  # }
-
-
-  filtered_counts =
-    counts %>%
-    applyMinCountFilter(min_count_cutoff) %>%
-    applyRelativeAbundanceFilter(relative_abundance_cutoff)
-  # %>%
-  #   applyPrevalenceFilter(prevalence_cutoff)
-
-  print(sprintf('filtered_counts exists: %s', 'filtered_counts' %in% ls()))
-
-  # print("current dim")
-  # print(dim(filtered_counts))
-
-  if (normalize)
-  {
-    filtered_counts = getRelativeAbundance(filtered_counts)
-  }
-
-  if (n_max_by_mean != F)
-  {
-    ### Keep only the n_max_by_mean features
-    filtered_counts =
-      filtered_counts %>%
-      ### Create a column of row means
-      mutate(mean=rowMeans(
-        select(., sample_names)/sum(select(., sample_names))
-      )) %>%
-      ### Order by the means (ascending)
-      arrange(mean) %>%
-      ### Take the highest ones (n_max_by_mean)
-      tail(n_max_by_mean) %>%
-      ### Drop the mean column
-      select(-mean)
-  }
-
-  if (add_glommed_names)
-  {
-    filtered_counts = addGlommedTaxaNames(
-      filtered_counts,
-      cluster_by,
-      make_unique=make_unique
-      )
-    # print('glommed taxa names')
-  }
-
-  return(filtered_counts %>% data.frame())
-
-}
-
-getFilteredTaxaCountsDev = function(
-  asv_table,
-  taxonomy_table,
-  sample_data,
-  cluster_by=NA,
-  relative_abundance_cutoff=0,
-  prevalence_cutoff=0,
-  min_count_cutoff=0,
-  filter_order = c('min_count', 'prevalence', 'relative_abundance'),
-  filter_by='Taxa',
-  clean_taxa=T,  ### remove NAs in lowest rank
-  n_max_by_mean=F,
-  id_col="SampleName", ### sample_data column that containes the unique sample IDs
-  add_glommed_names=T,
-  make_unique=T,
-  normalize=F
-)
-{
-  print("in getFilteredTaxaCounts")
-
-  ### Data for testing
-  # cluster_by = 'ASV'
-  # relative_abundance_cutoff = 0.02
-  # prevalence_cutoff = 0.1
-  # min_count_cutoff = 20
+  # min_count_cutoff = 0
   # filter_by = 'ASV'
   # clean_taxa = T
   # id_col = 'SampleName'
-  # add_glommed_names=F
+  # add_glommed_names=T
   # normalize=T
   # n_max_by_mean=F
 
   sample_names = as.character(sample_data[,id_col])
-  asv_table = asv_table %>% select('ASVs', sample_names)
+  asv_table = asv_table %>% select('ASVs', !!sample_names)
 
   # if (normalize)
   # {
@@ -892,6 +975,19 @@ getFilteredTaxaCountsDev = function(
   #     mutate_at(sample_names, ~./sum(.))
   # }
 
+  if (filter_by == 'ASV')
+  {
+    print("filtering ASV table")
+    filtered_asvs =
+      asv_table %>%
+      applyMinCountFilter(min_count_cutoff) %>%
+      applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
+      applyPrevalenceFilter(prevalence_cutoff)
+  } else
+  {
+    filtered_asvs = asv_table
+  }
+
   if (clean_taxa & cluster_by != 'ASV')
   {
     ### Remove any taxa that are NA at the lowest level.
@@ -900,7 +996,7 @@ getFilteredTaxaCountsDev = function(
     clean_taxonomy_table =
       taxonomy_table %>%
       # filter(sprintf("!is.na(%s)", lowest_rank))
-      filter(!is.na(!!sym(cluster_by)))
+      filter(!is.na(!!as.name(cluster_by)))
 
     # print("dim clean tax table")
     # print(dim(clean_taxonomy_table))
@@ -925,7 +1021,11 @@ getFilteredTaxaCountsDev = function(
   # print(sprintf("length sample_names = %d", length(sample_names)))
 
   print("creating asv taxa counts table")
-  counts = inner_join(asv_table, clean_taxonomy_table, by="ASVs")
+  counts = inner_join(
+    filtered_asvs,
+    clean_taxonomy_table,
+    by="ASVs"
+    )
 
   if (!is.na(cluster_by) & toupper(cluster_by) != 'ASV')
   {
@@ -949,12 +1049,19 @@ getFilteredTaxaCountsDev = function(
   print("current dim")
   print(dim(counts))
 
-  print("filtering counts")
-  filtered_counts =
-    counts %>%
-    applyMinCountFilter(min_count_cutoff) %>%
-    applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
-    applyPrevalenceFilter(prevalence_cutoff)
+  if (filter_by == 'glom' || filter_by == 'taxa')
+  {
+    print("filtering glommedcounts")
+    filtered_counts =
+      counts %>%
+      applyMinCountFilter(min_count_cutoff) %>%
+      applyRelativeAbundanceFilter(relative_abundance_cutoff) %>%
+      applyPrevalenceFilter(prevalence_cutoff)
+  } else
+  {
+    filtered_counts = counts
+  }
+
 
   print("current dim")
   print(dim(filtered_counts))
@@ -978,7 +1085,7 @@ getFilteredTaxaCountsDev = function(
       filtered_counts %>%
       ### Create a column of row means
       mutate(mean=rowMeans(
-        select(., sample_names)/sum(select(., sample_names))
+        select(., !!sample_names)/sum(select(., !!sample_names))
       )) %>%
       ### Order by the means (ascending)
       arrange(mean) %>%
@@ -1133,7 +1240,6 @@ writeData = function(
     quote=F
   )
 }
-
 
 makeColDataPlot = function(
   master_table,
@@ -1303,7 +1409,7 @@ filterVarsBySampleThreshold2 = function(
 
     crosstab =
       temp_master_table %>%
-      select(c(covariate, name)) %>%
+      select(!!c(covariate, name)) %>%
       table()
 
     print(crosstab)
@@ -1357,12 +1463,12 @@ filterVarsBySampleThreshold3 = function(
 )
 {
 
-  master_table = all_master_table
-  threshold = 3
-  variable_list = observational_variables
-  covariate="CaseString"
-  var = observational_variables$ARMS2rs10490924
-  print(names(variable_list))
+  # master_table = all_master_table
+  # threshold = 3
+  # variable_list = observational_variables
+  # covariate="CaseString"
+  # var = observational_variables$ARMS2rs10490924
+  # print(names(variable_list))
 
   new_variable_list = list()
 
@@ -1392,7 +1498,7 @@ filterVarsBySampleThreshold3 = function(
 
     crosstab =
       temp_master_table %>%
-      select(c(covariate, name)) %>%
+      select(!!c(covariate, name)) %>%
       table()
 
     print(crosstab)
@@ -1460,9 +1566,10 @@ doMultipleRegression = function(
 
 
   ### Build Formula
+  # print("setting transformations")
   if (transformation=='log')
   {
-    lhs = hs = sprintf('log(%s + %s)', var, log_regularizer)
+    lhs = sprintf('log(%s + %s)', var, log_regularizer)
   } else if (transformation=='rank')
   {
     lhs = sprintf('rank(%s)', var)
@@ -1471,6 +1578,7 @@ doMultipleRegression = function(
     lhs = var
   }
 
+  # print("creating formula")
   formula_rhs = paste0(names(predictors), collapse=' + ')
   formula = paste0(var, '~', formula_rhs) %>% as.formula()
 
@@ -1489,11 +1597,22 @@ getRegressionPvals = function(
 )
 {
 
+  ### Data for Testing
+  # fit=fit
+  # cotnrast_names="GRS"
+  # index_name=NULL
+  # logistic=T
+
   regression_results_table =
     fit %>%
     summary() %>%
     coefficients()
-  regression_contrasts = rownames(regression_results_table)
+
+  regression_contrasts =
+    rownames(regression_results_table)
+
+  # print(contrast_names)
+  # print(regression_contrasts)
 
   contrasts = intersect(contrast_names, regression_contrasts)
 
@@ -1506,7 +1625,7 @@ getRegressionPvals = function(
   }
 
   pvals = regression_results_table[contrasts, pval_column] %>% as.list()
-
+  names(pvals) = contrasts
   # pvals =
   #   fit %>%
   #   summary() %>%
@@ -1536,7 +1655,7 @@ getRegressionEffectSizes= function(
   contrasts = intersect(contrast_names, regression_contrasts)
 
   effect_sizes = regression_results_table[contrasts, 'Estimate'] %>% as.list()
-
+  names(effect_sizes) = contrasts
   # effect_sizes =
   #   fit %>%
   #   summary() %>%
@@ -1566,6 +1685,7 @@ getRegressionStandardError= function(
   contrasts = intersect(contrast_names, regression_contrasts)
 
   standard_error = regression_results_table[contrasts, 'Std. Error'] %>% as.list()
+  names(standard_error) = contrasts
 
   # standard_error =
   #   fit %>%1
@@ -1586,15 +1706,17 @@ setFactorsLevels = function(
   variables
   )
 {
-  # df = sample_data
-  # variables = variables = observational_variables[c('CaseString', 'Gender',  'Age')]
+  # df = all_master_table
+  # variables = observational_variables
 
   for (var in variables)
   {
     name = var$covariate_of_interest
     case = var$case
     control = var$control
-    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    all_values = df %>% pull(name) %>% unique()
+    other_levels = all_values %>% setdiff(c(case, control))
 
     if (case != '' & control != '')
     {
@@ -1602,7 +1724,7 @@ setFactorsLevels = function(
       other_levels = setdiff(df[[name]], c(case, control))
       df = mutate(df, !!name := factor(
         !!as.name(name),
-        levels=c(control, case, other=other_levels))
+        levels=c(control, case, other_levels))
         )
     }
 
@@ -1696,8 +1818,8 @@ makeContrastNames = function(
 )
 {
   ### Data for Testing
-  # variables = amd_only_variables
-  # master_table = amd_only_master_table
+  # variables = c()
+  # master_table = all_master_table
 
   contrast_names = list()
 
@@ -1769,7 +1891,7 @@ makeRegressionStatsContrastTemplate = function(
 
 
 
-doTwoGroupTests = function(
+doUnivariateTests = function(
   exp_vars,
   test_var,
   master_table,
@@ -1863,7 +1985,7 @@ doTwoGroupTests = function(
 # master_table = amd_only_master_table
 # test_group = 'AMD_Only'
 #
-# pval_list = doTwoGroupTests(
+# pval_list = doUnivariateTests(
 #   exp_vars = c(raw_exp_vars, calculated_exp_vars),
 #   test_var = test_var,
 #   master_table = amd_only_master_table,
@@ -1878,14 +2000,14 @@ doTwoGroupTests = function(
 #   name = test_var$covariate_of_interest
 #   print(name)
 #
-#   pval_list = doTwoGroupTests(
+#   pval_list = doUnivariateTests(
 #     exp_vars = c(raw_exp_vars, calculated_exp_vars),
 #     test_var = test_var,
 #     master_table = amd_only_master_table,
 #     test_group = 'AMD_Only'
 #   )
 #
-#   amd_only_two_group_stats %<>%
+#   amd_only_univariate_stats %<>%
 #     add_row(!!!pval_list)
 # }
 
@@ -1897,6 +2019,7 @@ makeBoxAndDotplot = function(
   annotation_data=c(),
   include=c("dots", "box"),
   title=NULL,
+  subtitle=NULL,
   xlabel=NULL,
   ylabel=NULL
 )
@@ -2056,6 +2179,7 @@ makeBoxAndDotplot = function(
   plt = plt +
     labs(
       title=title,
+      subtitle=subtitle,
       x=xlabel,
       y=ylabel
     )
@@ -2068,16 +2192,17 @@ makeBoxAndDotplot = function(
 
 
 
-plotAllTwoGroupTests = function(
+plotAllUnivariateTests = function(
   variables,
   master_table,
   indices,
   title_template,
+  subtitle=NULL,
   annotation_data
 )
 {
 
-  print("plotAllTwoGroupTests")
+  print("plotAllUnivariateTests")
 
   for (var in variables)
   {
@@ -2111,7 +2236,8 @@ plotAllTwoGroupTests = function(
         facet_var='index'
       ),
       annotation_data=annotation_data,
-      title=title
+      title=title,
+      subtitle=subtitle,
     )
 
     print(plt)
@@ -2123,7 +2249,7 @@ getPvalAnnotations = function(
   variables,
   pval_height_factor,
   master_table,
-  two_group_stats
+  univariate_stats
 )
 {
   num_annotations = length(variables)
@@ -2132,14 +2258,14 @@ getPvalAnnotations = function(
     index = variables,
     xloc = rep(1.5, num_annotations),
     yloc = pval_height_factor*master_table %>%
-      select(variables) %>%
+      select(!!variables) %>%
       drop_na() %>%
       summarize_all(max) %>%
       unlist()
   )
 
   pval_annotations =
-    two_group_stats %>%
+    univariate_stats %>%
     gather(
       key="index",
       value='pvals',
@@ -2149,8 +2275,8 @@ getPvalAnnotations = function(
     mutate(pvals = paste0('p = ', round(pvals, 3)))
 }
 
-# makeTwoGroupPlot = plotTwoGroupTest
-# plotTwoGroupTests = plotAllTwoGroupTests
+# makeUnivariatePlot = plotUnivariateTest
+# plotUnivariateTests = plotAllUnivariateTests
 
 
 plotEffectSizes = function(
@@ -2158,6 +2284,7 @@ plotEffectSizes = function(
   effect_sizes, # rows=variables, cols=response_vars, values=effect_sizes
   response_var, # Is added to title
   title_template='',
+  subtitle=NULL,
   effect_size_template='',
   category_label=''
 )
@@ -2195,7 +2322,10 @@ plotEffectSizes = function(
       stat='identity'
     ) +
     coord_flip() +
-    ggtitle(title) +
+    ggtitle(
+      label=title,
+      subtitle=subtitle
+    ) +
     ylab(paste(effect_size_template, "as Effect Size")) +
     xlab(category_label) +
     theme(
@@ -2376,7 +2506,6 @@ getMultipleRegressionStats = function(
 }
 
 
-
 getLogisticRegressionStats = function(
     base_predictor_vars,
     additional_predictors,
@@ -2388,13 +2517,14 @@ getLogisticRegressionStats = function(
   )
 {
 
-  # base_predictor_vars=observational_variables[c('Age', 'Gender', 'Tissue_code')]
-  # additional_predictors=c(raw_exp_vars, calculated_exp_vars)
-  # logistic_response_var='CaseString'
+  ### Data for testing
+  # base_predictor_vars=c()
+  # additional_predictors=target_variables
+  # logistic_response_var=observational_variables[[response_var]]
   # master_table=all_master_table
   # stats=c('pvalue', 'effect_size', 'std_error')
-  # response_var_name='CaseString'
-  # index_name=NULL
+  # response_var_name=response_var
+  # # index_name=
   # adjustment_method='BH'
 
   ### Get contrast names
@@ -2428,10 +2558,10 @@ getLogisticRegressionStats = function(
     print(sprintf('additional predictor: %s', var))
 
     ### Build Formula
-    lhs = logistic_response_var
+    lhs = logistic_response_var$covariate_of_interest
 
     predictor_names = base_predictor_vars %>% names() %>% unname()
-    all_predictor_names = c(var, predictor_names)
+    all_predictor_names = c(var, predictor_names) %>% setdiff('')
     print(all_predictor_names)
     all_contrast_names = c(base_contrast_names, var)
 
@@ -2445,10 +2575,15 @@ getLogisticRegressionStats = function(
     print("perform regression")
     fit = glm(
       formula=formula,
-      data=all_master_table,
+      data=master_table,
       family=binomial(link='logit'),
       na.action=na.omit
       )
+
+    contrast_names =
+      coefficients(fit) %>%
+      names %>%
+      setdiff('(Intercept)')
 
     ### Collect pvalues
     if ('pvalue' %in% stats)
@@ -2456,7 +2591,7 @@ getLogisticRegressionStats = function(
       print('getting pvalues')
       pvalues = getRegressionPvals(
         fit,
-        contrast_names = all_contrast_names,
+        contrast_names = contrast_names,
         index_name=NULL,
         logistic=T
       )
@@ -2476,7 +2611,7 @@ getLogisticRegressionStats = function(
       print('getting effect size')
       effect_sizes = getRegressionEffectSizes(
         fit,
-        contrast_names = all_contrast_names,
+        contrast_names = contrast_names,
         index_name=NULL
       )
       effect_sizes['response_var_name'] = var
@@ -2491,7 +2626,7 @@ getLogisticRegressionStats = function(
       print('getting std err')
       std_errors = getRegressionStandardError(
         fit,
-        contrast_names = all_contrast_names,
+        contrast_names = contrast_names,
         index_name=NULL
       )
       std_errors['response_var_name'] = var
@@ -2567,7 +2702,8 @@ plotEffectSize2 = function(
     feature_axis_title="",
     alpha_col,
     alpha_legend_title="",
-    plot_title=""
+    plot_title="",
+    subtitle=NULL
   )
 {
   ### Data for testing
@@ -2620,7 +2756,9 @@ plotEffectSize2 = function(
         y=effect_size_col,
         fill="enhanced",
         alpha=alpha_col
-      )
+      ),
+      width=1,
+      position=position_dodge(width=1000)
     ) +
     coord_flip() +
     scale_fill_manual(values=c('#FF0000', '#0000FF'), name=effect_size_legend_title) +
@@ -2631,7 +2769,10 @@ plotEffectSize2 = function(
       # labels=as.character(seq(0, 1, length=5)),
       name=alpha_legend_title
     ) +
-    ggtitle(plot_title)
+    ggtitle(
+      label=plot_title,
+      subtitle=subtitle
+    )
 
   # print(plt)
 
@@ -2705,3 +2846,207 @@ plotEffectSize2 = function(
 # https://stackoverflow.com/a/21798453/188963
 
 # pipe = (...fns) => x => fns.reduce((v, f) => f(v), x)
+
+# makePublicationEffectSizePlotBW= function(
+#   data,
+#   var_data,
+#   effect_size_col,
+#   feature_col,
+#   alpha_col,
+#   feature_axis_label="Significant Taxa",
+#   effect_size_axis_label="",
+#   alpha_legend_title="Adjusted P-Values",
+#   plot_title=NULL,
+#   subtitle=NULL,
+#   caption=NULL,
+#   base_size=16
+# )
+# {
+#   ### Data for testing
+#   # data=sig_data
+#   # var_data=observational_variables[[varname]]
+#   # effect_size_col="CaseString_AMD_vs_Control.L2FC"
+#   # effect_size_col=effect_size_col
+#   # feature_col="Taxon"
+#   # feature_axis_label="Significant Taxa"
+#   # alpha_col='CaseString_AMD_vs_Control.padj'
+#   # alpha_col=padj_col
+#   # alpha_legend_title="Adjusted P-Values"
+#   # plot_title=NULL
+#   # subtitle=NULL
+#   # caption=NULL
+#
+#   num_features = dim(sig_data)[1]
+#
+#   var_name = var_data$covariate_of_interest
+#   ref_level = var_data$labels$ref
+#   comparison_level = var_data$labels$comparison
+#
+#   if (effect_size_axis_label=="")
+#   {
+#     effect_size_axis_label = sprintf(
+#       'Log2 Fold Change: %s/%s',
+#       comparison_level,
+#       ref_level
+#     )
+#   }
+#
+#   min_alpha = min(data[[alpha_col]]) %>% signif(2)
+#   max_alpha = max(data[[alpha_col]]) %>% signif(2)
+#
+#   # print(alpha_col)
+#   # print(data %>% pull(alpha_col))
+#
+#   print(sprintf('min_alpha: %s  max_alpha: %s', min_alpha, max_alpha))
+#   alpha_breaks = seq(min_alpha, max_alpha, length=5)
+#   # print(alpha_breaks)
+#
+#   plt =
+#     data %>%
+#     arrange(!!as.name(effect_size_col)) %>%
+#     mutate(!!feature_col := factor(!!as.name(feature_col), levels=!!as.name(feature_col))
+#     ) %>%
+#     ggplot() +
+#     geom_col(aes_string(
+#       x=feature_col,
+#       y=effect_size_col,
+#       # fill="black",
+#       alpha=alpha_col
+#     )
+#     ) +
+#     coord_flip() +
+#     # scale_fill_manual(values=c('#FF0000', '#0000FF'), name=effect_size_legend_title) +
+#     scale_alpha_continuous(
+#       range=c(1, 0),
+#       limits=c(min_alpha, max_alpha),
+#       breaks=seq(min_alpha, max_alpha, length=5),
+#       # labels=as.character(seq(0, 1, length=5)),
+#       name=alpha_legend_title
+#     ) +
+#     labs(
+#       title=plot_title,
+#       subtitle=subtitle,
+#       caption=caption,
+#       x=feature_axis_label,
+#       y=effect_size_axis_label
+#     ) +
+#     # theme(
+#     #   axis.text=element_text(size=12),
+#     #   axis.title=element_text(size=14,face="bold")
+#     #   ) +
+#     theme_grey(base_size = 16)
+#     # theme(
+#     #   axis.title.x = element_text(size = 16),
+#     #   axis.text.x = element_text(size = 14),
+#     #   axis.title.y = element_text(size = 16)
+#     #   )
+#
+#   # print(plt)
+#
+#   return(plt)
+# }
+
+
+makePublicationEffectSizePlotBW= function(
+  data,
+  var_data,
+  effect_size_col,
+  feature_col,
+  feature_axis_label="Significant Taxa",
+  alpha_col,
+  alpha_legend_title="Adjusted P-Values",
+  alpha_breaks=NULL,
+  effect_size_axis_label="",
+  plot_title=NULL,
+  subtitle=NULL,
+  caption=NULL,
+  base_size=16,
+  levels_in_label=F
+)
+{
+  ### Data for testing
+  # data=sig_data
+  # var_data=observational_variables[[varname]]
+  # effect_size_col="CaseString_AMD_vs_Control.L2FC"
+  # effect_size_col=effect_size_col
+  # feature_col="Taxon"
+  # feature_axis_label="Significant Taxa"
+  # alpha_col='CaseString_AMD_vs_Control.padj'
+  # alpha_col=padj_col
+  # alpha_legend_title="Adjusted P-Values"
+  # plot_title=NULL
+  # subtitle=NULL
+  # caption=NULL
+
+  num_features = dim(sig_data)[1]
+
+  var_name = var_data$covariate_of_interest
+  case = var_data$case
+  control = var_data$control
+  ref_level = var_data$labels$ref
+  comparison_level = var_data$labels$comparison
+
+  if (levels_in_label)
+  {
+    effect_size_axis_label = sprintf(
+      'Log2 Fold Change: %s(%s)/%s(%s)',
+      case,
+      comparison_level,
+      control,
+      ref_level
+    )
+  } else
+  {
+    effect_size_axis_label = sprintf(
+      'Log2 Fold Change: %s/%s',
+      comparison_level,
+      ref_level
+    )
+  }
+
+  print(effect_size_axis_label)
+
+  min_alpha = min(data[[alpha_col]]) %>% signif(2)
+  max_alpha = max(data[[alpha_col]]) %>% signif(2)
+
+  alpha_limits = c(min_alpha, max_alpha)
+
+  if (is.null(alpha_breaks))
+  {
+    print(sprintf('min_alpha: %s  max_alpha: %s', min_alpha, max_alpha))
+    alpha_breaks = seq(min_alpha, max_alpha, length=5)
+    # print(alpha_breaks)
+  }
+
+  plt =
+    data %>%
+    arrange(!!as.name(effect_size_col)) %>%
+    mutate(!!feature_col := factor(!!as.name(feature_col), levels=!!as.name(feature_col))
+    ) %>%
+    ggplot() +
+    geom_col(aes_string(
+      x=feature_col,
+      y=effect_size_col,
+      alpha=alpha_col
+    )
+    ) +
+    coord_flip() +
+    scale_alpha_continuous(
+      range=c(1, 0),
+      limits=c(0.0001, 0.15),
+      breaks=c(0.1, 0.05, 0.01, 0.001, 0.0001),
+      labels=c(0.1, 0.05, 0.01, 0.001, 0.0001) %>% paste0("<", .),
+      name="Adjusted P-Values",
+      trans="identity"
+    ) +
+    labs(
+      title=plot_title,
+      subtitle=subtitle,
+      caption=caption,
+      x=feature_axis_label,
+      y=effect_size_axis_label
+    ) +
+    theme_grey(base_size = 16)
+
+  return(plt)
+}

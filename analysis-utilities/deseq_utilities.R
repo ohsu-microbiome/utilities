@@ -874,7 +874,9 @@ runDeseqFromTables = function(
     taxonomy_table,
     metadata,
     lowest_rank,
-    design
+    design,
+    cooks_cutoff=T,
+    independent_filtering=T
   )
 {
   ### Utility vectors for reused data
@@ -996,7 +998,12 @@ runDeseqFromTables = function(
     temp_results =
       ### Get the results for the current covariate by
       ### using its result_name
-      results(deseq_obj, name=cov_name_list[[cov_name]]) %>%
+      results(
+        deseq_obj,
+        name=cov_name_list[[cov_name]],
+        cooksCutoff=cooks_cutoff,
+        independentFiltering=independent_filtering
+        ) %>%
       ### Coerce to dataframe
       as.data.frame() %>%
       ### Drop columns of stats we don't need
@@ -1051,16 +1058,19 @@ runDeseqFromTables = function(
   ))
 }
 
-
 runDeseqFromTables_dev = function(
     asv_table,
     taxonomy_table,
     sample_data,
     variables,
     lowest_rank='Genus',
+    filter_by='ASV',
     relative_abundance_cutoff = 0.002,
     prevalence_cutoff = 0.1,
-    include_covariates='All'
+    min_count_cutoff=0,
+    include_covariates='All',
+    cooks_cutoff=T,
+    independent_filtering=T
   )
 {
 
@@ -1069,14 +1079,13 @@ runDeseqFromTables_dev = function(
   ### Data for testing
   # asv_table = asv_table
   # taxonomy_table = taxonomy_table
-  # sample_data = sample_data %>% filter(!!as.name(varname) %in% c(var$case, var$control))
-  # variables = varname
+  # # sample_data = sample_data %>% filter(!!as.name(varname) %in% c(var$case, var$control))
+  # variables = 'CaseString'
   # lowest_rank = 'Genus'
+  # filter_by='ASV'
   # relative_abundance_cutoff = 0.002
   # prevalence_cutoff = 0.1
   # include_covariates = 'All'
-
-
 
   sample_names = sample_data$SampleName
 
@@ -1085,26 +1094,15 @@ runDeseqFromTables_dev = function(
   #   variables
   # )
 
-  # taxa_counts = getFilteredTaxaCounts(
-  #   asv_table,
-  #   taxonomy_table,
-  #   sample_data,
-  #   lowest_rank=lowest_rank,
-  #   relative_abundance_cutoff=relative_abundance_cutoff,
-  #   prevalence_cutoff=prevalence_cutoff,
-  #   id_col="SampleName",
-  #   normalize=F
-  # )
-
-  taxa_counts = getFilteredTaxaCountsDev(
+  taxa_counts = getFilteredTaxaCounts(
     asv_table=asv_table,
     taxonomy_table=taxonomy_table,
     sample_data=sample_data,
     cluster_by=lowest_rank,
+    filter_by=filter_by,
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
-    min_count_cutoff=0,
-    filter_by='Taxa',
+    min_count_cutoff=min_count_cutoff,
     clean_taxa=T,  ### remove NAs in lowest rank
     n_max_by_mean=F,
     id_col="SampleName", ### metadata column that containes the unique sample IDs
@@ -1165,11 +1163,29 @@ runDeseqFromTables_dev = function(
   {
     print(name)
 
-    name_results = results(
+    if (cooks_cutoff==TRUE)
+    {
+      print("***  Default Cooks Cutoff  ***")
+      temp_results = results(
         deseq_obj,
         name=name,
-        format='DataFrame'
-      ) %>%
+        format='DataFrame',
+        independentFiltering=independent_filtering
+      )
+    } else
+    {
+      print("***  Custom Cooks Cutoff  ***")
+      temp_results = results(
+        deseq_obj,
+        name=name,
+        format='DataFrame',
+        cooksCutoff=cooks_cutoff,
+        independentFiltering=independent_filtering
+      )
+    }
+
+    name_results =
+      temp_results %>%
       data.frame(stringsAsFactors=F) %>%
       rownames_to_column('Taxon') %>%
       arrange(padj) %>%
@@ -1190,8 +1206,8 @@ runDeseqFromPathwayCounts = function(
   variables,
   include_covariates='All',
   pathway_colname="",
-  cooks_cutoff=F,
-  independent_filtering=F
+  cooks_cutoff=T,
+  independent_filtering=T
 )
 {
 
@@ -1257,13 +1273,29 @@ runDeseqFromPathwayCounts = function(
   {
     print(name)
 
-    name_results = results(
-      deseq_obj,
-      name=name,
-      format='DataFrame',
-      cooksCutoff=cooks_cutoff,
-      independentFiltering=independent_filtering
-    ) %>%
+    if (cooks_cutoff==TRUE)
+    {
+      print("***  Default Cooks Cutoff  ***")
+      temp_results = results(
+        deseq_obj,
+        name=name,
+        format='DataFrame',
+        independentFiltering=independent_filtering
+      )
+    } else
+    {
+      print("***  Custom Cooks Cutoff  ***")
+      temp_results = results(
+        deseq_obj,
+        name=name,
+        format='DataFrame',
+        cooksCutoff=cooks_cutoff,
+        independentFiltering=independent_filtering
+      )
+    }
+
+    name_results =
+      temp_results %>%
       data.frame(stringsAsFactors=F) %>%
       rownames_to_column(pathway_colname) %>%
       arrange(padj) %>%

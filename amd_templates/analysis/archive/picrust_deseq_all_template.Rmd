@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -45,22 +45,34 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
 ```
 
-# MiSeq-${miseq_run_number} DESeq2 Analysis {.tabset}
+# ${miseq_project_prefix} DESeq2 Analysis {.tabset}
 
-## Clustering
-Data clustered at the `r toupper("${clustering_level}")` level.
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
-## Setup 
+## Setup
 
 ### [Close]
 
@@ -94,24 +106,9 @@ ${knitr_options}
 
 ### Load Data
 ```{r}
-# pathway_counts_table_file = file.path(
-#   "${tables_dir}",
-#   "picrust_out",
-#   "pathways_out",
-#   "miseq-${miseq_run_number}_path_abun_unstrat.xlsx"
-# )
-# 
-# pathway_counts_table = read.xlsx(
-#   pathway_counts_table_file,
-#   colNames=T
-#   )
-
-
 ko_counts_table_file = file.path(
   "${tables_dir}",
-  "picrust_out",
-  "KO_metagenome_out",
-  "miseq-239_pred_metagenome_unstrat.xlsx"
+  "ko_pathway_abundance_integers.xlsx"
 )
 
 ko_counts_table = read.xlsx(
@@ -124,19 +121,6 @@ sample_data = read.xlsx(
   colNames=T
   )
 
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
-
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
 
@@ -148,48 +132,33 @@ source(file.path(
 
 ```
 
-### Integerize pathway counts
+### Extract Subgroups
 ```{r}
-pathway_counts_table = 
-  pathway_counts_table %>%
-  remove_rownames() %>%
-  mutate_at(vars(sample_names), ~floor(.+0.00000001))
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
 
-ko_counts_table = 
-  ko_counts_table %>%
-  remove_rownames() %>%
-  mutate_at(vars(sample_names), ~floor(.+0.00000001)) %>%
-  rename(KO=function.)
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
+
 ```
-
 
 ### Set Metadata Factor Levels
 ```{r}
 sample_data = setFactorsLevels(sample_data, observational_variables)
-# sample_data %<>%
-#   mutate(AREDS=
-#     ifelse(is.na(AREDS), "MISSING", AREDS) %>%
-#     factor(levels=c('N', 'Y', 'MISSING'))
-#   )
 ```
 
 ### Variables of interest
 #### Observational Variables
 ```{r}
-all_covariates = observational_variables[${linear_regression_predictors['All']}]
-age_lt_90_covariates = observational_variables[${linear_regression_predictors['Age_lt_90']}]
-genotypes = ${genotypes}
-phenotypes = ${phenotypes}
+test_groups = ${test_groups}
 ```
 
-#### Remove Age
-```{r}
-all_covariates$Age = NULL
-age_lt_90_covariates$Age = NULL
-```
-
-* **All Variables:** `r all_covariates %>% names()`
-* **Age < 90 Variables:** `r age_lt_90_covariates %>% names()`
+* **Test Groups:** `r test_groups`
 
 ## All Subgroups Case/Control Only
 ### Create Workbook
@@ -289,7 +258,7 @@ deseq_results_wb = createWorkbook()
 results_df = runDeseqFromPathwayCounts(
   pathway_counts=pathway_counts_table,
   sample_data,
-  variables=all_covariates %>% names(),
+  variables=test_groups,
   include_covariates = 'All'
   )
   
@@ -416,7 +385,7 @@ deseq_results_wb = createWorkbook()
 results_df = runDeseqFromPathwayCounts(
   counts_table=pathway_counts_table,
   sample_data %>% filter(Age < 90),
-  variables=age_lt_90_covariates %>% names(),
+  variables=test_groups,
   include_covariates = 'All'
   )
   

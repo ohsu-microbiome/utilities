@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -44,18 +44,31 @@ analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
 analysis_title = "${analysis_title}"
+analysis_subtitle = "${analysis_subtitle}"
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_title` Two Group Plots {.tabset}
-Mann-Whitney Two Group Testing
-
-## Clustering Level
+# ${miseq_project_prefix} `r analysis_title` Univariate Plots {.tabset}
+Mann-Whitney Univariate Testing
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup
 
@@ -116,7 +129,7 @@ filename = makeDataFileName(
   )
 print(sprintf("mann whitney file path: %s", filename))
 
-two_group_stats = read.xlsx(filename)
+univariate_stats = read.xlsx(filename)
 
 source(file.path(
   "${project_root}", 
@@ -125,17 +138,15 @@ source(file.path(
   ))
 ```
 
+
 ### Variables of interest
 #### Observational Variables
 ```{r}
-all_variables = observational_variables[${two_group_covariates['All']}]
-age_lt_90_variables = observational_variables[${two_group_covariates['Age_lt_90']}]
-amd_only_variables = observational_variables[${two_group_covariates['AMD_Only']}]
+case = ${case} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
 ```
 
-* **All Variables:** ${two_group_covariates['All']}
-* **Age < 90 Variables:** ${two_group_covariates['Age_lt_90']}
-* **AMD Only Variables:** ${two_group_covariates['AMD_Only']}
+* **Categorical Variables:** ${categorical_variables}
 
 #### Raw and Calculated Experimental Variables
 
@@ -143,6 +154,7 @@ amd_only_variables = observational_variables[${two_group_covariates['AMD_Only']}
 raw_exp_vars = ${raw_exp_vars}
 calculated_exp_vars = ${calculated_exp_vars}
 ```
+**Raw Experimental Variables: ** `r raw_exp_vars`
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
 
@@ -168,12 +180,12 @@ pval_annotations = getPvalAnnotations(
   variables=c(raw_exp_vars, calculated_exp_vars),
   master_table=all_master_table,
   pval_height_factor=1.2,
-  two_group_stats=two_group_stats
+  univariate_stats=univariate_stats
 )
 ```
 
 
-## Two Group Test Plots
+## Univariate Test Plots
 
 ### All Subgroups: AMD vs. Control
 ```{r}
@@ -187,7 +199,8 @@ makeBoxAndDotplot(
     facet_var='index'
     ),
   annotation_data=pval_annotations %>% filter(TestGroup=='All'),
-  title=paste(analysis_title, "All Subgroups")
+  title=paste(analysis_title, "All Subgroups"),
+  subtitle="${analysis_subtitle}"
 )
 ```
 
@@ -202,20 +215,24 @@ makeBoxAndDotplot(
     color_var='CaseString', 
     facet_var='index'
     ),
-  annotation_data=pval_annotations %>% filter(TestGroup=='Age_lt_90'),
-  title=paste(analysis_title, "Age<90")
+  annotation_data=pval_annotations %>% 
+    filter(TestGroup=='Age_lt_90'),
+  title=paste(analysis_title, "Age<90"),
+  subtitle="${analysis_subtitle}"
 )
 ```
 
 ### AMD Only---Multiple Covariates
 
 ```{r}
-plotAllTwoGroupTests(
-  variables=amd_only_variables,
+plotAllUnivariateTests(
+  variables=observational_variables[categorical_variables %>% setdiff("CaseString")],
   master_table=amd_only_master_table,
   indices=c(raw_exp_vars, calculated_exp_vars),
   title_template=paste(analysis_title, "AMD Only: "),
-  annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only')
+  annotation_data=pval_annotations %>% 
+    filter(TestGroup=='AMD_Only'),
+  subtitle="${analysis_subtitle}"
 )
 
 ```
@@ -224,12 +241,14 @@ plotAllTwoGroupTests(
 ### AMD Only, Age < 90---Multiple Covariates
 
 ```{r}
-plotAllTwoGroupTests(
-  variables=amd_only_variables,
+plotAllUnivariateTests(
+  variables=observational_variables[categorical_variables %>% setdiff("CaseString")],
   master_table=amd_only_master_table,
   indices=c(raw_exp_vars, calculated_exp_vars),
   title_template=paste(analysis_title, "AMD Only: "),
-  annotation_data=pval_annotations %>% filter(TestGroup=='AMD_Only_Age_lt_90')
+  annotation_data=pval_annotations %>%
+    filter(TestGroup=='AMD_Only_Age_lt_90'),
+  subtitle="${analysis_subtitle}"
 )
 
 ```

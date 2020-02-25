@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -45,7 +45,7 @@ tables_dir = "${tables_dir}"
 analysis_title = "${analysis_title}"
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_title` Logistic Regression Analysis {.tabset}
+# ${miseq_project_prefix} `r analysis_title` Logistic Regression Analysis {.tabset}
 ## Clustering Level
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
@@ -98,10 +98,13 @@ filename = makeDataFileName(
 
 print(filename)
 
-all_master_table = readWorkbook(filename, sheet='Master Table')
+feature_name = "${feature_name}"
+
+all_master_table = readWorkbook(filename, sheet=paste(feature_name, 'Master Table'))
 age_lt_90_master_table = all_master_table %>% filter(Age < 90)
 amd_only_master_table = all_master_table %>% filter(CaseString == 'AMD')
-filtered_taxa = readWorkbook(filename, sheet="${tools::toTitleCase(clustering_level)}") %>% pull("short_glommed_taxa")
+
+feature_list = readWorkbook(filename, sheet=feature_name) %>% pull(feature_name)
 
 source(file.path(
   "${project_root}", 

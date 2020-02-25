@@ -44,11 +44,11 @@ output:
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
-filter_by = "${filter_by}"
 tables_dir = "${tables_dir}"
 analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
 cooks_cutoff = ${cooks_cutoff}
 independent_filtering = ${independent_filtering}
+use_age = ${use_age}
 ```
 
 # ${miseq_project_prefix} DESeq2 Analysis {.tabset}
@@ -65,8 +65,6 @@ for (sg_filter in c(${subgroup_filters}))
 ```
 
 **Filtering**
-Data filtered by ${filter_by}
-
 * **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
@@ -156,6 +154,7 @@ if (!is.null(c(${subgroup_filters})))
 ```
 
 
+
 ### Set Metadata Factor Levels
 ```{r}
 sample_data = setFactorsLevels(sample_data, observational_variables)
@@ -169,33 +168,39 @@ sample_data = setFactorsLevels(sample_data, observational_variables)
 ### Variables of interest
 #### Observational Variables
 ```{r}
-case = ${case} %>% setdiff('')
-treatments = ${treatments} %>% setdiff('')
-phenotypes = ${phenotypes} %>% setdiff('')
-genotypes = ${genotypes} %>% setdiff('')
-key_covariates = ${key_covariates} %>% setdiff('')
-
-linear_predictors = ${linear_predictors} %>% setdiff('')
-categorical_variables = ${categorical_variables} %>% setdiff('')
-amd_only_variables = linear_predictors %>% setdiff(case)
+all_covariates = observational_variables[${linear_regression_predictors['All']}]
+age_lt_90_covariates = observational_variables[${linear_regression_predictors['Age_lt_90']}]
+genotypes = ${genotypes}
+phenotypes = ${phenotypes}
 ```
 
-* **All Variables:** `r linear_predictors %>% names()`
+#### Remove Age
+```{r}
+if (!use_age)
+{
+  all_covariates$Age = NULL
+  age_lt_90_covariates$Age = NULL 
+}
+
+```
+
+* **All Variables:** `r all_covariates %>% names()`
+* **Age < 90 Variables:** `r age_lt_90_covariates %>% names()`
 
 
 ### Extract Subgroups
 ```{r}
-if (!is.null(c(${subgroup_filters})))
-{
-  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
-  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
-  subgroup_filter_expression = str2expression(subgroup_filter_string)
-  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
-  sample_names = sample_data$SampleName
+subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+print(subgroup_filter_string)
+subgroup_filter_expression = str2expression(subgroup_filter_string)
+```
+`r subgroup_filter_string`
 
-  asv_table = asv_table %>% select('ASVs', sample_names)
-}
+```{r}
+sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+sample_names = sample_data$SampleName
 
+asv_table = asv_table %>% select('ASVs', sample_names)
 ```
 
 ### Set Filtering
@@ -220,15 +225,15 @@ deseq_results_wb = createWorkbook()
 for (lowest_rank in all_ranks)
 {
   
-  taxa_counts = getFilteredTaxaCounts(
+  taxa_counts = getFilteredTaxaCountsDev(
     asv_table=asv_table,
     taxonomy_table=taxonomy_table,
     sample_data=sample_data,
     cluster_by=lowest_rank,
-    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     min_count_cutoff=0,
+    filter_by='Taxa',
     clean_taxa=T,  ### remove NAs in lowest rank
     n_max_by_mean=F,
     id_col="SampleName", ### metadata column that containes the unique sample IDs
@@ -240,9 +245,8 @@ for (lowest_rank in all_ranks)
     asv_table,
     taxonomy_table,
     sample_data,
-    variables=c(case),
+    "CaseString",
     lowest_rank=lowest_rank,
-    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     include_covariates = 'All',
@@ -310,15 +314,15 @@ deseq_results_wb = createWorkbook()
 for (lowest_rank in all_ranks)
 {
   
-  taxa_counts = getFilteredTaxaCounts(
+  taxa_counts = getFilteredTaxaCountsDev(
     asv_table=asv_table,
     taxonomy_table=taxonomy_table,
     sample_data=sample_data,
     cluster_by=lowest_rank,
-    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     min_count_cutoff=0,
+    filter_by='Taxa',
     clean_taxa=T,  ### remove NAs in lowest rank
     n_max_by_mean=F,
     id_col="SampleName", ### metadata column that containes the unique sample IDs
@@ -330,9 +334,8 @@ for (lowest_rank in all_ranks)
     asv_table,
     taxonomy_table,
     sample_data,
-    variables=c(case, key_covariates),
+    all_covariates %>% names(),
     lowest_rank=lowest_rank,
-    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     include_covariates = 'All',
@@ -404,9 +407,8 @@ for (lowest_rank in all_ranks)
     asv_table,
     taxonomy_table,
     sample_data %>% filter(Age < 90),
-    variables=c(case),
+    "CaseString",
     lowest_rank=lowest_rank,
-    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     include_covariates = 'All',
@@ -479,9 +481,8 @@ for (lowest_rank in all_ranks)
     asv_table,
     taxonomy_table,
     sample_data %>% filter(Age < 90),
-    variables=c(case, key_covariates),
+    age_lt_90_covariates %>% names(),
     lowest_rank=lowest_rank,
-    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     include_covariates = 'All',

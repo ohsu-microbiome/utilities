@@ -10,6 +10,7 @@ makeNMDSPlot = function(
   axes=c(1,2),
   color,
   title_extra='',
+  subtitle=NULL,
   elipses=T,
   num_dimensions=0
 )
@@ -43,7 +44,7 @@ makeNMDSPlot = function(
     ### plotting
     ggplot(aes_string(x=mds_axes[[1]], y=mds_axes[[2]], color=color)) +
     geom_point() +
-    ggtitle(paste('nMDS', title_extra)) +
+    ggtitle(label=paste('nMDS', title_extra), subtitle=subtitle) +
     scale_color_manual(values=c('red', 'blue'))
 
   if (elipses)
@@ -64,6 +65,7 @@ makePCOAPlot = function(
   features,
   axes=c(1,2),
   title_extra='',
+  subtitle=NULL,
   elipses=T
 )
 {
@@ -99,7 +101,10 @@ makePCOAPlot = function(
     principal_components %>%
     ggplot(aes_string(x=axes_cols[[1]], y=axes_cols[[2]], color=color)) +
     geom_point() +
-    ggtitle(sprintf("PCoA %s Distance %s", capitalized_method, title_extra)) +
+    ggtitle(
+      label=sprintf("PCoA %s Distance %s", capitalized_method, title_extra),
+      subtitle=subtitle
+    ) +
     scale_color_manual(values=c('red', 'blue'))
 
 
@@ -122,7 +127,8 @@ plotUnifracPCoA = function(
   weighted=FALSE,
   plot_type='samples',
   color="",
-  axes=1:2
+  axes=1:2,
+  subtitle=NULL
 )
 {
   ps_object=ps
@@ -152,10 +158,10 @@ plotUnifracPCoA = function(
     ps_ord,
     type=plot_type,
     color=color,
-    title=title_string,
     axes=axes
   )  +
-    scale_color_manual(values=c('red', 'blue'))
+  scale_color_manual(values=c('red', 'blue')) +
+  ggtitle(label=title_string, subtitle=subtitle)
 }
 
 plotUnifracOrd = function(
@@ -168,7 +174,8 @@ plotUnifracOrd = function(
   var_data,
   color="",
   axes=c(1,2),
-  subset_string=""
+  subset_string="",
+  subtitle=NULL
 )
 {
   ### Data for Testing
@@ -218,10 +225,10 @@ plotUnifracOrd = function(
     ordination,
     type=plot_type,
     color=color,
-    title=title_string,
     axes=axes
   ) +
-    theme(plot.title = element_text(size = 9, face = "bold"))
+  theme(plot.title = element_text(size = 9, face = "bold")) +
+  ggtitle(label=title_string, subtitle=subtitle)
 
   if (!is.null(var_data))
   {
@@ -316,7 +323,8 @@ plotUnifracPCoA = function(
   weighted=FALSE,
   plot_type='samples',
   color="",
-  axes=1:2
+  axes=1:2,
+  subtitle=NULL
 )
 {
   subset_string = ifelse(subset=="", 'NONE', subset)
@@ -337,10 +345,10 @@ plotUnifracPCoA = function(
     ps_ord,
     type=plot_type,
     color=color,
-    title=title_string,
     axes=axes
   ) +
-    scale_color_manual(values=c('red', 'blue'))
+  scale_color_manual(values=c('red', 'blue')) +
+  ggtitle(label=title_string, subtitle=subtitle)
 }
 
 plotOrd3D = function(

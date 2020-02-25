@@ -1,0 +1,298 @@
+---
+title: "${miseq_project_prefix}: ${analysis_type}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+  .dataTable {
+    font-size: 9pt;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+cooks_cutoff = ${cooks_cutoff}
+independent_filtering = ${independent_filtering}
+```
+
+# ${miseq_project_prefix} DESeq2 Analysis {.tabset}
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+
+## Setup 
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('piphillin', lib='~/R35')
+```
+
+### Load Libraries
+```{r}
+# library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(openxlsx)
+library(KEGGREST)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+source('~/utilities/analysis-utilities/pathway_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+
+### Load Sample Data
+```{r}
+sample_data = read.xlsx(
+  '${sample_data_file}',
+  colNames=T
+  )
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+```
+
+
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+}
+```
+
+
+### Load Raw Pathway Abundance
+```{r}
+piphillin_results_dir = "${piphillin_results_dir}"
+print(piphillin_results_dir)
+
+ko_abundance_table_file = file.path(
+  "${piphillin_results_dir}",
+  "ko_pathway_abund_table_unnorm.txt"
+  )
+
+ko_abundance_table = read.delim(
+  ko_abundance_table_file,
+  header=T,
+  sep='\t'
+  ) %>% remove_rownames()
+
+
+ko_abundance_table %<>%
+  select(Pathway, sample_names)
+```
+
+### Filter pathway abundance
+**Pathway relative abundance cutoff:** ${pathway_relative_abundance_cutoff}
+**Pathway prevalence filter:** ${pathway_prevalence_cutoff}
+```{r}
+ko_abundance_table = 
+  ko_abundance_table %>%
+  applyRelativeAbundanceFilter(${pathway_relative_abundance_cutoff}) %>%
+  applyPrevalenceFilter(${pathway_prevalence_cutoff})
+```
+
+
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  ko_abundance_table = 
+    ko_abundance_table %>% 
+    select('Pathway', sample_names)
+}
+```
+
+### Get KEGG Pathway Names
+```{r}
+kegg_pathway_abundance = 
+  ko_abundance_table %>%
+  mutate(PathwayName = getKEGGPathways(Pathway))
+
+pathway_name_map = 
+  kegg_pathway_abundance %>%
+  select(Pathway, PathwayName)
+```
+
+### Integerize pathway counts and fix pathway names
+```{r}
+### Make PathwayNames unique and suitable for column names
+kegg_pathway_counts =
+  kegg_pathway_abundance %>%
+  mutate(PathwayName =
+           PathwayName %>%
+           str_replace_all(' ', '_') %>%
+           str_replace_all('/', '_slash_') %>%
+           str_replace_all('-', '_dash_') %>%
+           str_replace_all('\\(', '_paren_') %>%
+           str_replace_all('\\)', '_unparen_') %>%
+           str_replace_all('\\.', '_dot_') %>%
+           make.names()
+    ) %>%
+  select(-Pathway) %>%
+  group_by(PathwayName) %>%
+  summarise_all(sum) %>%
+  mutate_at(vars(sample_names), ~floor(.+1))
+
+# kegg_pathway_counts = 
+#   ko_abundance_table %>%
+#   group_by(Pathway) %>%
+#   summarise_all(sum) %>%
+#   mutate_at(vars(sample_names), ~floor(.+1))
+```
+
+### Save as XLSX
+```{r}
+kegg_pathway_counts_xlsx_filename = file.path(
+  "${analysis_dir}", 
+  "tables",
+  "kegg_pathway_counts.xlsx"
+  )
+
+write.xlsx(kegg_pathway_counts, file=kegg_pathway_counts_xlsx_filename)
+```
+
+### Make Master Table
+```{r}
+piphillin_master_table = getMasterTable(
+  taxa_counts=kegg_pathway_counts,
+  metadata=sample_data,
+  key_column='SampleName',
+  taxa_colnames='PathwayName'
+)
+```
+
+## Write Master Table
+```{r}
+wb = createWorkbook()
+
+addWorksheet(wb, sheetName="Master Table")
+openxlsx::writeData(
+  wb, 
+  sheet="Master Table", 
+  piphillin_master_table
+)
+
+addWorksheet(wb, sheetName="Pathway Names")
+
+openxlsx::writeData(
+  wb, 
+  sheet="Pathway Names", 
+  pathway_name_map
+)
+
+filename = makeDataFileName(
+  'master_table.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+print(filename)
+
+saveWorkbook(wb, file=filename, overwrite=T)
+```
+
+
+### Graph
+```{r}
+piphillin_master_table %>% 
+  select(SampleName, pathway_name_map$PathwayName) %>% 
+  gather(key='PathwayName', value='abundance', -SampleName) %>% 
+  ggplot(aes(x=SampleName, y=log(abundance))) + 
+  geom_boxplot() 
+```
+
+
+```{r}
+log_abundance = kegg_pathway_counts %>% mutate_at(sample_names, ~log10(.))
+```
+
+
+```{r}
+log_abundance %>% 
+  gather(key='SampleName', value='abundance', -PathwayName) %>%
+  ggplot(aes(x=SampleName, y=abundance)) + 
+  geom_boxplot()
+```
+
+```{r}
+rzipois = function(N, p, lambda)
+{
+  ifelse(runif(N)<p, 0, rpois(N, lambda=lambda))
+}
+```
+
+```{r}
+library(car)
+qqPlot(log_abundance[[20,]])
+qqPlot(rzipois(1000, 0.05, 100))
+
+```
+
+
+
+
+

@@ -1,0 +1,445 @@
+---
+title: "${miseq_project_prefix}: ${analysis_type}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+```
+
+# ${miseq_project_prefix} Logistic Regression AMD Only {.tabset}
+
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
+
+## Setup
+
+### Start Conda ENV
+```{r}
+startCondaEnv('regression', lib='~/R35')
+```
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+library(DT)
+library(pheatmap)
+library(kableExtra)
+library(vegan)
+library(nlme)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+
+### Load Data
+```{r}
+filename = makeDataFileName(
+  'master_table.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(filename)
+
+master_table = readWorkbook(filename, sheet='Master Table')
+amd_only_master_table = master_table %>% filter(CaseString == 'AMD')
+
+filtered_taxa = readWorkbook(
+  filename, 
+  sheet="${tools::toTitleCase(clustering_level)}"
+  ) %>% 
+  pull("short_glommed_taxa")
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+```
+
+### Extract Subgroups
+**Subgroup Filters Applied in Prep: ** ${subgroup_filters}
+
+### Set Factor Levels
+```{r}
+amd_only_master_table = setFactorsLevels(
+  amd_only_master_table,
+  observational_variables
+  )
+```
+
+### Variables of interest
+#### Observational Variables
+```{r}
+case = ${case} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+
+logistic_covariates = ${logistic_covariates}
+
+```
+
+* **Case:** `r case`
+* **Genotype variables:** `r genotypes`
+* **Phenotype variables:** `r phenotypes`
+* **Treatment variables:** `r treatments`
+* **Key covariates:**  `r key_covariates`
+
+#### Raw Variables
+```{r}
+raw_exp_vars = ${raw_exp_vars}
+print(raw_exp_vars)
+```
+
+#### calculated_exp_vars
+```{r}
+calculated_exp_vars = ${calculated_exp_vars}
+print(calculated_exp_vars)
+```
+
+
+#### Response Variables
+```{r}
+target_variables = 
+  c(raw_exp_vars, calculated_exp_vars) %>%
+  setdiff("")
+
+response_variables = c(phenotypes) %>% setdiff("")
+```
+
+
+## AMD Only
+### Create Workbook
+```{r}
+wb = createWorkbook()
+
+addWorksheet(
+  wb, 
+  sheetName="Response Variables"
+  )
+openxlsx::writeData(
+  wb,
+  sheet="Response Variables",
+  response_variables
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="Target Variables"
+  )
+openxlsx::writeData(
+  wb,
+  sheet="Target Variables",
+  target_variables
+  )
+
+```
+
+### Regressions Results Template
+```{r}
+covariates = observational_variables[logistic_covariates]
+contrasts = makeContrastNames(covariates, amd_only_master_table)
+logistic_regression_results_template = data.frame(
+  Target_Variable=character()
+  )
+
+for (contrast in c("Target_Variable", contrasts))
+{
+  print(contrast)
+  
+  pval_name = paste0(contrast, '.pval')
+  odds_name = paste0(contrast, '.odds')
+  print(pval_name)
+  print(odds_name)
+  logistic_regression_results_template %<>% 
+    mutate(
+      !!pval_name := numeric(),
+      !!odds_name := numeric()
+    )
+}
+```
+
+### Logistic Regression
+```{r}
+for(response_var in response_variables)
+{
+  
+  addWorksheet(wb, sheetName=response_var)
+  
+  logistic_regression_results = logistic_regression_results_template
+  
+  
+  ### Target Variables Only
+  logistic_regression_stats = getLogisticRegressionStats(
+    base_predictor_vars=c(),
+    additional_predictors=target_variables,
+    logistic_response_var=observational_variables[[response_var]],
+    master_table=amd_only_master_table,
+    stats=c('pvalue', 'effect_size', 'std_error'),
+    response_var_name='Index'
+  )
+  
+  for(var in names(logistic_regression_stats))
+  {
+    print(sprintf('var=%s', var))
+    
+    var_data = logistic_regression_stats[[var]]
+    print('var_data')
+    glimpse(var_data)
+    
+    stats_list = list()
+    stats_list[['Target_Variable']] = var
+        
+    pval_name = paste0('Target_Variable', '.pval')
+    odds_name = paste0('Target_Variable', '.odds')
+  
+    stats_list[[pval_name]] =
+      var_data %>%
+      filter(contrast == !!var) %>%
+      pull(pvalue)
+    stats_list[[odds_name]] =
+      var_data %>%
+      filter(contrast == !!var) %>%
+      pull(effect_size) %>%
+      exp()
+  
+    print('stats_list')
+    print(stats_list)
+  
+    setdiff(names(stats_list), colnames(logistic_regression_results))
+      
+    logistic_regression_results %<>% add_row(!!!stats_list)
+  }
+  
+  
+  
+  ### Key Covariates Only
+  logistic_regression_stats = getLogisticRegressionStats(
+    base_predictor_vars=covariates,
+    additional_predictors=c(''),
+    logistic_response_var=observational_variables[[response_var]],
+    master_table=amd_only_master_table,
+    stats=c('pvalue', 'effect_size', 'std_error'),
+    response_var_name='Index'
+  )
+  
+  logistic_regression_stats = list(
+    None=logistic_regression_stats %>%
+      .[[2]] %>%
+      data.frame() %>%
+      filter(contrast != '')
+  )
+  
+  contrasts = makeContrastNames(covariates, amd_only_master_table)
+  
+  ### Fill stats_list with results for each special variable
+  for(var in c("None"))
+  {
+    print(sprintf('var=%s', var))
+    
+    var_data = logistic_regression_stats[[var]]
+    print('var_data')
+    glimpse(var_data)
+    
+    stats_list = list()
+    
+    for (contrast in contrasts)
+    {
+      print(sprintf('contrast=%s', contrast))
+      
+      pval_name = paste0(contrast, '.pval')
+      odds_name = paste0(contrast, '.odds')
+      
+      print(sprintf('pval_name=%s  odds_name=%s', pval_name, odds_name))
+      
+      stats_list[[pval_name]] = 
+        var_data %>%
+        filter(contrast == !!contrast) %>%
+        pull(pvalue)
+      stats_list[[odds_name]] = 
+        var_data %>% 
+        filter(contrast == !!contrast) %>%
+        pull(effect_size) %>%
+        exp()
+      
+      print('stats_list')
+      print(stats_list)
+    }
+     
+      
+    stats_list = c(
+      list(
+        Target_Variable=NA,
+        Target_Variable.pval=NA,
+        Target_Variable.odds=NA
+      ),
+      stats_list
+    )
+    
+    logistic_regression_results %<>% add_row(!!!stats_list)
+  }
+
+
+  ### Target Variables
+  logistic_regression_stats = getLogisticRegressionStats(
+    base_predictor_vars=covariates,
+    additional_predictors=target_variables,
+    logistic_response_var=observational_variables[[response_var]],
+    master_table=amd_only_master_table,
+    stats=c('pvalue', 'effect_size', 'std_error'),
+    response_var_name='Index'
+  )
+  
+  for(target_var in names(logistic_regression_stats))
+  {
+    print(sprintf('target_var=%s', target_var))
+    
+    var_data = logistic_regression_stats[[target_var]]
+    print('var_data')
+    glimpse(var_data)
+    
+    stats_list = list()
+    stats_list[['Target_Variable']] = target_var
+        
+    pval_name = paste0('Target_Variable', '.pval')
+    odds_name = paste0('Target_Variable', '.odds')
+  
+    stats_list[[pval_name]] =
+      var_data %>%
+      filter(contrast == !!target_var) %>%
+      pull(pvalue)
+    stats_list[[odds_name]] =
+      var_data %>%
+      filter(contrast == !!target_var) %>%
+      pull(effect_size) %>%
+      exp()
+  
+    print('stats_list')
+    print(stats_list)
+  
+    for (contrast in contrasts)
+    {
+      print(sprintf('contrast=%s', contrast))
+      
+      pval_name = paste0(contrast, '.pval')
+      odds_name = paste0(contrast, '.odds')
+      
+      stats_list[[pval_name]] = 
+        var_data %>%
+        filter(contrast == !!contrast) %>%
+        pull(pvalue)
+      stats_list[[odds_name]] = 
+        var_data %>% 
+        filter(contrast == !!contrast) %>%
+        pull(effect_size) %>%
+        exp()
+      
+      print('stats_list')
+      print(stats_list)
+      
+    } ### end contrast, meaning covariate levels
+    
+    setdiff(names(stats_list), colnames(logistic_regression_results))
+      
+    logistic_regression_results %<>% add_row(!!!stats_list)
+    
+  } ### end response_vars, e.g. phenotype
+    
+  ### Write the worksheet for given response_var
+  openxlsx::writeData(
+    wb,
+    sheet=response_var,
+    logistic_regression_results
+    )
+  
+} ### end target_vars, e.g. phyla
+  
+
+```
+
+
+### Save Workbook
+```{r}
+filename = makeDataFileName(
+  'logistic_regression_amd_only.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+saveWorkbook(wb, file=filename, overwrite=T)
+```
+

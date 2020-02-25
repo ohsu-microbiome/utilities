@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -41,12 +41,31 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 ```
 
-# MiSeq-${miseq_run_number} Prevotella Analysis {.tabset}
+# ${miseq_project_prefix} Prevotella Analysis {.tabset}
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Setup 
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+  * **Relative Abundance cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
+
+## Setup
 
 ### [Close]
 
@@ -124,6 +143,22 @@ sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
 
 ```
+
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
+
+```
+
 
 ### Set Filtering
 ```{r}

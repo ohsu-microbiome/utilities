@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -41,38 +41,38 @@ output:
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
-tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
 analysis_title = "${analysis_title}"
 ```
 
-# MiSeq-${miseq_run_number} Pearson's $\Chi^2$ Test for Independence {.tabset}
+# ${miseq_project_prefix} Pearson's $\Chi^2$ Test for Independence {.tabset}
 ## Clustering Level
+
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
-
-## Categorical Variables Included
 ```{r}
-test_categorical_variables = ${test_categorical_variables}
-num_test_vars = length(test_categorical_variables)
-reference_categorical_variables = ${reference_categorical_variables}
-num_ref_vars = length(reference_categorical_variables)
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
 ```
 
-Using the following variables:
-
-* **Reference Variables:** `r reference_categorical_variables`
-* **Test Variables:** `r test_categorical_variables`
-
 ## Setup
-
 ### Start Conda ENV
 ```{r}
-startCondaEnv('base')
+startCondaEnv('regression')
 ```
 
 
@@ -100,6 +100,17 @@ source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ${knitr_options}
 
 ```
+
+### Categorical Variables Included
+```{r}
+categorical_variables = ${categorical_variables} %>% setdiff('')
+num_vars = length(categorical_variables)
+```
+
+Using the following variables:
+
+* **Categorical Variables:** `r categorical_variables`
+
 
 ### Load Data
 ```{r}
@@ -143,13 +154,13 @@ amd_only_master_table = setFactorsLevels(
 ## All Subgroups
 ### Run Pearson's $\Chi^2$ Test for Independence
 ```{r}
-all_pval_table = matrix(ncol=num_ref_vars, nrow=num_test_vars)
-colnames(all_pval_table) = reference_categorical_variables
-rownames(all_pval_table) = test_categorical_variables
+all_pval_table = matrix(ncol=num_vars, nrow=num_vars)
+colnames(all_pval_table) = categorical_variables
+rownames(all_pval_table) = categorical_variables
 
-for (ref_var in reference_categorical_variables)
+for (ref_var in categorical_variables)
 {
-  for (test_var in test_categorical_variables)
+  for (test_var in categorical_variables)
   {
     print(sprintf('ref_var: %s, test_var: %s', ref_var, test_var))
     

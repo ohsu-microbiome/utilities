@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -43,16 +43,30 @@ clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
 ```
 
-# MiSeq-${miseq_run_number} ${analysis_title} Linear Regression Plots{.tabset}
+# ${miseq_project_prefix} ${analysis_title} Linear Regression Plots{.tabset}
 Regression coefficients as effect size.
 
-## Clustering Level
-Data clustered at the `r toupper(clustering_level)` Level.
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+  ```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup {.tabset}
 
@@ -105,11 +119,7 @@ age_lt_90_master_table = all_master_table %>% filter(Age < 90)
 amd_only_master_table = all_master_table %>% filter(CaseString == 'AMD')
 filtered_taxa = readWorkbook(filename, sheet="${tools::toTitleCase(clustering_level)}") %>% pull("short_glommed_taxa")
 
-
-sample_data = read.delim(
-  '${sample_data_file}', 
-  stringsAsFactors=F
-  )
+sample_data = read.xlsx('${sample_data_file}')
 
 source(file.path(
   "${project_root}", 
@@ -160,7 +170,8 @@ for (var in response_vars)
     effect_sizes,
     response_var=var,
     effect_size_template='(log) Regression Cofficient',
-    category_label='Observational Variables'
+    category_label='Observational Variables',
+    subtitle="${analysis_subtitle}"
   ) 
 }
 ```

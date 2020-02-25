@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -38,21 +38,33 @@ output:
 
 
 ```{r}
-source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
 analysis_title = "${analysis_title}"
 ```
 
-# MiSeq-${miseq_run_number} ${analysis_title} Linear Regression Analysis {.tabset}
-## Clustering Level
+# ${miseq_project_prefix} ${analysis_title} Linear Regression Analysis {.tabset}
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+  * **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup
 ### Start Conda ENV
@@ -121,79 +133,36 @@ amd_only_master_table = setFactorsLevels(amd_only_master_table, observational_va
 ### Variables of interest
 #### Observational Variables
 ```{r}
-all_variables = observational_variables[${linear_regression_predictors['All']}]
-age_lt_90_variables = observational_variables[${linear_regression_predictors['Age_lt_90']}]
-amd_only_variables = observational_variables[${linear_regression_predictors['AMD_Only']}]
+case = ${case} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+linear_predictors = ${linear_predictors} %>% setdiff('')
 ```
 
-* **All Variables:** ${linear_regression_predictors['All']}
-* **Age < 90 Variables:** ${linear_regression_predictors['Age_lt_90']}
-* **AMD Only Variables:** ${linear_regression_predictors['AMD_Only']}
+* **Case:** ${case}
+* **Key Covariates:** ${key_covariates}
+* **linear_predictors:** ${linear_predictors}
 
 #### Calculated Experimental Variables
-
 ```{r}
 raw_exp_vars = ${raw_exp_vars}
 calculated_exp_vars = ${calculated_exp_vars}
 ```
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
-
-### Determine which covariates have sufficient samples with each value
-```{r}
-num_samples_threshold = 5
-
-all_variables = filterVarsBySampleThreshold(
-  all_master_table,
-  num_samples_threshold,
-  all_variables
-  )
-
-age_lt_90_variables = filterVarsBySampleThreshold(
-  age_lt_90_master_table,
-  num_samples_threshold,
-  age_lt_90_variables
-  )
-
-amd_only_variables = filterVarsBySampleThreshold(
-  amd_only_master_table %>% select(-CaseString),
-  num_samples_threshold,
-  amd_only_variables
-  )
-
-```
-
-
 ### Create p-val names for contrasts
-
 ```{r}
 all_contrast_names = makeContrastNames(
-  all_variables, 
+  observational_variables[linear_predictors], 
   all_master_table
   )
-
-age_lt_90_contrast_names = makeContrastNames(
-  age_lt_90_variables, 
-  all_master_table
-  )
-
-amd_only_contrast_names = makeContrastNames(
-  amd_only_variables, 
-  all_master_table
-  )
-
-union_contrast_names = 
-  all_contrast_names %>%
-  union(age_lt_90_contrast_names) %>%
-  union(amd_only_contrast_names)
 ```
 
 ### Initialize regression stats table
 
 ```{r}
-regression_pvals = makeRegressionStatsContrastTemplate(union_contrast_names)
+regression_pvals = makeRegressionStatsContrastTemplate(all_contrast_names)
 
-regression_effect_sizes = makeRegressionStatsContrastTemplate(union_contrast_names)
+regression_effect_sizes = makeRegressionStatsContrastTemplate(all_contrast_names)
 ```
 
 ## Linear Regression {.tabset}
@@ -202,7 +171,7 @@ regression_effect_sizes = makeRegressionStatsContrastTemplate(union_contrast_nam
 
 ```{r}
 exp_vars = c(raw_exp_vars, calculated_exp_vars)
-predictors = all_variables
+predictors = observational_variables[linear_predictors]
 master_table = all_master_table
 contrasts = all_contrast_names
 index_name_template = 'All_'
@@ -220,7 +189,7 @@ for (var in exp_vars)
     predictors,
     response_vars=var,
     master_table,
-    transformation='${regression_transform}',
+    transformation="${regression_transform}",
     log_regularizer=${log_regularizer}
   )
   
@@ -256,9 +225,9 @@ pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F
 
 ```{r}
 exp_vars = c(raw_exp_vars, calculated_exp_vars)
-predictors = age_lt_90_variables
+predictors = observational_variables[linear_predictors]
 master_table = age_lt_90_master_table
-contrasts = age_lt_90_contrast_names %>% unlist()
+contrasts = all_contrast_names
 index_name_template = 'Age_lt_90_'
 
 # regression_pvals = regression_pvals_template
@@ -274,7 +243,7 @@ for (var in exp_vars)
     predictors,
     response_vars=var,
     master_table,
-    transformation='${regression_transform}',
+    transformation="${regression_transform}",
     log_regularizer=${log_regularizer}
   )
   
@@ -310,9 +279,9 @@ pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F
 
 ```{r}
 exp_vars = c(raw_exp_vars, calculated_exp_vars)
-predictors = amd_only_variables
+predictors = observational_variables[linear_predictors %>% setdiff(case)]
 master_table = amd_only_master_table
-contrasts = amd_only_contrast_names %>% unlist()
+contrasts = all_contrast_names %>% unlist()
 index_name_template = 'AMD_Only_'
 
 # regression_pvals = regression_pvals_template
@@ -328,7 +297,7 @@ for (var in exp_vars)
     predictors,
     response_vars=var,
     master_table,
-    transformation='${regression_transform}',
+    transformation="${regression_transform}",
     log_regularizer=${log_regularizer}
   )
   
@@ -349,6 +318,10 @@ for (var in exp_vars)
   regression_effect_sizes = regression_effect_sizes %>% add_row(!!!effect_sizes)
 
 }
+
+regression_adjusted_pvals = 
+  regression_pvals %>%
+  mutate_if(is.numeric, p.adjust)
 ```
 
 #### Visualize
@@ -357,7 +330,6 @@ pheatmap(regression_pvals %>% column_to_rownames('Index'), cluster_cols=F, clust
 
 pheatmap(regression_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
 ```
-
 
 ### Write Regression Stats
 ```{r}
@@ -372,6 +344,17 @@ openxlsx::writeData(
   wb, 
   sheet="Unadjusted P-Values", 
   regression_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="Adjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="Adjusted P-Values", 
+  regression_adjusted_pvals
   )
 
 addWorksheet(

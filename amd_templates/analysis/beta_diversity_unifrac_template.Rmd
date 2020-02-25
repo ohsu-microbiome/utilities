@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -41,20 +41,35 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
 ```
 
 
-# MiSeq-${miseq_run_number} UNIFRAC Beta Diversity {.tabset}
+# ${miseq_project_prefix} UNIFRAC Beta Diversity {.tabset}
 
 ## Clustering Level
+
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+  ```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup
 
@@ -106,21 +121,13 @@ taxonomy_table =
     ) %>%
   mutate_all(as.character())
 
-sample_data = read.xlsx('${sample_data_file}')
-
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
+sample_data = 
+  read.xlsx('${sample_data_file}') %>%
+  mutate(
+    CNV_Either_Eye = ifelse(CNV_Either_Eye == 1, '1', '0'),
+    GA_No_CNV_Either_Eye = ifelse(GA_No_CNV_Either_Eye == 1, '1', '0')
+  )
   
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
-
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
 
@@ -135,6 +142,20 @@ source(file.path(
 
 ```
 
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
+
+```
 
 ### Make Phyloseq Object
 ```{r}
@@ -161,10 +182,34 @@ ps = phyloseq(
 ### Variables of interest
 #### Observational Variables
 ```{r}
+case = ${case}
 key_covariates = ${key_covariates}
 treatments = ${treatments}
-variables = c('CaseString', key_covariates, treatments) %>% unique()
+variables = c(case, key_covariates, treatments)
+# categorical_variables = ${categorical_variables}
+categorical_variables = c(case, key_covariates, treatments) %>% setdiff('Age')
 ```
+
+### Variables of interest
+#### Observational Variables
+```{r}
+case = ${case} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
+
+variables = c(case, key_covariates, treatments, phenotypes, genotypes)
+amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes)
+```
+
+* **Case:** `r case`
+* **Genotype variables:** `r genotypes`
+* **Phenotype variables:** `r phenotypes`
+* **Treatment variables:** `r treatments`
+* **Key covariates:**  `r key_covariates`
+
 
 #### Remove Age
 ```{r}
@@ -199,7 +244,7 @@ plot_scree(ps_ord, "Unifrac, Unweighted")
 
 #### 2D
 ```{r}
-for (var in variables)
+for (var in categorical_variables)
 {
   var_data = observational_variables[[var]]
   print(var_data)
@@ -228,7 +273,8 @@ for (var in variables)
       axes=axes,
       var_data = observational_variables[[var]],
       color=var,
-      plot_type='samples'
+      plot_type='samples',
+      subtitle="${analysis_subtitle}"
     ) %>% print()
   }
   
@@ -266,7 +312,7 @@ plot_scree(ps_ord, "Unifrac, Unweighted, Age<90")
 
 #### 2D
 ```{r}
-for (var in variables)
+for (var in categorical_variables)
 {
   var_data = observational_variables[[var]]
   print(var_data)
@@ -296,7 +342,8 @@ for (var in variables)
       axes=axes,
       var_data = observational_variables[[var]],
       color=var,
-      plot_type='samples'
+      plot_type='samples',
+      subtitle="${analysis_subtitle}"
     ) %>% print()
   }
   
@@ -335,7 +382,7 @@ plot_scree(ps_ord, "Unifrac Weighted")
 
 #### 2D
 ```{r}
-for (var in variables)
+for (var in categorical_variables)
 {
   var_data = observational_variables[[var]]
   print(var_data)
@@ -364,7 +411,8 @@ for (var in variables)
       axes=axes,
       var_data = observational_variables[[var]],
       color=var,
-      plot_type='samples'
+      plot_type='samples',
+      subtitle="${analysis_subtitle}"
     ) %>% print()
   }
   
@@ -402,7 +450,7 @@ plot_scree(ps_ord, "Unifrac Weighted, Age < 90")
 
 #### 2D
 ```{r}
-for (var in variables)
+for (var in categorical_variables)
 {
   var_data = observational_variables[[var]]
   print(var_data)
@@ -432,7 +480,8 @@ for (var in variables)
       axes=axes,
       var_data = observational_variables[[var]],
       color=var,
-      plot_type='samples'
+      plot_type='samples',
+      subtitle="${analysis_subtitle}"
     ) %>% print()
   }
   

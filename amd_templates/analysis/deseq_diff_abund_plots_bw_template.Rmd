@@ -1,0 +1,1127 @@
+---
+title: "MiSeq-239: DESeq2 Publication Plots"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+```{r}
+source('${project_metadata_file}')
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_type = "${analysis_type}"
+analysis_type_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+rank = "${clustering_level}"
+```
+
+# MiSeq-239 `r analysis_type` Differential Abundance Plots{.tabset}
+Regression coefficients as effect size.
+
+**Clustering**
+Data clustered at the `r toupper('rank')` Level.
+
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** 0.002
+* **Prevalence Cutoff:** 0.1
+* **Min Count Cutoff:** 0
+
+```{r}
+relative_abundance_cutoff = 0.002
+prevalence_cutoff = 0.1
+min_count_cutoff = 0
+```
+
+## Setup {.tabset}
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('deseq', lib="~/R35")
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
+
+## Setup {.tabset}
+
+### [Close]
+
+### Start Conda ENV
+```{r}
+startCondaEnv('deseq', lib="~/R35")
+```
+
+### Load Libraries
+```{r}
+# library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(openxlsx)
+# library(vegan)
+library(tools)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/analysis-utilities/deseq_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+sample_data = read.xlsx('${sample_data_file}')
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+```
+### Variables of interest
+
+#### Observational Variables
+```{r}
+case = ${case} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+
+linear_predictors = ${linear_predictors} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
+amd_only_variables = linear_predictors %>% setdiff(case)
+```
+
+* **Case:** `r case`
+* **Key Covariates:** `r key_covariates`
+* **Categorical Variables:**  `r categorical_variables`
+
+
+## Plots {.tabset}
+### [ ] Close
+
+### getFigHeight
+```{r}
+getFigHeight = function(num_features)
+{
+  # fig_height = num_features*exp(0.004*num_features)
+  fig_height = 3 + 0.3*num_features
+  return(fig_height)
+}
+```
+
+
+### All Subgroups -- Case/Control
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'all_subgroups_case_vs_control.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(wb_filename)
+exists(wb_filename)
+
+data = 
+  readWorkbook(wb_filename, sheet="Genus") 
+
+data %>% 
+  pull(CaseString_AMD_vs_Control.padj) %>%
+  min() %>% 
+  signif(., 3) %>%
+  sprintf("Min Pval: %s", .) %>%
+  print()
+
+# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+sig_data = 
+  data %>% 
+  arrange(CaseString_AMD_vs_Control.padj) %>% 
+  filter(CaseString_AMD_vs_Control.padj < 0.1)
+
+num_features = dim(sig_data)[1]
+fig_height = getFigHeight(num_features)
+print(fig_height)
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (dim(sig_data)[1] > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[['CaseString']],
+    effect_size_col="CaseString_AMD_vs_Control.L2FC",
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col='CaseString_AMD_vs_Control.padj',
+  )
+}
+
+```
+
+### All Subgroups -- With Covariates
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'all_subgroups_with_covariates.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(wb_filename)
+
+data = 
+  readWorkbook(wb_filename, sheet="Genus") 
+
+data %>% 
+  pull(CaseString_AMD_vs_Control.padj) %>%
+  min() %>% 
+  signif(., 3) %>%
+  sprintf("Min Pval: %s", .) %>%
+  print()
+
+# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+sig_data = 
+  data %>% 
+  arrange(CaseString_AMD_vs_Control.padj) %>% 
+  filter(CaseString_AMD_vs_Control.padj < 0.1)
+
+num_features = dim(sig_data)[1]
+fig_height = getFigHeight(num_features)
+print(fig_height)
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (dim(sig_data)[1] > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[['CaseString']],
+    effect_size_col="CaseString_AMD_vs_Control.L2FC",
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col='CaseString_AMD_vs_Control.padj'
+  )
+}
+
+  
+```
+
+
+### Age < 90 -- Case/Control
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'age_lt_90_case_vs_control.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(wb_filename)
+
+data = 
+  readWorkbook(wb_filename, sheet="Genus") 
+
+data %>% 
+  pull(CaseString_AMD_vs_Control.padj) %>%
+  min() %>% 
+  signif(., 3) %>%
+  sprintf("Min Pval: %s", .) %>%
+  print()
+
+# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+sig_data = 
+  data %>% 
+  arrange(CaseString_AMD_vs_Control.padj) %>% 
+  filter(CaseString_AMD_vs_Control.padj < 0.1)
+
+num_features = dim(sig_data)[1]
+fig_height = getFigHeight(num_features)
+print(fig_height)
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (dim(sig_data)[1] > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[['CaseString']],
+    effect_size_col="CaseString_AMD_vs_Control.L2FC",
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col='CaseString_AMD_vs_Control.padj'
+  )
+}
+
+```
+
+### Age < 90 -- With Covariates
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'age_lt_90_with_covariates.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(wb_filename)
+
+data = 
+  readWorkbook(wb_filename, sheet="Genus") 
+
+data %>% 
+  pull(CaseString_AMD_vs_Control.padj) %>%
+  min() %>% 
+  signif(., 3) %>%
+  sprintf("Min Pval: %s", .) %>%
+  print()
+
+# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+sig_data = 
+  data %>% 
+  arrange(CaseString_AMD_vs_Control.padj) %>% 
+  filter(CaseString_AMD_vs_Control.padj < 0.1)
+
+num_features = dim(sig_data)[1]
+fig_height = getFigHeight(num_features)
+print(fig_height)
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if(dim(sig_data)[1] > 0)
+{ 
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[['CaseString']],
+    effect_size_col="CaseString_AMD_vs_Control.L2FC",
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col='CaseString_AMD_vs_Control.padj'
+  )
+}
+
+```
+
+
+### AMD Only -- individual variables
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'amd_only_individual_variables.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(wb_filename)
+file.exists(wb_filename)
+
+lowest_rank = 'Genus'
+```
+
+#### Gender
+```{r}
+varname = "Gender"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+
+#### Tissue Code
+```{r}
+varname = "Tissue_code"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+    readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features=0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+
+
+#### GA_No_CNV_Either_Eye
+```{r}
+varname = "GA_No_CNV_Either_Eye"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+
+
+#### CNV_Either_Eye
+```{r}
+varname = "CNV_Either_Eye"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+
+
+#### CFHrs10737680
+```{r}
+varname = "CFHrs10737680"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col,
+    levels_in_label=T
+  )
+}
+
+```
+
+#### CFHrs1061170
+```{r}
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col,
+    levels_in_label=T
+  )
+}
+```
+
+
+#### ARMS2rs10490924
+```{r}
+varname = "ARMS2rs10490924"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col,
+    levels_in_label=T
+  )
+}
+```
+
+
+#### SKIV2Lrs429608
+```{r}
+varname = "SKIV2Lrs429608"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col,
+    levels_in_label=T
+  )
+}
+```
+
+
+#### AREDS
+```{r}
+varname = "AREDS"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+
+
+### AMD Only -- Genotypes, Phenotypes, and AREDS with Controls
+```{r, fig.width=10}
+wb_filename = makeDataFileName(
+  'amd_only_variables_with_controls.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+
+print(wb_filename)
+file.exists(wb_filename)
+
+lowest_rank = 'Genus'
+```
+
+
+#### Gender (+ tissue_code)
+```{r}
+varname = "Gender"
+
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+
+
+#### Tissue_code (+ Gender)
+```{r}
+varname = "Tissue_code"
+
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+
+```
+
+
+
+#### GA_No_CNV_Either_Eye
+```{r}
+varname = "GA_No_CNV_Either_Eye"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+
+
+#### CNV_Either_Eye
+```{r}
+varname = "CNV_Either_Eye"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+
+
+#### CFHrs10737680
+```{r}
+varname = "CFHrs10737680"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col,
+    levels_in_label=T
+  )
+}
+```
+
+#### CFHrs1061170
+```{r}
+varname = "CFHrs1061170"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col,
+    levels_in_label=T
+  )
+}
+```
+
+
+#### ARMS2rs10490924
+```{r}
+varname = "ARMS2rs10490924"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col,
+    levels_in_label=T
+  )
+}
+```
+
+
+#### SKIV2Lrs429608
+```{r}
+varname = "SKIV2Lrs429608"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col,
+    levels_in_label=T
+  )
+}
+```
+
+
+#### AREDS
+```{r}
+varname = "AREDS"
+if (varname %in% getSheetNames(wb_filename))
+{
+  data = 
+  readWorkbook(wb_filename, sheet=varname) 
+  
+  match_string = paste0(varname, '.*\\.padj')
+  padj_col = grep(match_string, colnames(data), value=T)
+  
+  match_string = paste0(varname, '.*\\.L2FC')
+  effect_size_col = grep(match_string, colnames(data), value=T)
+  
+  sig_data = data %>% filter(!!as.name(padj_col) <= 0.1)
+  
+  num_features = dim(sig_data)[1]
+  print(num_features)
+} else
+{
+  num_features = 0
+}
+```
+
+
+```{r, fig.height=getFigHeight(num_features)}
+if (num_features > 0)
+{
+  makePublicationEffectSizePlotBW(
+    data=sig_data,
+    var_data=observational_variables[[varname]],
+    effect_size_col=effect_size_col,
+    feature_col="Taxon",
+    feature_axis_label="Significant Taxa",
+    alpha_col=padj_col
+  )
+}
+```
+

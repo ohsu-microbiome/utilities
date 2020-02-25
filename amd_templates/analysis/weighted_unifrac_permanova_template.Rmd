@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -41,19 +41,34 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+permanova_type = "WEIGHTED"
+weighted=T
 ```
 
-# MiSeq-${miseq_run_number} WEIGHTED UNIFRAC PERMANOVA {.tabset}
+# ${miseq_project_prefix} `r permanova_type` UNIFRAC PERMANOVA {.tabset}
 
-## Clustering Level
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup
 
@@ -108,19 +123,6 @@ sample_data %<>%
     GA_No_CNV_Either_Eye = ifelse(GA_No_CNV_Either_Eye == 1, '1', '0')
   )
 
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
-
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
 
@@ -131,6 +133,20 @@ source(file.path(
   "${metadata_dir}", 
   'observational_variables.R'
   ))
+
+```
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
 
 ```
 
@@ -158,27 +174,29 @@ ps = phyloseq(
 
 ```
 
+
 ### Variables of interest
 #### Observational Variables
 ```{r}
-genotypes = ${genotypes}
-phenotypes = ${phenotypes}
-key_covariates = ${key_covariates}
-treatments = ${treatments}
+case = ${case} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
 
-variables = c('CaseString', key_covariates)
-
-amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes) %>% unique()
-
-amd_only_covariates = c(treatments, phenotypes, genotypes)
-
-all_variables = c(variables, amd_only_variables) %>% unique()
+main_variables = c(case, key_covariates)
+other_covariates = c(treatments, phenotypes, genotypes)
+all_variables = c(case, key_covariates, treatments, phenotypes, genotypes)
+amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes)
 ```
 
-* **Genotype variables:** ${genotypes}
-* **Phenotype variables:** ${phenotypes}
-* **Treatment variables:** ${treatments}
-* **Key covariates:**  ${key_covariates}
+* **Case:** `r case`
+* **Genotype variables:** `r genotypes`
+* **Phenotype variables:** `r phenotypes`
+* **Treatment variables:** `r treatments`
+* **Key covariates:**  `r key_covariates`
+
+
 
 #### Make Results Table
 ```{r}
@@ -188,9 +206,9 @@ all_results = data.frame(Variable=all_variables, stringsAsFactors=F)
 ## All Subgroups
 ### Calculate UNIFRAC
 ```{r}
-weighted_unifrac = UniFrac(
+unifrac = UniFrac(
   physeq=ps,
-  weighted=T,
+  weighted=weighted,
   normalized=T,
   parallel=T,
   fast=T
@@ -199,16 +217,16 @@ weighted_unifrac = UniFrac(
 ### Individual Variables
 ```{r}
 pvals = list()
-results_colname = 'All_Individual'
+results_colname = 'Main_Variables_Individually'
 
-for (var in variables)
+for (var in c(main_variables))
 {
   print(var)
   
-  heteroskedasticity_test = betadisper(weighted_unifrac, sample_data %>% pull(var), type="median") %>% print()
+  heteroskedasticity_test = betadisper(unifrac, sample_data %>% pull(var), type="median") %>% print()
   
   formula = 
-    paste('weighted_unifrac', '~', var) %>%
+    paste('unifrac', '~', var) %>%
     as.formula()
   
   print(formula)
@@ -237,12 +255,12 @@ all_results %<>%
   rename(!!results_colname := pval)
 ```
 
-### All Covariates
+### Main Variables
 ```{r}
-results_colname = 'All_Covariates'
+results_colname = 'Main_Variables_Together'
 
 formula = 
-  paste('weighted_unifrac', '~', paste(variables, collapse=' + ')) %>%
+  paste('unifrac', '~', paste(main_variables, collapse=' + ')) %>%
   as.formula()
 
 print(formula)
@@ -258,7 +276,78 @@ results_df =
   data.frame() %>%
   rownames_to_column('Variable') %>%
   mutate(pval = Pr..F.) %>%
-  filter(Variable %in% variables) %>%
+  filter(Variable %in% main_variables) %>%
+  select(Variable, pval)
+
+results_df
+
+all_results %<>% 
+  left_join(results_df, by='Variable') %>%
+  rename(!!results_colname := pval)
+
+```
+
+### All Variables
+```{r}
+
+results_colname = 'All_Variables_Together'
+
+ps_no_na = 
+  ps %>%
+  subset_samples(
+    !is.na(ARMS2rs10490924) &
+    !is.na(CFHrs10737680) &
+    !is.na(CFHrs1061170) &
+    !is.na(SKIV2Lrs429608) &
+    !is.na(GA_No_CNV_Either_Eye) &
+    !is.na(CNV_Either_Eye)
+    )
+  
+sample_data_no_na = 
+  sample_data %>%
+  data.frame(stringsAsFactors=F) %>%
+  select(all_variables) %>%
+  filter(
+    !is.na(ARMS2rs10490924) &
+    !is.na(CFHrs10737680) &
+    !is.na(CFHrs1061170) &
+    !is.na(SKIV2Lrs429608) &
+    !is.na(GA_No_CNV_Either_Eye) &
+    !is.na(CNV_Either_Eye)
+    )
+
+
+unifrac = UniFrac(
+  physeq=ps_no_na,
+  weighted=weighted,
+  normalized=T,
+  parallel=T,
+  fast=T
+)
+
+u =
+  unifrac %>%
+  as.matrix() %>%
+  data.frame()
+
+formula = 
+  paste('unifrac', '~', paste(c(all_variables), collapse=' + ')) %>%
+  as.formula()
+
+print(formula)
+
+permanova = adonis(
+  formula=formula, 
+  data=sample_data_no_na,
+  permutations=999
+  )
+
+results_df = 
+  permanova$aov.tab %>%
+  data.frame() %>%
+  rownames_to_column('Variable') %>%
+  mutate(pval = Pr..F.) %>%
+  filter(Variable %in% all_variables) %>%
   select(Variable, pval)
 
 results_df
@@ -273,11 +362,10 @@ all_results %<>%
 
 ### Calculate UNIFRAC
 ```{r}
-results_colname = 'Age_lt_90_Individual'
 
-weighted_unifrac = UniFrac(
+unifrac = UniFrac(
   physeq=ps %>% subset_samples(Age < 90),
-  weighted=T,
+  weighted=weighted,
   normalized=T,
   parallel=T,
   fast=T
@@ -285,9 +373,12 @@ weighted_unifrac = UniFrac(
 ```
 ### Individual Variables
 ```{r}
+
+results_colname = 'Age_lt_90_Main_Variables_Individually'
+
 pvals = list()
 
-for (var in variables)
+for (var in main_variables)
 {
   print(var)
   
@@ -295,11 +386,11 @@ for (var in variables)
     sample_data %>% 
     filter(Age < 90) %>%
     pull(var) %>%
-    betadisper(weighted_unifrac, .) %>% 
+    betadisper(unifrac, .) %>% 
     print()
   
   formula = 
-    paste('weighted_unifrac', '~', var) %>%
+    paste('unifrac', '~', var) %>%
     as.formula()
   
   permanova = adonis(
@@ -324,19 +415,19 @@ all_results %<>%
   rename(!!results_colname := pval)
 ```
 
-### Covariates
+### Main Variables
 ```{r}
-results_colname = 'Age_lt_90_Covariates'
+results_colname = 'Age_lt_90_Main_Variables_Together'
 
 # heteroskedasticity_test = 
 #   sample_data %>% 
 #   filter(CaseString=='AMD') %>%
-#   select(variables) %>%
-#   betadisper(weighted_unifrac, .) %>% 
+#   select(key_covariates) %>%
+#   betadisper(unifrac, .) %>% 
 #   print()
 
 formula = 
-  paste('weighted_unifrac', '~', paste(variables, collapse=' + ')) %>%
+  paste('unifrac', '~', paste(main_variables, collapse=' + ')) %>%
   as.formula()
 
 print(formula)
@@ -352,7 +443,7 @@ results_df =
   data.frame() %>%
   rownames_to_column('Variable') %>%
   mutate(pval = Pr..F.) %>%
-  filter(Variable %in% variables) %>%
+  filter(Variable %in% main_variables) %>%
   select(Variable, pval)
 
 results_df
@@ -362,20 +453,93 @@ all_results %<>%
   rename(!!results_colname := pval)
 ```
 
+### All Variables
+```{r}
+
+results_colname = 'Age_lt_90_All_Variables_Together'
+
+ps_age_lt_90_no_na = 
+  ps %>%
+  subset_samples(
+    Age < 90 &
+    !is.na(ARMS2rs10490924) &
+    !is.na(CFHrs10737680) &
+    !is.na(CFHrs1061170) &
+    !is.na(SKIV2Lrs429608) &
+    !is.na(GA_No_CNV_Either_Eye) &
+    !is.na(CNV_Either_Eye)
+    )
+  
+sample_data_age_lt_90_no_na = 
+  sample_data %>%
+  data.frame(stringsAsFactors=F) %>%
+  select(all_variables) %>%
+  filter(
+    Age < 90 &
+    !is.na(ARMS2rs10490924) &
+    !is.na(CFHrs10737680) &
+    !is.na(CFHrs1061170) &
+    !is.na(SKIV2Lrs429608) &
+    !is.na(GA_No_CNV_Either_Eye) &
+    !is.na(CNV_Either_Eye)
+    )
+
+
+unifrac = UniFrac(
+  physeq=ps_age_lt_90_no_na,
+  weighted=weighted,
+  normalized=T,
+  parallel=T,
+  fast=T
+)
+
+u =
+  unifrac %>%
+  as.matrix() %>%
+  data.frame()
+
+formula = 
+  paste('unifrac', '~', paste(c(all_variables), collapse=' + ')) %>%
+  as.formula()
+
+print(formula)
+
+permanova = adonis(
+  formula=formula, 
+  data=sample_data_age_lt_90_no_na,
+  permutations=999
+  )
+
+results_df = 
+  permanova$aov.tab %>%
+  data.frame() %>%
+  rownames_to_column('Variable') %>%
+  mutate(pval = Pr..F.) %>%
+  filter(Variable %in% all_variables) %>%
+  select(Variable, pval)
+
+results_df
+
+all_results %<>% 
+  left_join(results_df, by='Variable') %>%
+  rename(!!results_colname := pval)
+
+```
+
 ## AMD Only
 
 ### Individual Variables
 ```{r}
 pvals = list()
 
-results_colname = 'AMD_Only_Individual'
+results_colname = 'AMD_Only_Main_Variables_Individually'
 
 amd_only_ps = subset_samples(ps, CaseString=='AMD')
 amd_only_sample_data = 
   sample_data %>%
   filter(CaseString=='AMD')
 
-for (var in amd_only_variables)
+for (var in amd_only_variables %>% setdiff('CaseString'))
 {
   print(var)
   
@@ -404,9 +568,9 @@ for (var in amd_only_variables)
   this_ps = prune_samples(remove_idx, amd_only_ps)
   this_sample_data = amd_only_sample_data %>% filter(remove_idx)
   
-  weighted_unifrac = UniFrac(
+  unifrac = UniFrac(
     physeq=this_ps,
-    weighted=T,
+    weighted=weighted,
     normalized=T,
     parallel=T,
     fast=T
@@ -415,11 +579,11 @@ for (var in amd_only_variables)
   # heteroskedasticity_test = 
   #   amd_only_sample_data %>% 
   #   pull(var) %>%
-  #   betadisper(weighted_unifrac, .) %>% 
+  #   betadisper(unifrac, .) %>% 
   #   print()
   
   formula = 
-    paste('weighted_unifrac', '~', var) %>%
+    paste('unifrac', '~', var) %>%
     as.formula()
   
   print(formula)
@@ -447,15 +611,15 @@ all_results %<>%
   rename(!!results_colname := pval)
 ```
 
-### Covariates
+### Main Variables
 ```{r}
-results_colname = 'AMD_Only_Main_Covariates'
+results_colname = 'AMD_Only_Main_Variables_and_Single_Other'
 
-vars_to_use = c(key_covariates)
+vars_to_use = main_variables %>% setdiff("CaseString")
 
 formula = 
   paste(
-    'weighted_unifrac', '~', 
+    'unifrac', '~', 
     paste(vars_to_use, collapse=' + ')
     ) %>%
   as.formula()
@@ -465,9 +629,9 @@ print(formula)
 this_ps = subset_samples(ps, CaseString=='AMD')
 this_sample_data = sample_data %>% filter(CaseString=='AMD')
 
-weighted_unifrac = UniFrac(
+unifrac = UniFrac(
   physeq=this_ps,
-  weighted=T,
+  weighted=weighted,
   normalized=T,
   parallel=T,
   fast=T
@@ -484,14 +648,14 @@ results_df =
   data.frame() %>%
   rownames_to_column('Variable') %>%
   mutate(pval = Pr..F.) %>%
-  filter(Variable %in% amd_only_variables) %>%
+  filter(Variable %in% vars_to_use) %>%
   select(Variable, pval)
 
 all_results %<>% 
   left_join(results_df, by='Variable') %>%
   rename(!!results_colname := pval)
 
-for (var in amd_only_covariates)
+for (var in other_covariates)
 {
   
   print(var)
@@ -521,28 +685,28 @@ for (var in amd_only_covariates)
   this_ps = prune_samples(remove_idx, amd_only_ps)
   this_sample_data = amd_only_sample_data %>% filter(remove_idx)
   
-  weighted_unifrac = UniFrac(
+  unifrac = UniFrac(
     physeq=this_ps,
-    weighted=T,
+    weighted=weighted,
     normalized=T,
     parallel=T,
     fast=T
   )
   
-  vars_to_use = c(key_covariates, var)
+  vars_to_use = c(main_variables %>% setdiff('CaseString'), var)
   
   results_colname = paste0('AMD_Only_Main_Plus_', var)
   
   formula = 
     paste(
-      'weighted_unifrac', '~', 
+      'unifrac', '~', 
       paste(vars_to_use, collapse=' + ')
       ) %>%
     as.formula()
 
   print(formula)
   
-  # weighted_unifrac = as.matrix(weighted_unifrac)
+  # unifrac = as.matrix(unifrac)
   
   filtered_sample_data = 
   
@@ -557,7 +721,7 @@ for (var in amd_only_covariates)
     data.frame() %>%
     rownames_to_column('Variable') %>%
     mutate(pval = Pr..F.) %>%
-    filter(Variable %in% amd_only_variables) %>%
+    filter(Variable %in% c(main_variables %>% setdiff('CaseString'), var)) %>%
     select(Variable, pval)
   
   results_df
@@ -568,6 +732,80 @@ for (var in amd_only_covariates)
 }
 
 ```
+
+### All Variables
+```{r}
+
+results_colname = 'AMD_Only_All_Variables_Together'
+
+ps_amd_only_no_na = 
+  ps %>%
+  subset_samples(
+    CaseString == 'AMD' &
+    !is.na(ARMS2rs10490924) &
+    !is.na(CFHrs10737680) &
+    !is.na(CFHrs1061170) &
+    !is.na(SKIV2Lrs429608) &
+    !is.na(GA_No_CNV_Either_Eye) &
+    !is.na(CNV_Either_Eye)
+    )
+  
+sample_data_amd_only_no_na = 
+  sample_data %>%
+  data.frame(stringsAsFactors=F) %>%
+  select(all_variables) %>%
+  filter(
+    CaseString == 'AMD' &
+    !is.na(ARMS2rs10490924) &
+    !is.na(CFHrs10737680) &
+    !is.na(CFHrs1061170) &
+    !is.na(SKIV2Lrs429608) &
+    !is.na(GA_No_CNV_Either_Eye) &
+    !is.na(CNV_Either_Eye)
+    )
+
+
+unifrac = UniFrac(
+  physeq=ps_amd_only_no_na,
+  weighted=weighted,
+  normalized=T,
+  parallel=T,
+  fast=T
+)
+
+u =
+  unifrac %>%
+  as.matrix() %>%
+  data.frame()
+
+formula = 
+  paste('unifrac', '~', paste(c(amd_only_variables), collapse=' + ')) %>%
+  as.formula()
+
+print(formula)
+
+permanova = adonis(
+  formula=formula, 
+  data=sample_data_amd_only_no_na,
+  permutations=999
+  )
+
+results_df = 
+  permanova$aov.tab %>%
+  data.frame() %>%
+  rownames_to_column('Variable') %>%
+  mutate(pval = Pr..F.) %>%
+  filter(Variable %in% amd_only_variables) %>%
+  select(Variable, pval)
+
+results_df
+
+all_results %<>% 
+  left_join(results_df, by='Variable') %>%
+  rename(!!results_colname := pval)
+
+```
+
 
 ## Write Results
 ```{r}
@@ -591,16 +829,18 @@ if (file.exists(filename))
   wb = createWorkbook()
 }
 
-if ('WEIGHTED PERMANOVA' %in% sheets(wb))
+sheet_name = sprintf("%s PERMANOVA", permanova_type)
+
+if (sheet_name %in% sheets(wb))
 {
-  print(sprintf('removing worksheet %s', 'WEIGHTED PERMANOVA'))
-  removeWorksheet(wb, sheet='WEIGHTED PERMANOVA')
+  print(sprintf('removing worksheet %s', sheet_name))
+  removeWorksheet(wb, sheet=sheet_name)
 }
 
-print(sprintf('creating worksheet %s', 'WEIGHTED PERMANOVA'))
-addWorksheet(wb, sheetName='WEIGHTED PERMANOVA')
+print(sprintf('creating worksheet %s', sheet_name))
+addWorksheet(wb, sheetName=sheet_name)
 
-openxlsx::writeData(wb, sheet='WEIGHTED PERMANOVA', x=all_results)
+openxlsx::writeData(wb, sheet=sheet_name, x=all_results)
 
 saveWorkbook(wb, file=filename, overwrite=T)
 

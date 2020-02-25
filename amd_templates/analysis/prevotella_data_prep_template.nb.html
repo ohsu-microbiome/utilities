@@ -1,19 +1,31 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 
 
-<title>MiSeq-${miseq_run_number}</title>
+<title>${miseq_project_prefix}: ${analysis_type}</title>
 
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
 <script>/*! jQuery v1.11.3 | (c) 2005, 2015 jQuery Foundation, Inc. | jquery.org/license */
 !function(a,b){"object"==typeof module&&"object"==typeof module.exports?module.exports=a.document?b(a,!0):function(a){if(!a.document)throw new Error("jQuery requires a window with a document");return b(a)}:b(a)}("undefined"!=typeof window?window:this,function(a,b){var c=[],d=c.slice,e=c.concat,f=c.push,g=c.indexOf,h={},i=h.toString,j=h.hasOwnProperty,k={},l="1.11.3",m=function(a,b){return new m.fn.init(a,b)},n=/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g,o=/^-ms-/,p=/-([\da-z])/gi,q=function(a,b){return b.toUpperCase()};m.fn=m.prototype={jquery:l,constructor:m,selector:"",length:0,toArray:function(){return d.call(this)},get:function(a){return null!=a?0>a?this[a+this.length]:this[a]:d.call(this)},pushStack:function(a){var b=m.merge(this.constructor(),a);return b.prevObject=this,b.context=this.context,b},each:function(a,b){return m.each(this,a,b)},map:function(a){return this.pushStack(m.map(this,function(b,c){return a.call(b,c,b)}))},slice:function(){return this.pushStack(d.apply(this,arguments))},first:function(){return this.eq(0)},last:function(){return this.eq(-1)},eq:function(a){var b=this.length,c=+a+(0>a?b:0);return this.pushStack(c>=0&&b>c?[this[c]]:[])},end:function(){return this.prevObject||this.constructor(null)},push:f,sort:c.sort,splice:c.splice},m.extend=m.fn.extend=function(){var a,b,c,d,e,f,g=arguments[0]||{},h=1,i=arguments.length,j=!1;for("boolean"==typeof g&&(j=g,g=arguments[h]||{},h++),"object"==typeof g||m.isFunction(g)||(g={}),h===i&&(g=this,h--);i>h;h++)if(null!=(e=arguments[h]))for(d in e)a=g[d],c=e[d],g!==c&&(j&&c&&(m.isPlainObject(c)||(b=m.isArray(c)))?(b?(b=!1,f=a&&m.isArray(a)?a:[]):f=a&&m.isPlainObject(a)?a:{},g[d]=m.extend(j,f,c)):void 0!==c&&(g[d]=c));return g},m.extend({expando:"jQuery"+(l+Math.random()).replace(/\D/g,""),isReady:!0,error:function(a){throw new Error(a)},noop:function(){},isFunction:function(a){return"function"===m.type(a)},isArray:Array.isArray||function(a){return"array"===m.type(a)},isWindow:function(a){return null!=a&&a==a.window},isNumeric:function(a){return!m.isArray(a)&&a-parseFloat(a)+1>=0},isEmptyObject:function(a){var b;for(b in a)return!1;return!0},isPlainObject:function(a){var b;if(!a||"object"!==m.type(a)||a.nodeType||m.isWindow(a))return!1;try{if(a.constructor&&!j.call(a,"constructor")&&!j.call(a.constructor.prototype,"isPrototypeOf"))return!1}catch(c){return!1}if(k.ownLast)for(b in a)return j.call(a,b);for(b in a);return void 0===b||j.call(a,b)},type:function(a){return null==a?a+"":"object"==typeof a||"function"==typeof a?h[i.call(a)]||"object":typeof a},globalEval:function(b){b&&m.trim(b)&&(a.execScript||function(b){a.eval.call(a,b)})(b)},camelCase:function(a){return a.replace(o,"ms-").replace(p,q)},nodeName:function(a,b){return a.nodeName&&a.nodeName.toLowerCase()===b.toLowerCase()},each:function(a,b,c){var d,e=0,f=a.length,g=r(a);if(c){if(g){for(;f>e;e++)if(d=b.apply(a[e],c),d===!1)break}else for(e in a)if(d=b.apply(a[e],c),d===!1)break}else if(g){for(;f>e;e++)if(d=b.call(a[e],e,a[e]),d===!1)break}else for(e in a)if(d=b.call(a[e],e,a[e]),d===!1)break;return a},trim:function(a){return null==a?"":(a+"").replace(n,"")},makeArray:function(a,b){var c=b||[];return null!=a&&(r(Object(a))?m.merge(c,"string"==typeof a?[a]:a):f.call(c,a)),c},inArray:function(a,b,c){var d;if(b){if(g)return g.call(b,a,c);for(d=b.length,c=c?0>c?Math.max(0,d+c):c:0;d>c;c++)if(c in b&&b[c]===a)return c}return-1},merge:function(a,b){var c=+b.length,d=0,e=a.length;while(c>d)a[e++]=b[d++];if(c!==c)while(void 0!==b[d])a[e++]=b[d++];return a.length=e,a},grep:function(a,b,c){for(var d,e=[],f=0,g=a.length,h=!c;g>f;f++)d=!b(a[f],f),d!==h&&e.push(a[f]);return e},map:function(a,b,c){var d,f=0,g=a.length,h=r(a),i=[];if(h)for(;g>f;f++)d=b(a[f],f,c),null!=d&&i.push(d);else for(f in a)d=b(a[f],f,c),null!=d&&i.push(d);return e.apply([],i)},guid:1,proxy:function(a,b){var c,e,f;return"string"==typeof b&&(f=a[b],b=a,a=f),m.isFunction(a)?(c=d.call(arguments,2),e=function(){return a.apply(b||this,c.concat(d.call(arguments)))},e.guid=a.guid=a.guid||m.guid++,e):void 0},now:function(){return+new Date},support:k}),m.each("Boolean Number String Function Array Date RegExp Object Error".split(" "),function(a,b){h["[object "+b+"]"]=b.toLowerCase()});function r(a){var b="length"in a&&a.length,c=m.type(a);return"function"===c||m.isWindow(a)?!1:1===a.nodeType&&b?!0:"array"===c||0===b||"number"==typeof b&&b>0&&b-1 in a}var s=function(a){var b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u="sizzle"+1*new Date,v=a.document,w=0,x=0,y=ha(),z=ha(),A=ha(),B=function(a,b){return a===b&&(l=!0),0},C=1<<31,D={}.hasOwnProperty,E=[],F=E.pop,G=E.push,H=E.push,I=E.slice,J=function(a,b){for(var c=0,d=a.length;d>c;c++)if(a[c]===b)return c;return-1},K="checked|selected|async|autofocus|autoplay|controls|defer|disabled|hidden|ismap|loop|multiple|open|readonly|required|scoped",L="[\\x20\\t\\r\\n\\f]",M="(?:\\\\.|[\\w-]|[^\\x00-\\xa0])+",N=M.replace("w","w#"),O="\\["+L+"*("+M+")(?:"+L+"*([*^$|!~]?=)"+L+"*(?:'((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\"|("+N+"))|)"+L+"*\\]",P=":("+M+")(?:\\((('((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\")|((?:\\\\.|[^\\\\()[\\]]|"+O+")*)|.*)\\)|)",Q=new RegExp(L+"+","g"),R=new RegExp("^"+L+"+|((?:^|[^\\\\])(?:\\\\.)*)"+L+"+$","g"),S=new RegExp("^"+L+"*,"+L+"*"),T=new RegExp("^"+L+"*([>+~]|"+L+")"+L+"*"),U=new RegExp("="+L+"*([^\\]'\"]*?)"+L+"*\\]","g"),V=new RegExp(P),W=new RegExp("^"+N+"$"),X={ID:new RegExp("^#("+M+")"),CLASS:new RegExp("^\\.("+M+")"),TAG:new RegExp("^("+M.replace("w","w*")+")"),ATTR:new RegExp("^"+O),PSEUDO:new RegExp("^"+P),CHILD:new RegExp("^:(only|first|last|nth|nth-last)-(child|of-type)(?:\\("+L+"*(even|odd|(([+-]|)(\\d*)n|)"+L+"*(?:([+-]|)"+L+"*(\\d+)|))"+L+"*\\)|)","i"),bool:new RegExp("^(?:"+K+")$","i"),needsContext:new RegExp("^"+L+"*[>+~]|:(even|odd|eq|gt|lt|nth|first|last)(?:\\("+L+"*((?:-\\d)?\\d*)"+L+"*\\)|)(?=[^-]|$)","i")},Y=/^(?:input|select|textarea|button)$/i,Z=/^h\d$/i,$=/^[^{]+\{\s*\[native \w/,_=/^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/,aa=/[+~]/,ba=/'|\\/g,ca=new RegExp("\\\\([\\da-f]{1,6}"+L+"?|("+L+")|.)","ig"),da=function(a,b,c){var d="0x"+b-65536;return d!==d||c?b:0>d?String.fromCharCode(d+65536):String.fromCharCode(d>>10|55296,1023&d|56320)},ea=function(){m()};try{H.apply(E=I.call(v.childNodes),v.childNodes),E[v.childNodes.length].nodeType}catch(fa){H={apply:E.length?function(a,b){G.apply(a,I.call(b))}:function(a,b){var c=a.length,d=0;while(a[c++]=b[d++]);a.length=c-1}}}function ga(a,b,d,e){var f,h,j,k,l,o,r,s,w,x;if((b?b.ownerDocument||b:v)!==n&&m(b),b=b||n,d=d||[],k=b.nodeType,"string"!=typeof a||!a||1!==k&&9!==k&&11!==k)return d;if(!e&&p){if(11!==k&&(f=_.exec(a)))if(j=f[1]){if(9===k){if(h=b.getElementById(j),!h||!h.parentNode)return d;if(h.id===j)return d.push(h),d}else if(b.ownerDocument&&(h=b.ownerDocument.getElementById(j))&&t(b,h)&&h.id===j)return d.push(h),d}else{if(f[2])return H.apply(d,b.getElementsByTagName(a)),d;if((j=f[3])&&c.getElementsByClassName)return H.apply(d,b.getElementsByClassName(j)),d}if(c.qsa&&(!q||!q.test(a))){if(s=r=u,w=b,x=1!==k&&a,1===k&&"object"!==b.nodeName.toLowerCase()){o=g(a),(r=b.getAttribute("id"))?s=r.replace(ba,"\\$&"):b.setAttribute("id",s),s="[id='"+s+"'] ",l=o.length;while(l--)o[l]=s+ra(o[l]);w=aa.test(a)&&pa(b.parentNode)||b,x=o.join(",")}if(x)try{return H.apply(d,w.querySelectorAll(x)),d}catch(y){}finally{r||b.removeAttribute("id")}}}return i(a.replace(R,"$1"),b,d,e)}function ha(){var a=[];function b(c,e){return a.push(c+" ")>d.cacheLength&&delete b[a.shift()],b[c+" "]=e}return b}function ia(a){return a[u]=!0,a}function ja(a){var b=n.createElement("div");try{return!!a(b)}catch(c){return!1}finally{b.parentNode&&b.parentNode.removeChild(b),b=null}}function ka(a,b){var c=a.split("|"),e=a.length;while(e--)d.attrHandle[c[e]]=b}function la(a,b){var c=b&&a,d=c&&1===a.nodeType&&1===b.nodeType&&(~b.sourceIndex||C)-(~a.sourceIndex||C);if(d)return d;if(c)while(c=c.nextSibling)if(c===b)return-1;return a?1:-1}function ma(a){return function(b){var c=b.nodeName.toLowerCase();return"input"===c&&b.type===a}}function na(a){return function(b){var c=b.nodeName.toLowerCase();return("input"===c||"button"===c)&&b.type===a}}function oa(a){return ia(function(b){return b=+b,ia(function(c,d){var e,f=a([],c.length,b),g=f.length;while(g--)c[e=f[g]]&&(c[e]=!(d[e]=c[e]))})})}function pa(a){return a&&"undefined"!=typeof a.getElementsByTagName&&a}c=ga.support={},f=ga.isXML=function(a){var b=a&&(a.ownerDocument||a).documentElement;return b?"HTML"!==b.nodeName:!1},m=ga.setDocument=function(a){var b,e,g=a?a.ownerDocument||a:v;return g!==n&&9===g.nodeType&&g.documentElement?(n=g,o=g.documentElement,e=g.defaultView,e&&e!==e.top&&(e.addEventListener?e.addEventListener("unload",ea,!1):e.attachEvent&&e.attachEvent("onunload",ea)),p=!f(g),c.attributes=ja(function(a){return a.className="i",!a.getAttribute("className")}),c.getElementsByTagName=ja(function(a){return a.appendChild(g.createComment("")),!a.getElementsByTagName("*").length}),c.getElementsByClassName=$.test(g.getElementsByClassName),c.getById=ja(function(a){return o.appendChild(a).id=u,!g.getElementsByName||!g.getElementsByName(u).length}),c.getById?(d.find.ID=function(a,b){if("undefined"!=typeof b.getElementById&&p){var c=b.getElementById(a);return c&&c.parentNode?[c]:[]}},d.filter.ID=function(a){var b=a.replace(ca,da);return function(a){return a.getAttribute("id")===b}}):(delete d.find.ID,d.filter.ID=function(a){var b=a.replace(ca,da);return function(a){var c="undefined"!=typeof a.getAttributeNode&&a.getAttributeNode("id");return c&&c.value===b}}),d.find.TAG=c.getElementsByTagName?function(a,b){return"undefined"!=typeof b.getElementsByTagName?b.getElementsByTagName(a):c.qsa?b.querySelectorAll(a):void 0}:function(a,b){var c,d=[],e=0,f=b.getElementsByTagName(a);if("*"===a){while(c=f[e++])1===c.nodeType&&d.push(c);return d}return f},d.find.CLASS=c.getElementsByClassName&&function(a,b){return p?b.getElementsByClassName(a):void 0},r=[],q=[],(c.qsa=$.test(g.querySelectorAll))&&(ja(function(a){o.appendChild(a).innerHTML="<a id='"+u+"'></a><select id='"+u+"-\f]' msallowcapture=''><option selected=''></option></select>",a.querySelectorAll("[msallowcapture^='']").length&&q.push("[*^$]="+L+"*(?:''|\"\")"),a.querySelectorAll("[selected]").length||q.push("\\["+L+"*(?:value|"+K+")"),a.querySelectorAll("[id~="+u+"-]").length||q.push("~="),a.querySelectorAll(":checked").length||q.push(":checked"),a.querySelectorAll("a#"+u+"+*").length||q.push(".#.+[+~]")}),ja(function(a){var b=g.createElement("input");b.setAttribute("type","hidden"),a.appendChild(b).setAttribute("name","D"),a.querySelectorAll("[name=d]").length&&q.push("name"+L+"*[*^$|!~]?="),a.querySelectorAll(":enabled").length||q.push(":enabled",":disabled"),a.querySelectorAll("*,:x"),q.push(",.*:")})),(c.matchesSelector=$.test(s=o.matches||o.webkitMatchesSelector||o.mozMatchesSelector||o.oMatchesSelector||o.msMatchesSelector))&&ja(function(a){c.disconnectedMatch=s.call(a,"div"),s.call(a,"[s!='']:x"),r.push("!=",P)}),q=q.length&&new RegExp(q.join("|")),r=r.length&&new RegExp(r.join("|")),b=$.test(o.compareDocumentPosition),t=b||$.test(o.contains)?function(a,b){var c=9===a.nodeType?a.documentElement:a,d=b&&b.parentNode;return a===d||!(!d||1!==d.nodeType||!(c.contains?c.contains(d):a.compareDocumentPosition&&16&a.compareDocumentPosition(d)))}:function(a,b){if(b)while(b=b.parentNode)if(b===a)return!0;return!1},B=b?function(a,b){if(a===b)return l=!0,0;var d=!a.compareDocumentPosition-!b.compareDocumentPosition;return d?d:(d=(a.ownerDocument||a)===(b.ownerDocument||b)?a.compareDocumentPosition(b):1,1&d||!c.sortDetached&&b.compareDocumentPosition(a)===d?a===g||a.ownerDocument===v&&t(v,a)?-1:b===g||b.ownerDocument===v&&t(v,b)?1:k?J(k,a)-J(k,b):0:4&d?-1:1)}:function(a,b){if(a===b)return l=!0,0;var c,d=0,e=a.parentNode,f=b.parentNode,h=[a],i=[b];if(!e||!f)return a===g?-1:b===g?1:e?-1:f?1:k?J(k,a)-J(k,b):0;if(e===f)return la(a,b);c=a;while(c=c.parentNode)h.unshift(c);c=b;while(c=c.parentNode)i.unshift(c);while(h[d]===i[d])d++;return d?la(h[d],i[d]):h[d]===v?-1:i[d]===v?1:0},g):n},ga.matches=function(a,b){return ga(a,null,null,b)},ga.matchesSelector=function(a,b){if((a.ownerDocument||a)!==n&&m(a),b=b.replace(U,"='$1']"),!(!c.matchesSelector||!p||r&&r.test(b)||q&&q.test(b)))try{var d=s.call(a,b);if(d||c.disconnectedMatch||a.document&&11!==a.document.nodeType)return d}catch(e){}return ga(b,n,null,[a]).length>0},ga.contains=function(a,b){return(a.ownerDocument||a)!==n&&m(a),t(a,b)},ga.attr=function(a,b){(a.ownerDocument||a)!==n&&m(a);var e=d.attrHandle[b.toLowerCase()],f=e&&D.call(d.attrHandle,b.toLowerCase())?e(a,b,!p):void 0;return void 0!==f?f:c.attributes||!p?a.getAttribute(b):(f=a.getAttributeNode(b))&&f.specified?f.value:null},ga.error=function(a){throw new Error("Syntax error, unrecognized expression: "+a)},ga.uniqueSort=function(a){var b,d=[],e=0,f=0;if(l=!c.detectDuplicates,k=!c.sortStable&&a.slice(0),a.sort(B),l){while(b=a[f++])b===a[f]&&(e=d.push(f));while(e--)a.splice(d[e],1)}return k=null,a},e=ga.getText=function(a){var b,c="",d=0,f=a.nodeType;if(f){if(1===f||9===f||11===f){if("string"==typeof a.textContent)return a.textContent;for(a=a.firstChild;a;a=a.nextSibling)c+=e(a)}else if(3===f||4===f)return a.nodeValue}else while(b=a[d++])c+=e(b);return c},d=ga.selectors={cacheLength:50,createPseudo:ia,match:X,attrHandle:{},find:{},relative:{">":{dir:"parentNode",first:!0}," ":{dir:"parentNode"},"+":{dir:"previousSibling",first:!0},"~":{dir:"previousSibling"}},preFilter:{ATTR:function(a){return a[1]=a[1].replace(ca,da),a[3]=(a[3]||a[4]||a[5]||"").replace(ca,da),"~="===a[2]&&(a[3]=" "+a[3]+" "),a.slice(0,4)},CHILD:function(a){return a[1]=a[1].toLowerCase(),"nth"===a[1].slice(0,3)?(a[3]||ga.error(a[0]),a[4]=+(a[4]?a[5]+(a[6]||1):2*("even"===a[3]||"odd"===a[3])),a[5]=+(a[7]+a[8]||"odd"===a[3])):a[3]&&ga.error(a[0]),a},PSEUDO:function(a){var b,c=!a[6]&&a[2];return X.CHILD.test(a[0])?null:(a[3]?a[2]=a[4]||a[5]||"":c&&V.test(c)&&(b=g(c,!0))&&(b=c.indexOf(")",c.length-b)-c.length)&&(a[0]=a[0].slice(0,b),a[2]=c.slice(0,b)),a.slice(0,3))}},filter:{TAG:function(a){var b=a.replace(ca,da).toLowerCase();return"*"===a?function(){return!0}:function(a){return a.nodeName&&a.nodeName.toLowerCase()===b}},CLASS:function(a){var b=y[a+" "];return b||(b=new RegExp("(^|"+L+")"+a+"("+L+"|$)"))&&y(a,function(a){return b.test("string"==typeof a.className&&a.className||"undefined"!=typeof a.getAttribute&&a.getAttribute("class")||"")})},ATTR:function(a,b,c){return function(d){var e=ga.attr(d,a);return null==e?"!="===b:b?(e+="","="===b?e===c:"!="===b?e!==c:"^="===b?c&&0===e.indexOf(c):"*="===b?c&&e.indexOf(c)>-1:"$="===b?c&&e.slice(-c.length)===c:"~="===b?(" "+e.replace(Q," ")+" ").indexOf(c)>-1:"|="===b?e===c||e.slice(0,c.length+1)===c+"-":!1):!0}},CHILD:function(a,b,c,d,e){var f="nth"!==a.slice(0,3),g="last"!==a.slice(-4),h="of-type"===b;return 1===d&&0===e?function(a){return!!a.parentNode}:function(b,c,i){var j,k,l,m,n,o,p=f!==g?"nextSibling":"previousSibling",q=b.parentNode,r=h&&b.nodeName.toLowerCase(),s=!i&&!h;if(q){if(f){while(p){l=b;while(l=l[p])if(h?l.nodeName.toLowerCase()===r:1===l.nodeType)return!1;o=p="only"===a&&!o&&"nextSibling"}return!0}if(o=[g?q.firstChild:q.lastChild],g&&s){k=q[u]||(q[u]={}),j=k[a]||[],n=j[0]===w&&j[1],m=j[0]===w&&j[2],l=n&&q.childNodes[n];while(l=++n&&l&&l[p]||(m=n=0)||o.pop())if(1===l.nodeType&&++m&&l===b){k[a]=[w,n,m];break}}else if(s&&(j=(b[u]||(b[u]={}))[a])&&j[0]===w)m=j[1];else while(l=++n&&l&&l[p]||(m=n=0)||o.pop())if((h?l.nodeName.toLowerCase()===r:1===l.nodeType)&&++m&&(s&&((l[u]||(l[u]={}))[a]=[w,m]),l===b))break;return m-=e,m===d||m%d===0&&m/d>=0}}},PSEUDO:function(a,b){var c,e=d.pseudos[a]||d.setFilters[a.toLowerCase()]||ga.error("unsupported pseudo: "+a);return e[u]?e(b):e.length>1?(c=[a,a,"",b],d.setFilters.hasOwnProperty(a.toLowerCase())?ia(function(a,c){var d,f=e(a,b),g=f.length;while(g--)d=J(a,f[g]),a[d]=!(c[d]=f[g])}):function(a){return e(a,0,c)}):e}},pseudos:{not:ia(function(a){var b=[],c=[],d=h(a.replace(R,"$1"));return d[u]?ia(function(a,b,c,e){var f,g=d(a,null,e,[]),h=a.length;while(h--)(f=g[h])&&(a[h]=!(b[h]=f))}):function(a,e,f){return b[0]=a,d(b,null,f,c),b[0]=null,!c.pop()}}),has:ia(function(a){return function(b){return ga(a,b).length>0}}),contains:ia(function(a){return a=a.replace(ca,da),function(b){return(b.textContent||b.innerText||e(b)).indexOf(a)>-1}}),lang:ia(function(a){return W.test(a||"")||ga.error("unsupported lang: "+a),a=a.replace(ca,da).toLowerCase(),function(b){var c;do if(c=p?b.lang:b.getAttribute("xml:lang")||b.getAttribute("lang"))return c=c.toLowerCase(),c===a||0===c.indexOf(a+"-");while((b=b.parentNode)&&1===b.nodeType);return!1}}),target:function(b){var c=a.location&&a.location.hash;return c&&c.slice(1)===b.id},root:function(a){return a===o},focus:function(a){return a===n.activeElement&&(!n.hasFocus||n.hasFocus())&&!!(a.type||a.href||~a.tabIndex)},enabled:function(a){return a.disabled===!1},disabled:function(a){return a.disabled===!0},checked:function(a){var b=a.nodeName.toLowerCase();return"input"===b&&!!a.checked||"option"===b&&!!a.selected},selected:function(a){return a.parentNode&&a.parentNode.selectedIndex,a.selected===!0},empty:function(a){for(a=a.firstChild;a;a=a.nextSibling)if(a.nodeType<6)return!1;return!0},parent:function(a){return!d.pseudos.empty(a)},header:function(a){return Z.test(a.nodeName)},input:function(a){return Y.test(a.nodeName)},button:function(a){var b=a.nodeName.toLowerCase();return"input"===b&&"button"===a.type||"button"===b},text:function(a){var b;return"input"===a.nodeName.toLowerCase()&&"text"===a.type&&(null==(b=a.getAttribute("type"))||"text"===b.toLowerCase())},first:oa(function(){return[0]}),last:oa(function(a,b){return[b-1]}),eq:oa(function(a,b,c){return[0>c?c+b:c]}),even:oa(function(a,b){for(var c=0;b>c;c+=2)a.push(c);return a}),odd:oa(function(a,b){for(var c=1;b>c;c+=2)a.push(c);return a}),lt:oa(function(a,b,c){for(var d=0>c?c+b:c;--d>=0;)a.push(d);return a}),gt:oa(function(a,b,c){for(var d=0>c?c+b:c;++d<b;)a.push(d);return a})}},d.pseudos.nth=d.pseudos.eq;for(b in{radio:!0,checkbox:!0,file:!0,password:!0,image:!0})d.pseudos[b]=ma(b);for(b in{submit:!0,reset:!0})d.pseudos[b]=na(b);function qa(){}qa.prototype=d.filters=d.pseudos,d.setFilters=new qa,g=ga.tokenize=function(a,b){var c,e,f,g,h,i,j,k=z[a+" "];if(k)return b?0:k.slice(0);h=a,i=[],j=d.preFilter;while(h){(!c||(e=S.exec(h)))&&(e&&(h=h.slice(e[0].length)||h),i.push(f=[])),c=!1,(e=T.exec(h))&&(c=e.shift(),f.push({value:c,type:e[0].replace(R," ")}),h=h.slice(c.length));for(g in d.filter)!(e=X[g].exec(h))||j[g]&&!(e=j[g](e))||(c=e.shift(),f.push({value:c,type:g,matches:e}),h=h.slice(c.length));if(!c)break}return b?h.length:h?ga.error(a):z(a,i).slice(0)};function ra(a){for(var b=0,c=a.length,d="";c>b;b++)d+=a[b].value;return d}function sa(a,b,c){var d=b.dir,e=c&&"parentNode"===d,f=x++;return b.first?function(b,c,f){while(b=b[d])if(1===b.nodeType||e)return a(b,c,f)}:function(b,c,g){var h,i,j=[w,f];if(g){while(b=b[d])if((1===b.nodeType||e)&&a(b,c,g))return!0}else while(b=b[d])if(1===b.nodeType||e){if(i=b[u]||(b[u]={}),(h=i[d])&&h[0]===w&&h[1]===f)return j[2]=h[2];if(i[d]=j,j[2]=a(b,c,g))return!0}}}function ta(a){return a.length>1?function(b,c,d){var e=a.length;while(e--)if(!a[e](b,c,d))return!1;return!0}:a[0]}function ua(a,b,c){for(var d=0,e=b.length;e>d;d++)ga(a,b[d],c);return c}function va(a,b,c,d,e){for(var f,g=[],h=0,i=a.length,j=null!=b;i>h;h++)(f=a[h])&&(!c||c(f,d,e))&&(g.push(f),j&&b.push(h));return g}function wa(a,b,c,d,e,f){return d&&!d[u]&&(d=wa(d)),e&&!e[u]&&(e=wa(e,f)),ia(function(f,g,h,i){var j,k,l,m=[],n=[],o=g.length,p=f||ua(b||"*",h.nodeType?[h]:h,[]),q=!a||!f&&b?p:va(p,m,a,h,i),r=c?e||(f?a:o||d)?[]:g:q;if(c&&c(q,r,h,i),d){j=va(r,n),d(j,[],h,i),k=j.length;while(k--)(l=j[k])&&(r[n[k]]=!(q[n[k]]=l))}if(f){if(e||a){if(e){j=[],k=r.length;while(k--)(l=r[k])&&j.push(q[k]=l);e(null,r=[],j,i)}k=r.length;while(k--)(l=r[k])&&(j=e?J(f,l):m[k])>-1&&(f[j]=!(g[j]=l))}}else r=va(r===g?r.splice(o,r.length):r),e?e(null,g,r,i):H.apply(g,r)})}function xa(a){for(var b,c,e,f=a.length,g=d.relative[a[0].type],h=g||d.relative[" "],i=g?1:0,k=sa(function(a){return a===b},h,!0),l=sa(function(a){return J(b,a)>-1},h,!0),m=[function(a,c,d){var e=!g&&(d||c!==j)||((b=c).nodeType?k(a,c,d):l(a,c,d));return b=null,e}];f>i;i++)if(c=d.relative[a[i].type])m=[sa(ta(m),c)];else{if(c=d.filter[a[i].type].apply(null,a[i].matches),c[u]){for(e=++i;f>e;e++)if(d.relative[a[e].type])break;return wa(i>1&&ta(m),i>1&&ra(a.slice(0,i-1).concat({value:" "===a[i-2].type?"*":""})).replace(R,"$1"),c,e>i&&xa(a.slice(i,e)),f>e&&xa(a=a.slice(e)),f>e&&ra(a))}m.push(c)}return ta(m)}function ya(a,b){var c=b.length>0,e=a.length>0,f=function(f,g,h,i,k){var l,m,o,p=0,q="0",r=f&&[],s=[],t=j,u=f||e&&d.find.TAG("*",k),v=w+=null==t?1:Math.random()||.1,x=u.length;for(k&&(j=g!==n&&g);q!==x&&null!=(l=u[q]);q++){if(e&&l){m=0;while(o=a[m++])if(o(l,g,h)){i.push(l);break}k&&(w=v)}c&&((l=!o&&l)&&p--,f&&r.push(l))}if(p+=q,c&&q!==p){m=0;while(o=b[m++])o(r,s,g,h);if(f){if(p>0)while(q--)r[q]||s[q]||(s[q]=F.call(i));s=va(s)}H.apply(i,s),k&&!f&&s.length>0&&p+b.length>1&&ga.uniqueSort(i)}return k&&(w=v,j=t),r};return c?ia(f):f}return h=ga.compile=function(a,b){var c,d=[],e=[],f=A[a+" "];if(!f){b||(b=g(a)),c=b.length;while(c--)f=xa(b[c]),f[u]?d.push(f):e.push(f);f=A(a,ya(e,d)),f.selector=a}return f},i=ga.select=function(a,b,e,f){var i,j,k,l,m,n="function"==typeof a&&a,o=!f&&g(a=n.selector||a);if(e=e||[],1===o.length){if(j=o[0]=o[0].slice(0),j.length>2&&"ID"===(k=j[0]).type&&c.getById&&9===b.nodeType&&p&&d.relative[j[1].type]){if(b=(d.find.ID(k.matches[0].replace(ca,da),b)||[])[0],!b)return e;n&&(b=b.parentNode),a=a.slice(j.shift().value.length)}i=X.needsContext.test(a)?0:j.length;while(i--){if(k=j[i],d.relative[l=k.type])break;if((m=d.find[l])&&(f=m(k.matches[0].replace(ca,da),aa.test(j[0].type)&&pa(b.parentNode)||b))){if(j.splice(i,1),a=f.length&&ra(j),!a)return H.apply(e,f),e;break}}}return(n||h(a,o))(f,b,!p,e,aa.test(a)&&pa(b.parentNode)||b),e},c.sortStable=u.split("").sort(B).join("")===u,c.detectDuplicates=!!l,m(),c.sortDetached=ja(function(a){return 1&a.compareDocumentPosition(n.createElement("div"))}),ja(function(a){return a.innerHTML="<a href='#'></a>","#"===a.firstChild.getAttribute("href")})||ka("type|href|height|width",function(a,b,c){return c?void 0:a.getAttribute(b,"type"===b.toLowerCase()?1:2)}),c.attributes&&ja(function(a){return a.innerHTML="<input/>",a.firstChild.setAttribute("value",""),""===a.firstChild.getAttribute("value")})||ka("value",function(a,b,c){return c||"input"!==a.nodeName.toLowerCase()?void 0:a.defaultValue}),ja(function(a){return null==a.getAttribute("disabled")})||ka(K,function(a,b,c){var d;return c?void 0:a[b]===!0?b.toLowerCase():(d=a.getAttributeNode(b))&&d.specified?d.value:null}),ga}(a);m.find=s,m.expr=s.selectors,m.expr[":"]=m.expr.pseudos,m.unique=s.uniqueSort,m.text=s.getText,m.isXMLDoc=s.isXML,m.contains=s.contains;var t=m.expr.match.needsContext,u=/^<(\w+)\s*\/?>(?:<\/\1>|)$/,v=/^.[^:#\[\.,]*$/;function w(a,b,c){if(m.isFunction(b))return m.grep(a,function(a,d){return!!b.call(a,d,a)!==c});if(b.nodeType)return m.grep(a,function(a){return a===b!==c});if("string"==typeof b){if(v.test(b))return m.filter(b,a,c);b=m.filter(b,a)}return m.grep(a,function(a){return m.inArray(a,b)>=0!==c})}m.filter=function(a,b,c){var d=b[0];return c&&(a=":not("+a+")"),1===b.length&&1===d.nodeType?m.find.matchesSelector(d,a)?[d]:[]:m.find.matches(a,m.grep(b,function(a){return 1===a.nodeType}))},m.fn.extend({find:function(a){var b,c=[],d=this,e=d.length;if("string"!=typeof a)return this.pushStack(m(a).filter(function(){for(b=0;e>b;b++)if(m.contains(d[b],this))return!0}));for(b=0;e>b;b++)m.find(a,d[b],c);return c=this.pushStack(e>1?m.unique(c):c),c.selector=this.selector?this.selector+" "+a:a,c},filter:function(a){return this.pushStack(w(this,a||[],!1))},not:function(a){return this.pushStack(w(this,a||[],!0))},is:function(a){return!!w(this,"string"==typeof a&&t.test(a)?m(a):a||[],!1).length}});var x,y=a.document,z=/^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]*))$/,A=m.fn.init=function(a,b){var c,d;if(!a)return this;if("string"==typeof a){if(c="<"===a.charAt(0)&&">"===a.charAt(a.length-1)&&a.length>=3?[null,a,null]:z.exec(a),!c||!c[1]&&b)return!b||b.jquery?(b||x).find(a):this.constructor(b).find(a);if(c[1]){if(b=b instanceof m?b[0]:b,m.merge(this,m.parseHTML(c[1],b&&b.nodeType?b.ownerDocument||b:y,!0)),u.test(c[1])&&m.isPlainObject(b))for(c in b)m.isFunction(this[c])?this[c](b[c]):this.attr(c,b[c]);return this}if(d=y.getElementById(c[2]),d&&d.parentNode){if(d.id!==c[2])return x.find(a);this.length=1,this[0]=d}return this.context=y,this.selector=a,this}return a.nodeType?(this.context=this[0]=a,this.length=1,this):m.isFunction(a)?"undefined"!=typeof x.ready?x.ready(a):a(m):(void 0!==a.selector&&(this.selector=a.selector,this.context=a.context),m.makeArray(a,this))};A.prototype=m.fn,x=m(y);var B=/^(?:parents|prev(?:Until|All))/,C={children:!0,contents:!0,next:!0,prev:!0};m.extend({dir:function(a,b,c){var d=[],e=a[b];while(e&&9!==e.nodeType&&(void 0===c||1!==e.nodeType||!m(e).is(c)))1===e.nodeType&&d.push(e),e=e[b];return d},sibling:function(a,b){for(var c=[];a;a=a.nextSibling)1===a.nodeType&&a!==b&&c.push(a);return c}}),m.fn.extend({has:function(a){var b,c=m(a,this),d=c.length;return this.filter(function(){for(b=0;d>b;b++)if(m.contains(this,c[b]))return!0})},closest:function(a,b){for(var c,d=0,e=this.length,f=[],g=t.test(a)||"string"!=typeof a?m(a,b||this.context):0;e>d;d++)for(c=this[d];c&&c!==b;c=c.parentNode)if(c.nodeType<11&&(g?g.index(c)>-1:1===c.nodeType&&m.find.matchesSelector(c,a))){f.push(c);break}return this.pushStack(f.length>1?m.unique(f):f)},index:function(a){return a?"string"==typeof a?m.inArray(this[0],m(a)):m.inArray(a.jquery?a[0]:a,this):this[0]&&this[0].parentNode?this.first().prevAll().length:-1},add:function(a,b){return this.pushStack(m.unique(m.merge(this.get(),m(a,b))))},addBack:function(a){return this.add(null==a?this.prevObject:this.prevObject.filter(a))}});function D(a,b){do a=a[b];while(a&&1!==a.nodeType);return a}m.each({parent:function(a){var b=a.parentNode;return b&&11!==b.nodeType?b:null},parents:function(a){return m.dir(a,"parentNode")},parentsUntil:function(a,b,c){return m.dir(a,"parentNode",c)},next:function(a){return D(a,"nextSibling")},prev:function(a){return D(a,"previousSibling")},nextAll:function(a){return m.dir(a,"nextSibling")},prevAll:function(a){return m.dir(a,"previousSibling")},nextUntil:function(a,b,c){return m.dir(a,"nextSibling",c)},prevUntil:function(a,b,c){return m.dir(a,"previousSibling",c)},siblings:function(a){return m.sibling((a.parentNode||{}).firstChild,a)},children:function(a){return m.sibling(a.firstChild)},contents:function(a){return m.nodeName(a,"iframe")?a.contentDocument||a.contentWindow.document:m.merge([],a.childNodes)}},function(a,b){m.fn[a]=function(c,d){var e=m.map(this,b,c);return"Until"!==a.slice(-5)&&(d=c),d&&"string"==typeof d&&(e=m.filter(d,e)),this.length>1&&(C[a]||(e=m.unique(e)),B.test(a)&&(e=e.reverse())),this.pushStack(e)}});var E=/\S+/g,F={};function G(a){var b=F[a]={};return m.each(a.match(E)||[],function(a,c){b[c]=!0}),b}m.Callbacks=function(a){a="string"==typeof a?F[a]||G(a):m.extend({},a);var b,c,d,e,f,g,h=[],i=!a.once&&[],j=function(l){for(c=a.memory&&l,d=!0,f=g||0,g=0,e=h.length,b=!0;h&&e>f;f++)if(h[f].apply(l[0],l[1])===!1&&a.stopOnFalse){c=!1;break}b=!1,h&&(i?i.length&&j(i.shift()):c?h=[]:k.disable())},k={add:function(){if(h){var d=h.length;!function f(b){m.each(b,function(b,c){var d=m.type(c);"function"===d?a.unique&&k.has(c)||h.push(c):c&&c.length&&"string"!==d&&f(c)})}(arguments),b?e=h.length:c&&(g=d,j(c))}return this},remove:function(){return h&&m.each(arguments,function(a,c){var d;while((d=m.inArray(c,h,d))>-1)h.splice(d,1),b&&(e>=d&&e--,f>=d&&f--)}),this},has:function(a){return a?m.inArray(a,h)>-1:!(!h||!h.length)},empty:function(){return h=[],e=0,this},disable:function(){return h=i=c=void 0,this},disabled:function(){return!h},lock:function(){return i=void 0,c||k.disable(),this},locked:function(){return!i},fireWith:function(a,c){return!h||d&&!i||(c=c||[],c=[a,c.slice?c.slice():c],b?i.push(c):j(c)),this},fire:function(){return k.fireWith(this,arguments),this},fired:function(){return!!d}};return k},m.extend({Deferred:function(a){var b=[["resolve","done",m.Callbacks("once memory"),"resolved"],["reject","fail",m.Callbacks("once memory"),"rejected"],["notify","progress",m.Callbacks("memory")]],c="pending",d={state:function(){return c},always:function(){return e.done(arguments).fail(arguments),this},then:function(){var a=arguments;return m.Deferred(function(c){m.each(b,function(b,f){var g=m.isFunction(a[b])&&a[b];e[f[1]](function(){var a=g&&g.apply(this,arguments);a&&m.isFunction(a.promise)?a.promise().done(c.resolve).fail(c.reject).progress(c.notify):c[f[0]+"With"](this===d?c.promise():this,g?[a]:arguments)})}),a=null}).promise()},promise:function(a){return null!=a?m.extend(a,d):d}},e={};return d.pipe=d.then,m.each(b,function(a,f){var g=f[2],h=f[3];d[f[1]]=g.add,h&&g.add(function(){c=h},b[1^a][2].disable,b[2][2].lock),e[f[0]]=function(){return e[f[0]+"With"](this===e?d:this,arguments),this},e[f[0]+"With"]=g.fireWith}),d.promise(e),a&&a.call(e,e),e},when:function(a){var b=0,c=d.call(arguments),e=c.length,f=1!==e||a&&m.isFunction(a.promise)?e:0,g=1===f?a:m.Deferred(),h=function(a,b,c){return function(e){b[a]=this,c[a]=arguments.length>1?d.call(arguments):e,c===i?g.notifyWith(b,c):--f||g.resolveWith(b,c)}},i,j,k;if(e>1)for(i=new Array(e),j=new Array(e),k=new Array(e);e>b;b++)c[b]&&m.isFunction(c[b].promise)?c[b].promise().done(h(b,k,c)).fail(g.reject).progress(h(b,j,i)):--f;return f||g.resolveWith(k,c),g.promise()}});var H;m.fn.ready=function(a){return m.ready.promise().done(a),this},m.extend({isReady:!1,readyWait:1,holdReady:function(a){a?m.readyWait++:m.ready(!0)},ready:function(a){if(a===!0?!--m.readyWait:!m.isReady){if(!y.body)return setTimeout(m.ready);m.isReady=!0,a!==!0&&--m.readyWait>0||(H.resolveWith(y,[m]),m.fn.triggerHandler&&(m(y).triggerHandler("ready"),m(y).off("ready")))}}});function I(){y.addEventListener?(y.removeEventListener("DOMContentLoaded",J,!1),a.removeEventListener("load",J,!1)):(y.detachEvent("onreadystatechange",J),a.detachEvent("onload",J))}function J(){(y.addEventListener||"load"===event.type||"complete"===y.readyState)&&(I(),m.ready())}m.ready.promise=function(b){if(!H)if(H=m.Deferred(),"complete"===y.readyState)setTimeout(m.ready);else if(y.addEventListener)y.addEventListener("DOMContentLoaded",J,!1),a.addEventListener("load",J,!1);else{y.attachEvent("onreadystatechange",J),a.attachEvent("onload",J);var c=!1;try{c=null==a.frameElement&&y.documentElement}catch(d){}c&&c.doScroll&&!function e(){if(!m.isReady){try{c.doScroll("left")}catch(a){return setTimeout(e,50)}I(),m.ready()}}()}return H.promise(b)};var K="undefined",L;for(L in m(k))break;k.ownLast="0"!==L,k.inlineBlockNeedsLayout=!1,m(function(){var a,b,c,d;c=y.getElementsByTagName("body")[0],c&&c.style&&(b=y.createElement("div"),d=y.createElement("div"),d.style.cssText="position:absolute;border:0;width:0;height:0;top:0;left:-9999px",c.appendChild(d).appendChild(b),typeof b.style.zoom!==K&&(b.style.cssText="display:inline;margin:0;border:0;padding:1px;width:1px;zoom:1",k.inlineBlockNeedsLayout=a=3===b.offsetWidth,a&&(c.style.zoom=1)),c.removeChild(d))}),function(){var a=y.createElement("div");if(null==k.deleteExpando){k.deleteExpando=!0;try{delete a.test}catch(b){k.deleteExpando=!1}}a=null}(),m.acceptData=function(a){var b=m.noData[(a.nodeName+" ").toLowerCase()],c=+a.nodeType||1;return 1!==c&&9!==c?!1:!b||b!==!0&&a.getAttribute("classid")===b};var M=/^(?:\{[\w\W]*\}|\[[\w\W]*\])$/,N=/([A-Z])/g;function O(a,b,c){if(void 0===c&&1===a.nodeType){var d="data-"+b.replace(N,"-$1").toLowerCase();if(c=a.getAttribute(d),"string"==typeof c){try{c="true"===c?!0:"false"===c?!1:"null"===c?null:+c+""===c?+c:M.test(c)?m.parseJSON(c):c}catch(e){}m.data(a,b,c)}else c=void 0}return c}function P(a){var b;for(b in a)if(("data"!==b||!m.isEmptyObject(a[b]))&&"toJSON"!==b)return!1;
 
@@ -1723,6 +1735,7 @@ summary {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -1767,41 +1780,28 @@ summary {
 
 
 
-<h1 class="title toc-ignore">MiSeq-${miseq_run_number}</h1>
+<h1 class="title toc-ignore">${miseq_project_prefix}: ${analysis_type}</h1>
 
 </div>
 
 <div id="TOC">
 <ul>
-<li><a href="#miseq-miseq_run_number-deseq2-analysis"><span class="toc-section-number">1</span> MiSeq-${miseq_run_number} DESeq2 Analysis</a><ul>
-<li><a href="#clustering"><span class="toc-section-number">1.1</span> Clustering</a></li>
-<li><a href="#filtering"><span class="toc-section-number">1.2</span> Filtering</a></li>
-<li><a href="#setup"><span class="toc-section-number">1.3</span> Setup</a><ul>
-<li><a href="#close"><span class="toc-section-number">1.3.1</span> [Close]</a></li>
-<li><a href="#start-conda-env"><span class="toc-section-number">1.3.2</span> Start Conda ENV</a></li>
-<li><a href="#load-libraries"><span class="toc-section-number">1.3.3</span> Load Libraries</a></li>
-<li><a href="#set-knitr-options"><span class="toc-section-number">1.3.4</span> Set Knitr Options</a></li>
-<li><a href="#load-data"><span class="toc-section-number">1.3.5</span> Load Data</a></li>
-<li><a href="#integerize-pathway-counts"><span class="toc-section-number">1.3.6</span> Integerize pathway counts</a></li>
-<li><a href="#set-metadata-factor-levels"><span class="toc-section-number">1.3.7</span> Set Metadata Factor Levels</a></li>
-<li><a href="#variables-of-interest"><span class="toc-section-number">1.3.8</span> Variables of interest</a></li>
+<li><a href="#miseq_project_prefix-basic-data-prep"><span class="toc-section-number">1</span> ${miseq_project_prefix} Basic Data Prep</a>
+<ul>
+<li><a href="#setup"><span class="toc-section-number">1.1</span> Setup</a>
+<ul>
+<li><a href="#close"><span class="toc-section-number">1.1.1</span> [Close]</a></li>
+<li><a href="#start-conda-env"><span class="toc-section-number">1.1.2</span> Start Conda ENV</a></li>
+<li><a href="#load-libraries"><span class="toc-section-number">1.1.3</span> Load Libraries</a></li>
+<li><a href="#set-knitr-options"><span class="toc-section-number">1.1.4</span> Set Knitr Options</a></li>
+<li><a href="#load-data"><span class="toc-section-number">1.1.5</span> Load Data</a></li>
+<li><a href="#extract-subgroups"><span class="toc-section-number">1.1.6</span> Extract Subgroups</a></li>
+<li><a href="#set-filtering"><span class="toc-section-number">1.1.7</span> Set Filtering</a></li>
+<li><a href="#get-filtered-taxa-abundance"><span class="toc-section-number">1.1.8</span> Get Filtered Taxa Abundance</a></li>
 </ul></li>
-<li><a href="#all-subgroups-casecontrol-only"><span class="toc-section-number">1.4</span> All Subgroups Case/Control Only</a><ul>
-<li><a href="#create-workbook"><span class="toc-section-number">1.4.1</span> Create Workbook</a></li>
-</ul></li>
-<li><a href="#all-subgroups-all-variables"><span class="toc-section-number">1.5</span> All Subgroups – All Variables</a><ul>
-<li><a href="#create-workbook-1"><span class="toc-section-number">1.5.1</span> Create Workbook</a></li>
-<li><a href="#run-and-add-worksheets-1"><span class="toc-section-number">1.5.2</span> Run and add worksheets</a></li>
-<li><a href="#save-workbook-1"><span class="toc-section-number">1.5.3</span> Save Workbook</a></li>
-</ul></li>
-<li><a href="#age-90-casecontrol-only"><span class="toc-section-number">1.6</span> Age &lt; 90 Case/Control Only</a><ul>
-<li><a href="#create-workbook-2"><span class="toc-section-number">1.6.1</span> Create Workbook</a></li>
-</ul></li>
-<li><a href="#age-90-all-variables"><span class="toc-section-number">1.7</span> Age &lt; 90 – All Variables</a><ul>
-<li><a href="#create-workbook-3"><span class="toc-section-number">1.7.1</span> Create Workbook</a></li>
-<li><a href="#run-and-add-worksheets-3"><span class="toc-section-number">1.7.2</span> Run and add worksheets</a></li>
-<li><a href="#save-workbook-3"><span class="toc-section-number">1.7.3</span> Save Workbook</a></li>
-</ul></li>
+<li><a href="#create-master-tables"><span class="toc-section-number">1.2</span> Create Master Tables</a></li>
+<li><a href="#collect-prevotella"><span class="toc-section-number">1.3</span> Collect % Prevotella</a></li>
+<li><a href="#write-table"><span class="toc-section-number">1.4</span> Write Table</a></li>
 </ul></li>
 </ul>
 </div>
@@ -1832,76 +1832,80 @@ summary {
     font-size: 1.4rem;
   }
   
-  .dataTable {
-    font-size: 9pt;
-  }
-  
 </style>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCcke3Byb2plY3RfbWV0YWRhdGFfZmlsZX0nKVxuYGBgIn0= -->
-<pre class="r"><code>source(&#39;${project_metadata_file}&#39;)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCcke3Byb2plY3RfbWV0YWRhdGFfZmlsZX0nKVxuYW5hbHlzaXNfdHlwZSA9IFwiJHthbmFseXNpc190eXBlfVwiXG5jbHVzdGVyaW5nX2xldmVsID0gXCIke2NsdXN0ZXJpbmdfbGV2ZWx9XCJcbmZpbHRlcl9ieSA9IFwiJHtmaWx0ZXJfYnl9XCJcbnRhYmxlc19kaXIgPSBcIiR7dGFibGVzX2Rpcn1cIlxuYGBgIn0= -->
+<pre class="r"><code>source(&#39;${project_metadata_file}&#39;)
+analysis_type = &quot;${analysis_type}&quot;
+clustering_level = &quot;${clustering_level}&quot;
+filter_by = &quot;${filter_by}&quot;
+tables_dir = &quot;${tables_dir}&quot;</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiY2Fubm90IG9wZW4gZmlsZSAnJHtwcm9qZWN0X21ldGFkYXRhX2ZpbGV9JzogTm8gc3VjaCBmaWxlIG9yIGRpcmVjdG9yeUVycm9yIGluIGZpbGUoZmlsZW5hbWUsIFwiclwiLCBlbmNvZGluZyA9IGVuY29kaW5nKSA6IFxuICBjYW5ub3Qgb3BlbiB0aGUgY29ubmVjdGlvblxuIn0= -->
-<pre><code>cannot open file &#39;${project_metadata_file}&#39;: No such file or directoryError in file(filename, &quot;r&quot;, encoding = encoding) : 
-  cannot open the connection</code></pre>
-<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="miseq-miseq_run_number-deseq2-analysis" class="section level1 tabset">
-<h1><span class="header-section-number">1</span> MiSeq-${miseq_run_number} DESeq2 Analysis</h1>
-<div id="clustering" class="section level2">
-<h2><span class="header-section-number">1.1</span> Clustering</h2>
-<p>Data clustered at the ${CLUSTERING_LEVEL} level.</p>
-</div>
-<div id="filtering" class="section level2">
-<h2><span class="header-section-number">1.2</span> Filtering</h2>
+<div id="miseq_project_prefix-basic-data-prep" class="section level1 tabset" number="1">
+<h1 class="tabset" number="1"><span class="header-section-number">1</span> ${miseq_project_prefix} Basic Data Prep</h1>
+<p><strong>Clustering</strong> Data clustered at the ${CLUSTERING_LEVEL} Level.</p>
+<p><strong>Subgroups</strong></p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p><strong>Filtering</strong> Data filtered by ${FILTER_BY}</p>
 <ul>
-<li><strong>Relative Abundance Cutoff:</strong> ${relative_abundance_cutoff}</li>
+<li><strong>Relative Abundance cutoff:</strong> ${relative_abundance_cutoff}</li>
 <li><strong>Prevalence Cutoff:</strong> ${prevalence_cutoff}</li>
 <li><strong>Min Count Cutoff:</strong> ${min_count_cutoff}</li>
 </ul>
-</div>
-<div id="setup" class="section level2">
-<h2><span class="header-section-number">1.3</span> Setup</h2>
-<div id="close" class="section level3">
-<h3><span class="header-section-number">1.3.1</span> [Close]</h3>
-</div>
-<div id="start-conda-env" class="section level3">
-<h3><span class="header-section-number">1.3.2</span> Start Conda ENV</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudignZGVzZXEnLCBsaWI9J34vUjM1JylcbmBgYCJ9 -->
-<pre class="r"><code>startCondaEnv(&#39;deseq&#39;, lib=&#39;~/R35&#39;)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZiA9ICR7cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZn1cbnByZXZhbGVuY2VfY3V0b2ZmID0gJHtwcmV2YWxlbmNlX2N1dG9mZn1cbm1pbl9jb3VudF9jdXRvZmYgPSAke21pbl9jb3VudF9jdXRvZmZ9XG5gYGAifQ== -->
+<pre class="r"><code>relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<div id="setup" class="section level2" number="1.1">
+<h2 number="1.1"><span class="header-section-number">1.1</span> Setup</h2>
+<div id="close" class="section level3" number="1.1.1">
+<h3 number="1.1.1"><span class="header-section-number">1.1.1</span> [Close]</h3>
+</div>
+<div id="start-conda-env" class="section level3" number="1.1.2">
+<h3 number="1.1.2"><span class="header-section-number">1.1.2</span> Start Conda ENV</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudignYmFzZScpXG5gYGAifQ== -->
+<pre class="r"><code>startCondaEnv(&#39;base&#39;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="load-libraries" class="section level3">
-<h3><span class="header-section-number">1.3.3</span> Load Libraries</h3>
+<div id="load-libraries" class="section level3" number="1.1.3">
+<h3 number="1.1.3"><span class="header-section-number">1.1.3</span> Load Libraries</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShybWFya2Rvd24pXG5saWJyYXJ5KHRpZHl2ZXJzZSlcbmxpYnJhcnkobWFncml0dHIpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KG9wZW54bHN4KVxubGlicmFyeShEVClcbmxpYnJhcnkoa2FibGVFeHRyYSlcbmxpYnJhcnkoREVTZXEyKVxuXG4jIyMgQ3VzdG9tIGxpYnJhcmllcyB0aGF0IGNhbiBiZSBsb2FkZWQgZnJvbSBHaXRIdWJcbnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL2dlbmVyYWxfYXN2X2RhdGFfYW5hbHlzaXNfdXRpbGl0aWVzLlInKVxuc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZGVzZXFfdXRpbGl0aWVzLlInKVxuc291cmNlKCd+L3V0aWxpdGllcy9hbWRfdGVtcGxhdGVzL3NldHVwL2FtZF9wcm9qZWN0X3V0aWxpdGllcy5SJylcbnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL3BhdGh3YXlfdXRpbGl0aWVzLlInKVxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShybWFya2Rvd24pXG5saWJyYXJ5KHRpZHl2ZXJzZSlcbmxpYnJhcnkobWFncml0dHIpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KGdnYmVlc3dhcm0pXG5saWJyYXJ5KG9wZW54bHN4KVxubGlicmFyeShEVClcbmxpYnJhcnkocGhlYXRtYXApXG5saWJyYXJ5KGthYmxlRXh0cmEpXG5cbiMjIyBDdXN0b20gbGlicmFyaWVzIHRoYXQgY2FuIGJlIGxvYWRlZCBmcm9tIEdpdEh1Ylxuc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZ2VuZXJhbF9hc3ZfZGF0YV9hbmFseXNpc191dGlsaXRpZXMuUicpXG5zb3VyY2UoJ34vdXRpbGl0aWVzL2FtZF90ZW1wbGF0ZXMvc2V0dXAvYW1kX3Byb2plY3RfdXRpbGl0aWVzLlInKVxuYGBgIn0= -->
 <pre class="r"><code>library(rmarkdown)
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
+library(ggbeeswarm)
 library(openxlsx)
 library(DT)
+library(pheatmap)
 library(kableExtra)
-library(DESeq2)
 
 ### Custom libraries that can be loaded from GitHub
 source(&#39;~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R&#39;)
-source(&#39;~/utilities/analysis-utilities/deseq_utilities.R&#39;)
-source(&#39;~/utilities/amd_templates/setup/amd_project_utilities.R&#39;)
-source(&#39;~/utilities/analysis-utilities/pathway_utilities.R&#39;)</code></pre>
+source(&#39;~/utilities/amd_templates/setup/amd_project_utilities.R&#39;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="set-knitr-options" class="section level3">
-<h3><span class="header-section-number">1.3.4</span> Set Knitr Options</h3>
+<div id="set-knitr-options" class="section level3" number="1.1.4">
+<h3 number="1.1.4"><span class="header-section-number">1.1.4</span> Set Knitr Options</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuJHtrbml0cl9vcHRpb25zfVxuYGBgIn0= -->
@@ -1910,463 +1914,189 @@ source(&#39;~/utilities/analysis-utilities/pathway_utilities.R&#39;)</code></pre
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="load-data" class="section level3">
-<h3><span class="header-section-number">1.3.5</span> Load Data</h3>
+<div id="load-data" class="section level3" number="1.1.5">
+<h3 number="1.1.5"><span class="header-section-number">1.1.5</span> Load Data</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBwYXRod2F5X2NvdW50c190YWJsZV9maWxlID0gZmlsZS5wYXRoKFxuIyAgIFwiJHt0YWJsZXNfZGlyfVwiLFxuIyAgIFwicGljcnVzdF9vdXRcIixcbiMgICBcInBhdGh3YXlzX291dFwiLFxuIyAgIFwibWlzZXEtJHttaXNlcV9ydW5fbnVtYmVyfV9wYXRoX2FidW5fdW5zdHJhdC54bHN4XCJcbiMgKVxuIyBcbiMgcGF0aHdheV9jb3VudHNfdGFibGUgPSByZWFkLnhsc3goXG4jICAgcGF0aHdheV9jb3VudHNfdGFibGVfZmlsZSxcbiMgICBjb2xOYW1lcz1UXG4jICAgKVxuXG5cbmtvX2NvdW50c190YWJsZV9maWxlID0gZmlsZS5wYXRoKFxuICBcIiR7dGFibGVzX2Rpcn1cIixcbiAgXCJwaWNydXN0X291dFwiLFxuICBcIktPX21ldGFnZW5vbWVfb3V0XCIsXG4gIFwibWlzZXEtMjM5X3ByZWRfbWV0YWdlbm9tZV91bnN0cmF0Lnhsc3hcIlxuKVxuXG5rb19jb3VudHNfdGFibGUgPSByZWFkLnhsc3goXG4gIGtvX2NvdW50c190YWJsZV9maWxlLFxuICBjb2xOYW1lcz1UXG4gIClcblxuc2FtcGxlX2RhdGEgPSByZWFkLnhsc3goXG4gICcke3NhbXBsZV9kYXRhX2ZpbGV9JyxcbiAgY29sTmFtZXM9VFxuICApXG5cbmlmIChcIklHQVwiICVpbiUgY29sbmFtZXMoc2FtcGxlX2RhdGEpICYgdXNlX2FsbGJhYylcbntcbiAgc2FtcGxlX2RhdGEgPSBcbiAgICBzYW1wbGVfZGF0YSAlPiVcbiAgICBmaWx0ZXIoSUdBPT0nQWxsQmFjJylcblxuICBzYW1wbGVfbmFtZXMgPSBzYW1wbGVfZGF0YSRTYW1wbGVOYW1lXG4gIFxuICBhc3ZfdGFibGUgPSBcbiAgICBhc3ZfdGFibGUgJT4lXG4gICAgc2VsZWN0KCdBU1ZzJywgZW5kc193aXRoKCdBbGxCYWMnKSlcbn1cblxuc2FtcGxlX2RhdGFfY29sdW1ucyA9IGNvbG5hbWVzKHNhbXBsZV9kYXRhKVxuc2FtcGxlX25hbWVzID0gc2FtcGxlX2RhdGEkU2FtcGxlTmFtZVxuXG5zb3VyY2UoZmlsZS5wYXRoKFxuICBcIiR7cHJvamVjdF9yb290fVwiLCBcbiAgXCIke21ldGFkYXRhX2Rpcn1cIiwgXG4gICdvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcy5SJ1xuICApKVxuXG5gYGAifQ== -->
-<pre class="r"><code># pathway_counts_table_file = file.path(
-#   &quot;${tables_dir}&quot;,
-#   &quot;picrust_out&quot;,
-#   &quot;pathways_out&quot;,
-#   &quot;miseq-${miseq_run_number}_path_abun_unstrat.xlsx&quot;
-# )
-# 
-# pathway_counts_table = read.xlsx(
-#   pathway_counts_table_file,
-#   colNames=T
-#   )
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYXN2X3RhYmxlID0gXG4gIHJlYWQuZGVsaW0oXG4gICAgJyR7YXN2X3RhYmxlX2ZpbGV9JywgXG4gICAgaGVhZGVyPVQsIFxuICAgIHNlcD0nXFx0JyxcbiAgICBzdHJpbmdzQXNGYWN0b3JzPUZcbiAgICApXG5cbnRheG9ub215X3RhYmxlID0gXG4gIHJlYWQuZGVsaW0oXG4gICAgJyR7dGF4b25vbXlfdGFibGVfZmlsZX0nLCBcbiAgICBoZWFkZXI9VCwgXG4gICAgc2VwPSdcXHQnLFxuICAgIHN0cmluZ3NBc0ZhY3RvcnM9RlxuICAgICkgJT4lXG4gIG11dGF0ZV9hbGwoYXMuY2hhcmFjdGVyKCkpXG5cbnNhbXBsZV9kYXRhID0gcmVhZC54bHN4KCcke3NhbXBsZV9kYXRhX2ZpbGV9Jylcblxuc2FtcGxlX2RhdGFfY29sdW1ucyA9IGNvbG5hbWVzKHNhbXBsZV9kYXRhKVxuc2FtcGxlX25hbWVzID0gc2FtcGxlX2RhdGEkU2FtcGxlTmFtZVxuXG5gYGAifQ== -->
+<pre class="r"><code>asv_table = 
+  read.delim(
+    &#39;${asv_table_file}&#39;, 
+    header=T, 
+    sep=&#39;\t&#39;,
+    stringsAsFactors=F
+    )
 
+taxonomy_table = 
+  read.delim(
+    &#39;${taxonomy_table_file}&#39;, 
+    header=T, 
+    sep=&#39;\t&#39;,
+    stringsAsFactors=F
+    ) %&gt;%
+  mutate_all(as.character())
 
-ko_counts_table_file = file.path(
-  &quot;${tables_dir}&quot;,
-  &quot;picrust_out&quot;,
-  &quot;KO_metagenome_out&quot;,
-  &quot;miseq-239_pred_metagenome_unstrat.xlsx&quot;
-)
-
-ko_counts_table = read.xlsx(
-  ko_counts_table_file,
-  colNames=T
-  )
-
-sample_data = read.xlsx(
-  &#39;${sample_data_file}&#39;,
-  colNames=T
-  )
-
-if (&quot;IGA&quot; %in% colnames(sample_data) &amp; use_allbac)
-{
-  sample_data = 
-    sample_data %&gt;%
-    filter(IGA==&#39;AllBac&#39;)
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %&gt;%
-    select(&#39;ASVs&#39;, ends_with(&#39;AllBac&#39;))
-}
+sample_data = read.xlsx(&#39;${sample_data_file}&#39;)
 
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
-
-source(file.path(
-  &quot;${project_root}&quot;, 
-  &quot;${metadata_dir}&quot;, 
-  &#39;observational_variables.R&#39;
-  ))
 </code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="integerize-pathway-counts" class="section level3">
-<h3><span class="header-section-number">1.3.6</span> Integerize pathway counts</h3>
+<div id="extract-subgroups" class="section level3" number="1.1.6">
+<h3 number="1.1.6"><span class="header-section-number">1.1.6</span> Extract Subgroups</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGF0aHdheV9jb3VudHNfdGFibGUgPSBcbiAgcGF0aHdheV9jb3VudHNfdGFibGUgJT4lXG4gIHJlbW92ZV9yb3duYW1lcygpICU+JVxuICBtdXRhdGVfYXQodmFycyhzYW1wbGVfbmFtZXMpLCB+Zmxvb3IoLiswLjAwMDAwMDAxKSlcbmtvX2NvdW50c190YWJsZSA9IFxuICBrb19jb3VudHNfdGFibGUgJT4lXG4gIHJlbW92ZV9yb3duYW1lcygpICU+JVxuICBtdXRhdGVfYXQodmFycyhzYW1wbGVfbmFtZXMpLCB+Zmxvb3IoLiswLjAwMDAwMDAxKSlcbmBgYCJ9 -->
-<pre class="r"><code>pathway_counts_table = 
-  pathway_counts_table %&gt;%
-  remove_rownames() %&gt;%
-  mutate_at(vars(sample_names), ~floor(.+0.00000001))
-ko_counts_table = 
-  ko_counts_table %&gt;%
-  remove_rownames() %&gt;%
-  mutate_at(vars(sample_names), ~floor(.+0.00000001))</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="set-metadata-factor-levels" class="section level3">
-<h3><span class="header-section-number">1.3.7</span> Set Metadata Factor Levels</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2FtcGxlX2RhdGEgPSBzZXRGYWN0b3JzTGV2ZWxzKHNhbXBsZV9kYXRhLCBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcylcbiMgc2FtcGxlX2RhdGEgJTw+JVxuIyAgIG11dGF0ZShBUkVEUz1cbiMgICAgIGlmZWxzZShpcy5uYShBUkVEUyksIFwiTUlTU0lOR1wiLCBBUkVEUykgJT4lXG4jICAgICBmYWN0b3IobGV2ZWxzPWMoJ04nLCAnWScsICdNSVNTSU5HJykpXG4jICAgKVxuYGBgIn0= -->
-<pre class="r"><code>sample_data = setFactorsLevels(sample_data, observational_variables)
-# sample_data %&lt;&gt;%
-#   mutate(AREDS=
-#     ifelse(is.na(AREDS), &quot;MISSING&quot;, AREDS) %&gt;%
-#     factor(levels=c(&#39;N&#39;, &#39;Y&#39;, &#39;MISSING&#39;))
-#   )</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="variables-of-interest" class="section level3">
-<h3><span class="header-section-number">1.3.8</span> Variables of interest</h3>
-<div id="observational-variables" class="section level4">
-<h4><span class="header-section-number">1.3.8.1</span> Observational Variables</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX2NvdmFyaWF0ZXMgPSBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1ske2xpbmVhcl9yZWdyZXNzaW9uX3ByZWRpY3RvcnNbJ0FsbCddfV1cbmFnZV9sdF85MF9jb3ZhcmlhdGVzID0gb2JzZXJ2YXRpb25hbF92YXJpYWJsZXNbJHtsaW5lYXJfcmVncmVzc2lvbl9wcmVkaWN0b3JzWydBZ2VfbHRfOTAnXX1dXG5nZW5vdHlwZXMgPSAke2dlbm90eXBlc31cbnBoZW5vdHlwZXMgPSAke3BoZW5vdHlwZXN9XG5gYGAifQ== -->
-<pre class="r"><code>all_covariates = observational_variables[${linear_regression_predictors[&#39;All&#39;]}]
-age_lt_90_covariates = observational_variables[${linear_regression_predictors[&#39;Age_lt_90&#39;]}]
-genotypes = ${genotypes}
-phenotypes = ${phenotypes}</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="remove-age" class="section level4">
-<h4><span class="header-section-number">1.3.8.2</span> Remove Age</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX2NvdmFyaWF0ZXMkQWdlID0gTlVMTFxuYWdlX2x0XzkwX2NvdmFyaWF0ZXMkQWdlID0gTlVMTFxuYGBgIn0= -->
-<pre class="r"><code>all_covariates$Age = NULL
-age_lt_90_covariates$Age = NULL</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<ul>
-<li><strong>All Variables:</strong> CaseString, Gender, Tissue_code</li>
-<li><strong>Age &lt; 90 Variables:</strong> CaseString, Gender, Tissue_code</li>
-</ul>
-</div>
-</div>
-</div>
-<div id="all-subgroups-casecontrol-only" class="section level2">
-<h2><span class="header-section-number">1.4</span> All Subgroups Case/Control Only</h2>
-<div id="create-workbook" class="section level3">
-<h3><span class="header-section-number">1.4.1</span> Create Workbook</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKClcbmBgYCJ9 -->
-<pre class="r"><code>deseq_results_wb = createWorkbook()</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<div id="run-and-add-worksheets" class="section level4">
-<h4><span class="header-section-number">1.4.1.1</span> Run and add worksheets</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyByZXN1bHRzX2RmID0gcnVuRGVzZXFGcm9tUGF0aHdheUNvdW50cyhcbiMgICBwYXRod2F5X2NvdW50cz1wYXRod2F5X2NvdW50c190YWJsZSxcbiMgICBzYW1wbGVfZGF0YSxcbiMgICB2YXJpYWJsZXM9XCJDYXNlU3RyaW5nXCIsXG4jICAgaW5jbHVkZV9jb3ZhcmlhdGVzID0gJ0FsbCdcbiMgICApXG5cbnJlc3VsdHNfZGYgPSBydW5EZXNlcUZyb21QYXRod2F5Q291bnRzKFxuICBwYXRod2F5X2NvdW50cz1rb19jb3VudHNfdGFibGUsXG4gIHNhbXBsZV9kYXRhLFxuICB2YXJpYWJsZXM9XCJDYXNlU3RyaW5nXCIsXG4gIGluY2x1ZGVfY292YXJpYXRlcyA9ICdBbGwnLFxuICBwYXRod2F5X2NvbG5hbWU9J0tPJ1xuICApXG5cbnBhZGpfY29sID0gXCJDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGpcIlxuXG5yZXN1bHRzX2RmID1cbiAgcmVzdWx0c19kZiAlPiVcbiAgc2VsZWN0KHBhdGh3YXksICEhcGFkal9jb2wsIGV2ZXJ5dGhpbmcoKSkgJT4lXG4gIGFycmFuZ2UoISFhcy5uYW1lKHBhZGpfY29sKSlcblxuYWRkV29ya3NoZWV0KFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXROYW1lPVwiXCJcbiAgKVxuXG5vcGVueGxzeDo6d3JpdGVEYXRhKFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIHg9cmVzdWx0c19kZlxuICApXG4gIFxuc2V0Q29sV2lkdGhzKFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIGNvbHM9MSwgXG4gIHdpZHRocyA9IFwiYXV0b1wiXG4pXG5cbmZyZWV6ZVBhbmUoXG4gIGRlc2VxX3Jlc3VsdHNfd2IsIFxuICBzaGVldD1cIlwiLCBcbiAgZmlyc3RDb2w9VCxcbiAgZmlyc3RSb3c9VFxuKVxuYGBgIn0= -->
-<pre class="r"><code># results_df = runDeseqFromPathwayCounts(
-#   pathway_counts=pathway_counts_table,
-#   sample_data,
-#   variables=&quot;CaseString&quot;,
-#   include_covariates = &#39;All&#39;
-#   )
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFpcy5udWxsKGMoJHtzdWJncm91cF9maWx0ZXJzfSkpKVxue1xuICBzdWJncm91cF9maWx0ZXJfc3RyaW5nID0gcGFzdGUwKCR7c3ViZ3JvdXBfZmlsdGVyc30sIGNvbGxhcHNlPVwiICYgXCIpXG4gIHByaW50KHNwcmludGYoXCJTdWJncm91cCBGaWx0ZXIgU3RyaW5nOiAlc1wiLCBzdWJncm91cF9maWx0ZXJfc3RyaW5nKSlcbiAgc3ViZ3JvdXBfZmlsdGVyX2V4cHJlc3Npb24gPSBzdHIyZXhwcmVzc2lvbihzdWJncm91cF9maWx0ZXJfc3RyaW5nKVxuICBzYW1wbGVfZGF0YSA9IHNhbXBsZV9kYXRhICU+JSBmaWx0ZXIoZXZhbChzdWJncm91cF9maWx0ZXJfZXhwcmVzc2lvbikpXG4gIHNhbXBsZV9uYW1lcyA9IHNhbXBsZV9kYXRhJFNhbXBsZU5hbWVcblxuICBhc3ZfdGFibGUgPSBhc3ZfdGFibGUgJT4lIHNlbGVjdCgnQVNWcycsIHNhbXBsZV9uYW1lcylcbn1cblxuYGBgIn0= -->
+<pre class="r"><code>if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=&quot; &amp; &quot;)
+  print(sprintf(&quot;Subgroup Filter String: %s&quot;, subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %&gt;% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
 
-results_df = runDeseqFromPathwayCounts(
-  pathway_counts=ko_counts_table,
+  asv_table = asv_table %&gt;% select(&#39;ASVs&#39;, sample_names)
+}
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="set-filtering" class="section level3" number="1.1.7">
+<h3 number="1.1.7"><span class="header-section-number">1.1.7</span> Set Filtering</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZiA9ICR7cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZn1cbnByZXZhbGVuY2VfY3V0b2ZmID0gJHtwcmV2YWxlbmNlX2N1dG9mZn1cbmBgYCJ9 -->
+<pre class="r"><code>relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p><strong>relative abundance cutoff:</strong> 0.002 <strong>prevalence cutoff:</strong> 0.1</p>
+</div>
+<div id="get-filtered-taxa-abundance" class="section level3" number="1.1.8">
+<h3 number="1.1.8"><span class="header-section-number">1.1.8</span> Get Filtered Taxa Abundance</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZ2VudXNfYWJ1bmRhbmNlID0gZ2V0RmlsdGVyZWRUYXhhQ291bnRzKFxuICBhc3ZfdGFibGUsXG4gIHRheG9ub215X3RhYmxlLFxuICBzYW1wbGVfZGF0YSwgXG4gIGNsdXN0ZXJfYnk9XCJHZW51c1wiLFxuICBmaWx0ZXJfYnk9XCIke2ZpbHRlcl9ieX1cIixcbiAgcmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZj1yZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmLFxuICBwcmV2YWxlbmNlX2N1dG9mZj1wcmV2YWxlbmNlX2N1dG9mZixcbiAgaWRfY29sPVwiU2FtcGxlTmFtZVwiLFxuICBub3JtYWxpemU9VFxuICApXG5cbmFzdl9hYnVuZGFuY2UgPSBnZXRGaWx0ZXJlZFRheGFDb3VudHMoXG4gIGFzdl90YWJsZSxcbiAgdGF4b25vbXlfdGFibGUsXG4gIHNhbXBsZV9kYXRhLFxuICBjbHVzdGVyX2J5PVwiQVNWXCIsXG4gIGZpbHRlcl9ieT1cIkFTVlwiLFxuICByZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmPTAsXG4gIHByZXZhbGVuY2VfY3V0b2ZmPTAsXG4gIG1pbl9jb3VudF9jdXRvZmY9MCxcbiAgaWRfY29sPVwiU2FtcGxlTmFtZVwiLFxuICBub3JtYWxpemU9VFxuKVxuXG5cbmBgYCJ9 -->
+<pre class="r"><code>genus_abundance = getFilteredTaxaCounts(
+  asv_table,
+  taxonomy_table,
+  sample_data, 
+  cluster_by=&quot;Genus&quot;,
+  filter_by=&quot;${filter_by}&quot;,
+  relative_abundance_cutoff=relative_abundance_cutoff,
+  prevalence_cutoff=prevalence_cutoff,
+  id_col=&quot;SampleName&quot;,
+  normalize=T
+  )
+
+asv_abundance = getFilteredTaxaCounts(
+  asv_table,
+  taxonomy_table,
   sample_data,
-  variables=&quot;CaseString&quot;,
-  include_covariates = &#39;All&#39;,
-  pathway_colname=&#39;KO&#39;
-  )
-
-padj_col = &quot;CaseString_AMD_vs_Control.padj&quot;
-
-results_df =
-  results_df %&gt;%
-  select(pathway, !!padj_col, everything()) %&gt;%
-  arrange(!!as.name(padj_col))
-
-addWorksheet(
-  wb=deseq_results_wb, 
-  sheetName=&quot;&quot;
-  )
-
-openxlsx::writeData(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  x=results_df
-  )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  cols=1, 
-  widths = &quot;auto&quot;
+  cluster_by=&quot;ASV&quot;,
+  filter_by=&quot;ASV&quot;,
+  relative_abundance_cutoff=0,
+  prevalence_cutoff=0,
+  min_count_cutoff=0,
+  id_col=&quot;SampleName&quot;,
+  normalize=T
 )
-
-freezePane(
-  deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  firstCol=T,
-  firstRow=T
-)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="save-workbook" class="section level4">
-<h4><span class="header-section-number">1.4.1.2</span> Save Workbook</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc19jYXNlX3ZzX2NvbnRyb2wueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKVxuYGBgIn0= -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;all_subgroups_case_vs_control.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;rank&quot;
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
+</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
 </div>
-</div>
-<div id="all-subgroups-all-variables" class="section level2">
-<h2><span class="header-section-number">1.5</span> All Subgroups – All Variables</h2>
-<div id="create-workbook-1" class="section level3">
-<h3><span class="header-section-number">1.5.1</span> Create Workbook</h3>
+<div id="create-master-tables" class="section level2" number="1.2">
+<h2 number="1.2"><span class="header-section-number">1.2</span> Create Master Tables</h2>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKClcbmBgYCJ9 -->
-<pre class="r"><code>deseq_results_wb = createWorkbook()</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="run-and-add-worksheets-1" class="section level3">
-<h3><span class="header-section-number">1.5.2</span> Run and add worksheets</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0c19kZiA9IHJ1bkRlc2VxRnJvbVBhdGh3YXlDb3VudHMoXG4gIHBhdGh3YXlfY291bnRzPXBhdGh3YXlfY291bnRzX3RhYmxlLFxuICBzYW1wbGVfZGF0YSxcbiAgdmFyaWFibGVzPWFsbF9jb3ZhcmlhdGVzICU+JSBuYW1lcygpLFxuICBpbmNsdWRlX2NvdmFyaWF0ZXMgPSAnQWxsJ1xuICApXG4gIFxucGFkal9jb2wgPSBcIkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wucGFkalwiXG4gIFxucmVzdWx0c19kZiA9XG4gIHJlc3VsdHNfZGYgJT4lXG4gIHNlbGVjdChwYXRod2F5LCAhIXBhZGpfY29sLCBzdGFydHNfd2l0aChcIkNhc2VTdHJpbmdcIiksIGV2ZXJ5dGhpbmcoKSkgJT4lXG4gIGFycmFuZ2UoISFhcy5uYW1lKHBhZGpfY29sKSlcblxuYWRkV29ya3NoZWV0KFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXROYW1lPVwiXCJcbiAgKVxuXG5vcGVueGxzeDo6d3JpdGVEYXRhKFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIHg9cmVzdWx0c19kZlxuICApXG4gIFxuc2V0Q29sV2lkdGhzKFxuICB3Yj1kZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIGNvbHM9MSwgXG4gIHdpZHRocyA9IFwiYXV0b1wiXG4pXG5cbmZyZWV6ZVBhbmUoXG4gIGRlc2VxX3Jlc3VsdHNfd2IsIFxuICBzaGVldD1cIlwiLCBcbiAgZmlyc3RDb2w9VCxcbiAgZmlyc3RSb3c9VFxuKVxuYGBgIn0= -->
-<pre class="r"><code>results_df = runDeseqFromPathwayCounts(
-  pathway_counts=pathway_counts_table,
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX21hc3Rlcl90YWJsZSA9IGdldE1hc3RlclRhYmxlKFxuICBnZW51c19hYnVuZGFuY2UsXG4gIHNhbXBsZV9kYXRhLFxuICAnU2FtcGxlTmFtZScsXG4gICdzaG9ydF9nbG9tbWVkX3RheGEnXG4pXG5gYGAifQ== -->
+<pre class="r"><code>all_master_table = getMasterTable(
+  genus_abundance,
   sample_data,
-  variables=all_covariates %&gt;% names(),
-  include_covariates = &#39;All&#39;
-  )
-  
-padj_col = &quot;CaseString_AMD_vs_Control.padj&quot;
-  
-results_df =
-  results_df %&gt;%
-  select(pathway, !!padj_col, starts_with(&quot;CaseString&quot;), everything()) %&gt;%
-  arrange(!!as.name(padj_col))
-
-addWorksheet(
-  wb=deseq_results_wb, 
-  sheetName=&quot;&quot;
-  )
-
-openxlsx::writeData(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  x=results_df
-  )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  cols=1, 
-  widths = &quot;auto&quot;
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  firstCol=T,
-  firstRow=T
+  &#39;SampleName&#39;,
+  &#39;short_glommed_taxa&#39;
 )</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="save-workbook-1" class="section level3">
-<h3><span class="header-section-number">1.5.3</span> Save Workbook</h3>
+<div id="collect-prevotella" class="section level2" number="1.3">
+<h2 number="1.3"><span class="header-section-number">1.3</span> Collect % Prevotella</h2>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc193aXRoX2NvdmFyaWF0ZXMueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKVxuYGBgIn0= -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;all_subgroups_with_covariates.xlsx&#39;,
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyMjIFByZXZvdGVsbGEgZ2VuZXJhIGZyb20gU2lsdmEgZGF0YWJhc2Ugd2Vic2l0ZSBodHRwczovL3d3dy5hcmItc2lsdmEuZGUvc2VhcmNoL1xucHJldm90ZWxsYV9nZW5lcmEgPSBwYXN0ZTAoYyhcbiAgJ0JhY3Rlcm9pZGV0ZXNfUHJldm90ZWxsYXwnLCBcbiAgcGFzdGUwKCdCYWN0ZXJvaWRldGVzX1ByZXZvdGVsbGFfJywgYygxLDIsNiw3LDkpLCBjb2xsYXBzZT1cInxcIilcbiAgKSxcbiAgY29sbGFwc2U9XCJcIlxuKVxucHJldm90ZWxsYV9nZW5lcmFcbmBgYCJ9 -->
+<pre class="r"><code>### Prevotella genera from Silva database website https://www.arb-silva.de/search/
+prevotella_genera = paste0(c(
+  &#39;Bacteroidetes_Prevotella|&#39;, 
+  paste0(&#39;Bacteroidetes_Prevotella_&#39;, c(1,2,6,7,9), collapse=&quot;|&quot;)
+  ),
+  collapse=&quot;&quot;
+)
+prevotella_genera</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Prevotella genera from Silva database website <a href="https://www.arb-silva.de/search/" class="uri">https://www.arb-silva.de/search/</a>: Bacteroidetes_Prevotella|Bacteroidetes_Prevotella_1|Bacteroidetes_Prevotella_2|Bacteroidetes_Prevotella_6|Bacteroidetes_Prevotella_7|Bacteroidetes_Prevotella_9</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX21hc3Rlcl90YWJsZSAlPD4lXG4gIG11dGF0ZShcbiAgICBGcmFjdGlvblByZXZvdGVsbGFBbGwgPSBcbiAgICAgIHNlbGVjdCguLCBtYXRjaGVzKHByZXZvdGVsbGFfZ2VuZXJhKSkgJT4lIFxuICAgICAgcm93U3VtcygpLFxuICAgIEZyYWN0aW9uQmFjdGVyb2lkZXRlcyA9IFxuICAgICAgc2VsZWN0KC4sIHN0YXJ0c193aXRoKCdCYWN0ZXJvaWRldGVzXycpKSAlPiUgXG4gICAgICByb3dTdW1zKCksXG4gICAgRnJhY3Rpb25QcmV2b3RlbGxhQmFjdGVyb2lkZXRlcyA9IEZyYWN0aW9uUHJldm90ZWxsYUFsbC9GcmFjdGlvbkJhY3Rlcm9pZGV0ZXMsXG4gICAgUGN0UHJldm90ZWxsYV9ndF8xID0gaWZlbHNlKEZyYWN0aW9uUHJldm90ZWxsYUFsbCA+IDAuMDEsICdZJywgJ04nKSxcbiAgICBQY3RQcmV2b3RlbGxhX2d0XzUgPSBpZmVsc2UoRnJhY3Rpb25QcmV2b3RlbGxhQWxsID4gMC4wNSwgJ1knLCAnTicpLFxuICAgIFBjdFByZXZvdGVsbGFfZ3RfMTAgPSBpZmVsc2UoRnJhY3Rpb25QcmV2b3RlbGxhQWxsID4gMC4xLCAnWScsICdOJylcbiAgKVxuYGBgIn0= -->
+<pre class="r"><code>all_master_table %&lt;&gt;%
+  mutate(
+    FractionPrevotellaAll = 
+      select(., matches(prevotella_genera)) %&gt;% 
+      rowSums(),
+    FractionBacteroidetes = 
+      select(., starts_with(&#39;Bacteroidetes_&#39;)) %&gt;% 
+      rowSums(),
+    FractionPrevotellaBacteroidetes = FractionPrevotellaAll/FractionBacteroidetes,
+    PctPrevotella_gt_1 = ifelse(FractionPrevotellaAll &gt; 0.01, &#39;Y&#39;, &#39;N&#39;),
+    PctPrevotella_gt_5 = ifelse(FractionPrevotellaAll &gt; 0.05, &#39;Y&#39;, &#39;N&#39;),
+    PctPrevotella_gt_10 = ifelse(FractionPrevotellaAll &gt; 0.1, &#39;Y&#39;, &#39;N&#39;)
+  )</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="write-table" class="section level2" number="1.4">
+<h2 number="1.4"><span class="header-section-number">1.4</span> Write Table</h2>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud2IgPSBjcmVhdGVXb3JrYm9vaygpXG5cbmFkZFdvcmtzaGVldCh3Yiwgc2hlZXROYW1lPVwiTWFzdGVyIFRhYmxlXCIpXG5vcGVueGxzeDo6d3JpdGVEYXRhKHdiLCBzaGVldD1cIk1hc3RlciBUYWJsZVwiLCBhbGxfbWFzdGVyX3RhYmxlKVxuXG5hbGxfcmFua3MgPSBjKCdQaHlsdW0nLCAnQ2xhc3MnLCAnT3JkZXInLCAnRmFtaWx5JywgJ0dlbnVzJylcbmp1c3RfdGF4YSA9IGdlbnVzX2FidW5kYW5jZSAlPiUgc2VsZWN0KGFsbF9yYW5rcywgZ2xvbW1lZF90YXhhLCBzaG9ydF9nbG9tbWVkX3RheGEpXG5hZGRXb3Jrc2hlZXQod2IsIHNoZWV0TmFtZT1cIiR7dG9vbHM6OnRvVGl0bGVDYXNlKGNsdXN0ZXJpbmdfbGV2ZWwpfVwiKVxub3Blbnhsc3g6OndyaXRlRGF0YSh3Yiwgc2hlZXQ9XCIke3Rvb2xzOjp0b1RpdGxlQ2FzZShjbHVzdGVyaW5nX2xldmVsKX1cIiwganVzdF90YXhhKVxuXG5maWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoXG4gICdtYXN0ZXJfdGFibGUueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcIiR7Y2x1c3RlcmluZ19sZXZlbH1cIlxuKVxucHJpbnQoZmlsZW5hbWUpXG5cbnNhdmVXb3JrYm9vayh3YiwgZmlsZT1maWxlbmFtZSwgb3ZlcndyaXRlPVQpXG5gYGAifQ== -->
+<pre class="r"><code>wb = createWorkbook()
+
+addWorksheet(wb, sheetName=&quot;Master Table&quot;)
+openxlsx::writeData(wb, sheet=&quot;Master Table&quot;, all_master_table)
+
+all_ranks = c(&#39;Phylum&#39;, &#39;Class&#39;, &#39;Order&#39;, &#39;Family&#39;, &#39;Genus&#39;)
+just_taxa = genus_abundance %&gt;% select(all_ranks, glommed_taxa, short_glommed_taxa)
+addWorksheet(wb, sheetName=&quot;${tools::toTitleCase(clustering_level)}&quot;)
+openxlsx::writeData(wb, sheet=&quot;${tools::toTitleCase(clustering_level)}&quot;, just_taxa)
+
+filename = makeDataFileName(
+  &#39;master_table.xlsx&#39;,
   &quot;${tables_dir}&quot;,
   &quot;${analysis_type}&quot;,
   &quot;${miseq_project_prefix}&quot;,
-  &quot;rank&quot;
+  &quot;${clustering_level}&quot;
 )
-
 print(filename)
 
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-</div>
-<div id="age-90-casecontrol-only" class="section level2">
-<h2><span class="header-section-number">1.6</span> Age &lt; 90 Case/Control Only</h2>
-<div id="create-workbook-2" class="section level3">
-<h3><span class="header-section-number">1.6.1</span> Create Workbook</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKClcbmBgYCJ9 -->
-<pre class="r"><code>deseq_results_wb = createWorkbook()</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<div id="run-and-add-worksheets-2" class="section level4">
-<h4><span class="header-section-number">1.6.1.1</span> Run and add worksheets</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0c19kZiA9IHJ1bkRlc2VxRnJvbVBhdGh3YXlDb3VudHMoXG4gIGNvdW50c190YWJsZT1wYXRod2F5X2NvdW50c190YWJsZSxcbiAgc2FtcGxlX2RhdGEgJT4lIGZpbHRlcihBZ2UgPCA5MCksXG4gIHZhcmlhYmxlcz1cIkNhc2VTdHJpbmdcIixcbiAgaW5jbHVkZV9jb3ZhcmlhdGVzID0gJ0FsbCdcbiAgKVxuXG5wYWRqX2NvbCA9IFwiQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqXCJcblxucmVzdWx0c19kZiA9XG4gIHJlc3VsdHNfZGYgJT4lXG4gIHNlbGVjdChwYXRod2F5LCAhIXBhZGpfY29sLCBldmVyeXRoaW5nKCkpICU+JVxuICBhcnJhbmdlKCEhYXMubmFtZShwYWRqX2NvbCkpXG5cbmFkZFdvcmtzaGVldChcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0TmFtZT1cIlwiXG4gIClcblxub3Blbnhsc3g6OndyaXRlRGF0YShcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0PVwiXCIsIFxuICB4PXJlc3VsdHNfZGZcbiAgKVxuICBcbnNldENvbFdpZHRocyhcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0PVwiXCIsIFxuICBjb2xzPTEsIFxuICB3aWR0aHMgPSBcImF1dG9cIlxuKVxuXG5mcmVlemVQYW5lKFxuICBkZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIGZpcnN0Q29sPVQsXG4gIGZpcnN0Um93PVRcbilcbmBgYCJ9 -->
-<pre class="r"><code>results_df = runDeseqFromPathwayCounts(
-  counts_table=pathway_counts_table,
-  sample_data %&gt;% filter(Age &lt; 90),
-  variables=&quot;CaseString&quot;,
-  include_covariates = &#39;All&#39;
-  )
-
-padj_col = &quot;CaseString_AMD_vs_Control.padj&quot;
-
-results_df =
-  results_df %&gt;%
-  select(pathway, !!padj_col, everything()) %&gt;%
-  arrange(!!as.name(padj_col))
-
-addWorksheet(
-  wb=deseq_results_wb, 
-  sheetName=&quot;&quot;
-  )
-
-openxlsx::writeData(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  x=results_df
-  )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  cols=1, 
-  widths = &quot;auto&quot;
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  firstCol=T,
-  firstRow=T
-)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="save-workbook-2" class="section level4">
-<h4><span class="header-section-number">1.6.1.2</span> Save Workbook</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc19jYXNlX3ZzX2NvbnRyb2wueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKVxuYGBgIn0= -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;all_subgroups_case_vs_control.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;rank&quot;
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-</div>
-</div>
-<div id="age-90-all-variables" class="section level2">
-<h2><span class="header-section-number">1.7</span> Age &lt; 90 – All Variables</h2>
-<div id="create-workbook-3" class="section level3">
-<h3><span class="header-section-number">1.7.1</span> Create Workbook</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKClcbmBgYCJ9 -->
-<pre class="r"><code>deseq_results_wb = createWorkbook()</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="run-and-add-worksheets-3" class="section level3">
-<h3><span class="header-section-number">1.7.2</span> Run and add worksheets</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0c19kZiA9IHJ1bkRlc2VxRnJvbVBhdGh3YXlDb3VudHMoXG4gIGNvdW50c190YWJsZT1wYXRod2F5X2NvdW50c190YWJsZSxcbiAgc2FtcGxlX2RhdGEgJT4lIGZpbHRlcihBZ2UgPCA5MCksXG4gIHZhcmlhYmxlcz1hZ2VfbHRfOTBfY292YXJpYXRlcyAlPiUgbmFtZXMoKSxcbiAgaW5jbHVkZV9jb3ZhcmlhdGVzID0gJ0FsbCdcbiAgKVxuICBcbnBhZGpfY29sID0gXCJDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGpcIlxuICBcbnJlc3VsdHNfZGYgPVxuICByZXN1bHRzX2RmICU+JVxuICBzZWxlY3QocGF0aHdheSwgISFwYWRqX2NvbCwgc3RhcnRzX3dpdGgoXCJDYXNlU3RyaW5nXCIpLCBldmVyeXRoaW5nKCkpICU+JVxuICBhcnJhbmdlKCEhYXMubmFtZShwYWRqX2NvbCkpXG5cbmFkZFdvcmtzaGVldChcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0TmFtZT1cIlwiXG4gIClcblxub3Blbnhsc3g6OndyaXRlRGF0YShcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0PVwiXCIsIFxuICB4PXJlc3VsdHNfZGZcbiAgKVxuICBcbnNldENvbFdpZHRocyhcbiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgXG4gIHNoZWV0PVwiXCIsIFxuICBjb2xzPTEsIFxuICB3aWR0aHMgPSBcImF1dG9cIlxuKVxuXG5mcmVlemVQYW5lKFxuICBkZXNlcV9yZXN1bHRzX3diLCBcbiAgc2hlZXQ9XCJcIiwgXG4gIGZpcnN0Q29sPVQsXG4gIGZpcnN0Um93PVRcbilcbmBgYCJ9 -->
-<pre class="r"><code>results_df = runDeseqFromPathwayCounts(
-  counts_table=pathway_counts_table,
-  sample_data %&gt;% filter(Age &lt; 90),
-  variables=age_lt_90_covariates %&gt;% names(),
-  include_covariates = &#39;All&#39;
-  )
-  
-padj_col = &quot;CaseString_AMD_vs_Control.padj&quot;
-  
-results_df =
-  results_df %&gt;%
-  select(pathway, !!padj_col, starts_with(&quot;CaseString&quot;), everything()) %&gt;%
-  arrange(!!as.name(padj_col))
-
-addWorksheet(
-  wb=deseq_results_wb, 
-  sheetName=&quot;&quot;
-  )
-
-openxlsx::writeData(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  x=results_df
-  )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  cols=1, 
-  widths = &quot;auto&quot;
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet=&quot;&quot;, 
-  firstCol=T,
-  firstRow=T
-)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="save-workbook-3" class="section level3">
-<h3><span class="header-section-number">1.7.3</span> Save Workbook</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnYWxsX3N1Ymdyb3Vwc193aXRoX2NvdmFyaWF0ZXMueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcInJhbmtcIlxuKVxuXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKVxuYGBgIn0= -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;all_subgroups_with_covariates.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;rank&quot;
-)
-
-print(filename)
-
-saveWorkbook(deseq_results_wb, file=filename, overwrite=T)</code></pre>
+saveWorkbook(wb, file=filename, overwrite=T)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 </div>
 </div>
-</div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAogIC5kYXRhVGFibGUgewogICAgZm9udC1zaXplOiA5cHQ7CiAgfQogIAo8L3N0eWxlPgoKYGBge3J9CnNvdXJjZSgnJHtwcm9qZWN0X21ldGFkYXRhX2ZpbGV9JykKYW5hbHlzaXNfdHlwZSA9ICIke2FuYWx5c2lzX3R5cGV9IgpjbHVzdGVyaW5nX2xldmVsID0gIiR7Y2x1c3RlcmluZ19sZXZlbH0iCnRhYmxlc19kaXIgPSAiJHt0YWJsZXNfZGlyfSIKdXNlX2FsbGJhYyA9ICR7dXNlX2FsbGJhY30KYW5hbHlzaXNfdGl0bGUgPSB0b29sczo6dG9UaXRsZUNhc2UoZ3N1YigiXyIsICIgIiwgYW5hbHlzaXNfdHlwZSkpCmBgYAoKIyBNaVNlcS0ke21pc2VxX3J1bl9udW1iZXJ9IERFU2VxMiBBbmFseXNpcyB7LnRhYnNldH0KCiMjIENsdXN0ZXJpbmcKRGF0YSBjbHVzdGVyZWQgYXQgdGhlIGByIHRvdXBwZXIoIiR7Y2x1c3RlcmluZ19sZXZlbH0iKWAgbGV2ZWwuCgojIyBGaWx0ZXJpbmcKKiAqKlJlbGF0aXZlIEFidW5kYW5jZSBDdXRvZmY6KiogJHtyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmfQoqICoqUHJldmFsZW5jZSBDdXRvZmY6KiogJHtwcmV2YWxlbmNlX2N1dG9mZn0KKiAqKk1pbiBDb3VudCBDdXRvZmY6KiogJHttaW5fY291bnRfY3V0b2ZmfQoKCiMjIFNldHVwIAoKIyMjIFtDbG9zZV0KCiMjIyBTdGFydCBDb25kYSBFTlYKYGBge3J9CnN0YXJ0Q29uZGFFbnYoJ2Rlc2VxJywgbGliPSd+L1IzNScpCmBgYAoKIyMjIExvYWQgTGlicmFyaWVzCmBgYHtyfQpsaWJyYXJ5KHJtYXJrZG93bikKbGlicmFyeSh0aWR5dmVyc2UpCmxpYnJhcnkobWFncml0dHIpCmxpYnJhcnkoZ2dwbG90MikKbGlicmFyeShvcGVueGxzeCkKbGlicmFyeShEVCkKbGlicmFyeShrYWJsZUV4dHJhKQpsaWJyYXJ5KERFU2VxMikKCiMjIyBDdXN0b20gbGlicmFyaWVzIHRoYXQgY2FuIGJlIGxvYWRlZCBmcm9tIEdpdEh1Ygpzb3VyY2UoJ34vdXRpbGl0aWVzL2FuYWx5c2lzLXV0aWxpdGllcy9nZW5lcmFsX2Fzdl9kYXRhX2FuYWx5c2lzX3V0aWxpdGllcy5SJykKc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZGVzZXFfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FtZF90ZW1wbGF0ZXMvc2V0dXAvYW1kX3Byb2plY3RfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FuYWx5c2lzLXV0aWxpdGllcy9wYXRod2F5X3V0aWxpdGllcy5SJykKYGBgCgojIyMgU2V0IEtuaXRyIE9wdGlvbnMKYGBge3J9CiR7a25pdHJfb3B0aW9uc30KYGBgCgojIyMgTG9hZCBEYXRhCmBgYHtyfQojIHBhdGh3YXlfY291bnRzX3RhYmxlX2ZpbGUgPSBmaWxlLnBhdGgoCiMgICAiJHt0YWJsZXNfZGlyfSIsCiMgICAicGljcnVzdF9vdXQiLAojICAgInBhdGh3YXlzX291dCIsCiMgICAibWlzZXEtJHttaXNlcV9ydW5fbnVtYmVyfV9wYXRoX2FidW5fdW5zdHJhdC54bHN4IgojICkKIyAKIyBwYXRod2F5X2NvdW50c190YWJsZSA9IHJlYWQueGxzeCgKIyAgIHBhdGh3YXlfY291bnRzX3RhYmxlX2ZpbGUsCiMgICBjb2xOYW1lcz1UCiMgICApCgoKa29fY291bnRzX3RhYmxlX2ZpbGUgPSBmaWxlLnBhdGgoCiAgIiR7dGFibGVzX2Rpcn0iLAogICJwaWNydXN0X291dCIsCiAgIktPX21ldGFnZW5vbWVfb3V0IiwKICAibWlzZXEtMjM5X3ByZWRfbWV0YWdlbm9tZV91bnN0cmF0Lnhsc3giCikKCmtvX2NvdW50c190YWJsZSA9IHJlYWQueGxzeCgKICBrb19jb3VudHNfdGFibGVfZmlsZSwKICBjb2xOYW1lcz1UCiAgKQoKc2FtcGxlX2RhdGEgPSByZWFkLnhsc3goCiAgJyR7c2FtcGxlX2RhdGFfZmlsZX0nLAogIGNvbE5hbWVzPVQKICApCgppZiAoIklHQSIgJWluJSBjb2xuYW1lcyhzYW1wbGVfZGF0YSkgJiB1c2VfYWxsYmFjKQp7CiAgc2FtcGxlX2RhdGEgPSAKICAgIHNhbXBsZV9kYXRhICU+JQogICAgZmlsdGVyKElHQT09J0FsbEJhYycpCgogIHNhbXBsZV9uYW1lcyA9IHNhbXBsZV9kYXRhJFNhbXBsZU5hbWUKICAKICBhc3ZfdGFibGUgPSAKICAgIGFzdl90YWJsZSAlPiUKICAgIHNlbGVjdCgnQVNWcycsIGVuZHNfd2l0aCgnQWxsQmFjJykpCn0KCnNhbXBsZV9kYXRhX2NvbHVtbnMgPSBjb2xuYW1lcyhzYW1wbGVfZGF0YSkKc2FtcGxlX25hbWVzID0gc2FtcGxlX2RhdGEkU2FtcGxlTmFtZQoKc291cmNlKGZpbGUucGF0aCgKICAiJHtwcm9qZWN0X3Jvb3R9IiwgCiAgIiR7bWV0YWRhdGFfZGlyfSIsIAogICdvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcy5SJwogICkpCgpgYGAKCiMjIyBJbnRlZ2VyaXplIHBhdGh3YXkgY291bnRzCmBgYHtyfQpwYXRod2F5X2NvdW50c190YWJsZSA9IAogIHBhdGh3YXlfY291bnRzX3RhYmxlICU+JQogIHJlbW92ZV9yb3duYW1lcygpICU+JQogIG11dGF0ZV9hdCh2YXJzKHNhbXBsZV9uYW1lcyksIH5mbG9vciguKzAuMDAwMDAwMDEpKQoKa29fY291bnRzX3RhYmxlID0gCiAga29fY291bnRzX3RhYmxlICU+JQogIHJlbW92ZV9yb3duYW1lcygpICU+JQogIG11dGF0ZV9hdCh2YXJzKHNhbXBsZV9uYW1lcyksIH5mbG9vciguKzAuMDAwMDAwMDEpKSAlPiUKICByZW5hbWUoS089ZnVuY3Rpb24uKQpgYGAKCgojIyMgU2V0IE1ldGFkYXRhIEZhY3RvciBMZXZlbHMKYGBge3J9CnNhbXBsZV9kYXRhID0gc2V0RmFjdG9yc0xldmVscyhzYW1wbGVfZGF0YSwgb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMpCiMgc2FtcGxlX2RhdGEgJTw+JQojICAgbXV0YXRlKEFSRURTPQojICAgICBpZmVsc2UoaXMubmEoQVJFRFMpLCAiTUlTU0lORyIsIEFSRURTKSAlPiUKIyAgICAgZmFjdG9yKGxldmVscz1jKCdOJywgJ1knLCAnTUlTU0lORycpKQojICAgKQpgYGAKCiMjIyBWYXJpYWJsZXMgb2YgaW50ZXJlc3QKIyMjIyBPYnNlcnZhdGlvbmFsIFZhcmlhYmxlcwpgYGB7cn0KYWxsX2NvdmFyaWF0ZXMgPSBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1ske2xpbmVhcl9yZWdyZXNzaW9uX3ByZWRpY3RvcnNbJ0FsbCddfV0KYWdlX2x0XzkwX2NvdmFyaWF0ZXMgPSBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlc1ske2xpbmVhcl9yZWdyZXNzaW9uX3ByZWRpY3RvcnNbJ0FnZV9sdF85MCddfV0KZ2Vub3R5cGVzID0gJHtnZW5vdHlwZXN9CnBoZW5vdHlwZXMgPSAke3BoZW5vdHlwZXN9CmBgYAoKIyMjIyBSZW1vdmUgQWdlCmBgYHtyfQphbGxfY292YXJpYXRlcyRBZ2UgPSBOVUxMCmFnZV9sdF85MF9jb3ZhcmlhdGVzJEFnZSA9IE5VTEwKYGBgCgoqICoqQWxsIFZhcmlhYmxlczoqKiBgciBhbGxfY292YXJpYXRlcyAlPiUgbmFtZXMoKWAKKiAqKkFnZSA8IDkwIFZhcmlhYmxlczoqKiBgciBhZ2VfbHRfOTBfY292YXJpYXRlcyAlPiUgbmFtZXMoKWAKCiMjIEFsbCBTdWJncm91cHMgQ2FzZS9Db250cm9sIE9ubHkKIyMjIENyZWF0ZSBXb3JrYm9vawpgYGB7cn0KZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKCkKYGBgCgojIyMjIFJ1biBhbmQgYWRkIHdvcmtzaGVldHMKYGBge3J9CiMgcmVzdWx0c19kZiA9IHJ1bkRlc2VxRnJvbVBhdGh3YXlDb3VudHMoCiMgICBwYXRod2F5X2NvdW50cz1wYXRod2F5X2NvdW50c190YWJsZSwKIyAgIHNhbXBsZV9kYXRhLAojICAgdmFyaWFibGVzPSJDYXNlU3RyaW5nIiwKIyAgIGluY2x1ZGVfY292YXJpYXRlcyA9ICdBbGwnCiMgICApCgpyZXN1bHRzX2RmID0gcnVuRGVzZXFGcm9tUGF0aHdheUNvdW50cygKICBwYXRod2F5X2NvdW50cz1rb19jb3VudHNfdGFibGUsCiAgc2FtcGxlX2RhdGEsCiAgdmFyaWFibGVzPSJDYXNlU3RyaW5nIiwKICBpbmNsdWRlX2NvdmFyaWF0ZXMgPSAnQWxsJywKICBwYXRod2F5X2NvbG5hbWU9J0tPJwogICkKCnBhZGpfY29sID0gIkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wucGFkaiIKCnJlc3VsdHNfZGYgPQogIHJlc3VsdHNfZGYgJT4lCiAgc2VsZWN0KHBhdGh3YXksICEhcGFkal9jb2wsIGV2ZXJ5dGhpbmcoKSkgJT4lCiAgYXJyYW5nZSghIWFzLm5hbWUocGFkal9jb2wpKQoKYWRkV29ya3NoZWV0KAogIHdiPWRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0TmFtZT0iIgogICkKCm9wZW54bHN4Ojp3cml0ZURhdGEoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIHg9cmVzdWx0c19kZgogICkKICAKc2V0Q29sV2lkdGhzKAogIHdiPWRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0PSIiLCAKICBjb2xzPTEsIAogIHdpZHRocyA9ICJhdXRvIgopCgpmcmVlemVQYW5lKAogIGRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0PSIiLCAKICBmaXJzdENvbD1ULAogIGZpcnN0Um93PVQKKQpgYGAKCiMjIyMgU2F2ZSBXb3JrYm9vawpgYGB7cn0KZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKAogICdhbGxfc3ViZ3JvdXBzX2Nhc2VfdnNfY29udHJvbC54bHN4JywKICAiJHt0YWJsZXNfZGlyfSIsCiAgIiR7YW5hbHlzaXNfdHlwZX0iLAogICIke21pc2VxX3Byb2plY3RfcHJlZml4fSIsCiAgInJhbmsiCikKCnByaW50KGZpbGVuYW1lKQoKc2F2ZVdvcmtib29rKGRlc2VxX3Jlc3VsdHNfd2IsIGZpbGU9ZmlsZW5hbWUsIG92ZXJ3cml0ZT1UKQpgYGAKCiMjIEFsbCBTdWJncm91cHMgLS0gQWxsIFZhcmlhYmxlcwojIyMgQ3JlYXRlIFdvcmtib29rCmBgYHtyfQpkZXNlcV9yZXN1bHRzX3diID0gY3JlYXRlV29ya2Jvb2soKQpgYGAKCiMjIyBSdW4gYW5kIGFkZCB3b3Jrc2hlZXRzCmBgYHtyfQpyZXN1bHRzX2RmID0gcnVuRGVzZXFGcm9tUGF0aHdheUNvdW50cygKICBwYXRod2F5X2NvdW50cz1wYXRod2F5X2NvdW50c190YWJsZSwKICBzYW1wbGVfZGF0YSwKICB2YXJpYWJsZXM9YWxsX2NvdmFyaWF0ZXMgJT4lIG5hbWVzKCksCiAgaW5jbHVkZV9jb3ZhcmlhdGVzID0gJ0FsbCcKICApCiAgCnBhZGpfY29sID0gIkNhc2VTdHJpbmdfQU1EX3ZzX0NvbnRyb2wucGFkaiIKICAKcmVzdWx0c19kZiA9CiAgcmVzdWx0c19kZiAlPiUKICBzZWxlY3QocGF0aHdheSwgISFwYWRqX2NvbCwgc3RhcnRzX3dpdGgoIkNhc2VTdHJpbmciKSwgZXZlcnl0aGluZygpKSAlPiUKICBhcnJhbmdlKCEhYXMubmFtZShwYWRqX2NvbCkpCgphZGRXb3Jrc2hlZXQoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXROYW1lPSIiCiAgKQoKb3Blbnhsc3g6OndyaXRlRGF0YSgKICB3Yj1kZXNlcV9yZXN1bHRzX3diLCAKICBzaGVldD0iIiwgCiAgeD1yZXN1bHRzX2RmCiAgKQogIApzZXRDb2xXaWR0aHMoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIGNvbHM9MSwgCiAgd2lkdGhzID0gImF1dG8iCikKCmZyZWV6ZVBhbmUoCiAgZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIGZpcnN0Q29sPVQsCiAgZmlyc3RSb3c9VAopCmBgYAoKIyMjIFNhdmUgV29ya2Jvb2sKYGBge3J9CmZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZSgKICAnYWxsX3N1Ymdyb3Vwc193aXRoX2NvdmFyaWF0ZXMueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICJyYW5rIgopCgpwcmludChmaWxlbmFtZSkKCnNhdmVXb3JrYm9vayhkZXNlcV9yZXN1bHRzX3diLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VCkKYGBgCgoKIyMgQWdlIDwgOTAgQ2FzZS9Db250cm9sIE9ubHkKIyMjIENyZWF0ZSBXb3JrYm9vawpgYGB7cn0KZGVzZXFfcmVzdWx0c193YiA9IGNyZWF0ZVdvcmtib29rKCkKYGBgCgojIyMjIFJ1biBhbmQgYWRkIHdvcmtzaGVldHMKYGBge3J9CnJlc3VsdHNfZGYgPSBydW5EZXNlcUZyb21QYXRod2F5Q291bnRzKAogIGNvdW50c190YWJsZT1wYXRod2F5X2NvdW50c190YWJsZSwKICBzYW1wbGVfZGF0YSAlPiUgZmlsdGVyKEFnZSA8IDkwKSwKICB2YXJpYWJsZXM9IkNhc2VTdHJpbmciLAogIGluY2x1ZGVfY292YXJpYXRlcyA9ICdBbGwnCiAgKQoKcGFkal9jb2wgPSAiQ2FzZVN0cmluZ19BTURfdnNfQ29udHJvbC5wYWRqIgoKcmVzdWx0c19kZiA9CiAgcmVzdWx0c19kZiAlPiUKICBzZWxlY3QocGF0aHdheSwgISFwYWRqX2NvbCwgZXZlcnl0aGluZygpKSAlPiUKICBhcnJhbmdlKCEhYXMubmFtZShwYWRqX2NvbCkpCgphZGRXb3Jrc2hlZXQoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXROYW1lPSIiCiAgKQoKb3Blbnhsc3g6OndyaXRlRGF0YSgKICB3Yj1kZXNlcV9yZXN1bHRzX3diLCAKICBzaGVldD0iIiwgCiAgeD1yZXN1bHRzX2RmCiAgKQogIApzZXRDb2xXaWR0aHMoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIGNvbHM9MSwgCiAgd2lkdGhzID0gImF1dG8iCikKCmZyZWV6ZVBhbmUoCiAgZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIGZpcnN0Q29sPVQsCiAgZmlyc3RSb3c9VAopCmBgYAoKIyMjIyBTYXZlIFdvcmtib29rCmBgYHtyfQpmaWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FsbF9zdWJncm91cHNfY2FzZV92c19jb250cm9sLnhsc3gnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAicmFuayIKKQoKcHJpbnQoZmlsZW5hbWUpCgpzYXZlV29ya2Jvb2soZGVzZXFfcmVzdWx0c193YiwgZmlsZT1maWxlbmFtZSwgb3ZlcndyaXRlPVQpCmBgYAoKIyMgQWdlIDwgOTAgLS0gQWxsIFZhcmlhYmxlcwojIyMgQ3JlYXRlIFdvcmtib29rCmBgYHtyfQpkZXNlcV9yZXN1bHRzX3diID0gY3JlYXRlV29ya2Jvb2soKQpgYGAKCiMjIyBSdW4gYW5kIGFkZCB3b3Jrc2hlZXRzCmBgYHtyfQpyZXN1bHRzX2RmID0gcnVuRGVzZXFGcm9tUGF0aHdheUNvdW50cygKICBjb3VudHNfdGFibGU9cGF0aHdheV9jb3VudHNfdGFibGUsCiAgc2FtcGxlX2RhdGEgJT4lIGZpbHRlcihBZ2UgPCA5MCksCiAgdmFyaWFibGVzPWFnZV9sdF85MF9jb3ZhcmlhdGVzICU+JSBuYW1lcygpLAogIGluY2x1ZGVfY292YXJpYXRlcyA9ICdBbGwnCiAgKQogIApwYWRqX2NvbCA9ICJDYXNlU3RyaW5nX0FNRF92c19Db250cm9sLnBhZGoiCiAgCnJlc3VsdHNfZGYgPQogIHJlc3VsdHNfZGYgJT4lCiAgc2VsZWN0KHBhdGh3YXksICEhcGFkal9jb2wsIHN0YXJ0c193aXRoKCJDYXNlU3RyaW5nIiksIGV2ZXJ5dGhpbmcoKSkgJT4lCiAgYXJyYW5nZSghIWFzLm5hbWUocGFkal9jb2wpKQoKYWRkV29ya3NoZWV0KAogIHdiPWRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0TmFtZT0iIgogICkKCm9wZW54bHN4Ojp3cml0ZURhdGEoCiAgd2I9ZGVzZXFfcmVzdWx0c193YiwgCiAgc2hlZXQ9IiIsIAogIHg9cmVzdWx0c19kZgogICkKICAKc2V0Q29sV2lkdGhzKAogIHdiPWRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0PSIiLCAKICBjb2xzPTEsIAogIHdpZHRocyA9ICJhdXRvIgopCgpmcmVlemVQYW5lKAogIGRlc2VxX3Jlc3VsdHNfd2IsIAogIHNoZWV0PSIiLCAKICBmaXJzdENvbD1ULAogIGZpcnN0Um93PVQKKQpgYGAKCiMjIyBTYXZlIFdvcmtib29rCmBgYHtyfQpmaWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ2FsbF9zdWJncm91cHNfd2l0aF9jb3ZhcmlhdGVzLnhsc3gnLAogICIke3RhYmxlc19kaXJ9IiwKICAiJHthbmFseXNpc190eXBlfSIsCiAgIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9IiwKICAicmFuayIKKQoKcHJpbnQoZmlsZW5hbWUpCgpzYXZlV29ya2Jvb2soZGVzZXFfcmVzdWx0c193YiwgZmlsZT1maWxlbmFtZSwgb3ZlcndyaXRlPVQpCmBgYAoK</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH06ICR7YW5hbHlzaXNfdHlwZX0iCm91dHB1dDoKICBodG1sX25vdGVib29rOgogICAgZGZfcHJpbnQ6IHBhZ2VkCiAgICBudW1iZXJfc2VjdGlvbnM6IHllcwogICAgdGhlbWU6IGx1bWVuCiAgICB0b2M6IHllcwogICAgY29kZV9mb2xkaW5nOiBoaWRlCi0tLQoKPHN0eWxlPgogIGh0bWwgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBib2R5IHsKICAgIGZvbnQtc2l6ZTogMTZwdDsKICB9CiAgCiAgaDEgewogICAgZm9udC1zaXplOiAyLjJyZW07CiAgfQogIAogIGgyIHsKICAgIGZvbnQtc2l6ZTogMnJlbTsKICB9CiAgCiAgaDMgewogICAgZm9udC1zaXplOiAxLjhyZW07CiAgfQogIAogIGg0IHsKICAgIGZvbnQtc2l6ZTogMS40cmVtOwogIH0KICAKPC9zdHlsZT4KCmBgYHtyfQpzb3VyY2UoJyR7cHJvamVjdF9tZXRhZGF0YV9maWxlfScpCmFuYWx5c2lzX3R5cGUgPSAiJHthbmFseXNpc190eXBlfSIKY2x1c3RlcmluZ19sZXZlbCA9ICIke2NsdXN0ZXJpbmdfbGV2ZWx9IgpmaWx0ZXJfYnkgPSAiJHtmaWx0ZXJfYnl9Igp0YWJsZXNfZGlyID0gIiR7dGFibGVzX2Rpcn0iCmBgYAoKIyAke21pc2VxX3Byb2plY3RfcHJlZml4fSBCYXNpYyBEYXRhIFByZXB7LnRhYnNldH0KCioqQ2x1c3RlcmluZyoqCkRhdGEgY2x1c3RlcmVkIGF0IHRoZSBgciB0b3VwcGVyKCcke2NsdXN0ZXJpbmdfbGV2ZWx9JylgIExldmVsLgoKKipTdWJncm91cHMqKgpgYGB7ciwgcmVzdWx0cz0nYXNpcycsIGVjaG89RkFMU0V9CmZvciAoc2dfZmlsdGVyIGluIGMoJHtzdWJncm91cF9maWx0ZXJzfSkpCnsKICBjYXQoc2dfZmlsdGVyLCAnXG5cbicpCn0KYGBgCgoqKkZpbHRlcmluZyoqCkRhdGEgZmlsdGVyZWQgYnkgYHIgdG91cHBlcignJHtmaWx0ZXJfYnl9JylgCgoqICoqUmVsYXRpdmUgQWJ1bmRhbmNlIGN1dG9mZjoqKiAke3JlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmZ9CiogKipQcmV2YWxlbmNlIEN1dG9mZjoqKiAke3ByZXZhbGVuY2VfY3V0b2ZmfQoqICoqTWluIENvdW50IEN1dG9mZjoqKiAke21pbl9jb3VudF9jdXRvZmZ9CmBgYHtyfQpyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmID0gJHtyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmfQpwcmV2YWxlbmNlX2N1dG9mZiA9ICR7cHJldmFsZW5jZV9jdXRvZmZ9Cm1pbl9jb3VudF9jdXRvZmYgPSAke21pbl9jb3VudF9jdXRvZmZ9CmBgYAoKIyMgU2V0dXAKCiMjIyBbQ2xvc2VdCgojIyMgU3RhcnQgQ29uZGEgRU5WCmBgYHtyfQpzdGFydENvbmRhRW52KCdiYXNlJykKYGBgCgojIyMgTG9hZCBMaWJyYXJpZXMKYGBge3J9CmxpYnJhcnkocm1hcmtkb3duKQpsaWJyYXJ5KHRpZHl2ZXJzZSkKbGlicmFyeShtYWdyaXR0cikKbGlicmFyeShnZ3Bsb3QyKQpsaWJyYXJ5KGdnYmVlc3dhcm0pCmxpYnJhcnkob3Blbnhsc3gpCmxpYnJhcnkoRFQpCmxpYnJhcnkocGhlYXRtYXApCmxpYnJhcnkoa2FibGVFeHRyYSkKCiMjIyBDdXN0b20gbGlicmFyaWVzIHRoYXQgY2FuIGJlIGxvYWRlZCBmcm9tIEdpdEh1Ygpzb3VyY2UoJ34vdXRpbGl0aWVzL2FuYWx5c2lzLXV0aWxpdGllcy9nZW5lcmFsX2Fzdl9kYXRhX2FuYWx5c2lzX3V0aWxpdGllcy5SJykKc291cmNlKCd+L3V0aWxpdGllcy9hbWRfdGVtcGxhdGVzL3NldHVwL2FtZF9wcm9qZWN0X3V0aWxpdGllcy5SJykKYGBgCgoKIyMjIFNldCBLbml0ciBPcHRpb25zCmBgYHtyfQoke2tuaXRyX29wdGlvbnN9CmBgYAoKIyMjIExvYWQgRGF0YQpgYGB7cn0KYXN2X3RhYmxlID0gCiAgcmVhZC5kZWxpbSgKICAgICcke2Fzdl90YWJsZV9maWxlfScsIAogICAgaGVhZGVyPVQsIAogICAgc2VwPSdcdCcsCiAgICBzdHJpbmdzQXNGYWN0b3JzPUYKICAgICkKCnRheG9ub215X3RhYmxlID0gCiAgcmVhZC5kZWxpbSgKICAgICcke3RheG9ub215X3RhYmxlX2ZpbGV9JywgCiAgICBoZWFkZXI9VCwgCiAgICBzZXA9J1x0JywKICAgIHN0cmluZ3NBc0ZhY3RvcnM9RgogICAgKSAlPiUKICBtdXRhdGVfYWxsKGFzLmNoYXJhY3RlcigpKQoKc2FtcGxlX2RhdGEgPSByZWFkLnhsc3goJyR7c2FtcGxlX2RhdGFfZmlsZX0nKQoKc2FtcGxlX2RhdGFfY29sdW1ucyA9IGNvbG5hbWVzKHNhbXBsZV9kYXRhKQpzYW1wbGVfbmFtZXMgPSBzYW1wbGVfZGF0YSRTYW1wbGVOYW1lCgpgYGAKCiMjIyBFeHRyYWN0IFN1Ymdyb3VwcwpgYGB7cn0KaWYgKCFpcy5udWxsKGMoJHtzdWJncm91cF9maWx0ZXJzfSkpKQp7CiAgc3ViZ3JvdXBfZmlsdGVyX3N0cmluZyA9IHBhc3RlMCgke3N1Ymdyb3VwX2ZpbHRlcnN9LCBjb2xsYXBzZT0iICYgIikKICBwcmludChzcHJpbnRmKCJTdWJncm91cCBGaWx0ZXIgU3RyaW5nOiAlcyIsIHN1Ymdyb3VwX2ZpbHRlcl9zdHJpbmcpKQogIHN1Ymdyb3VwX2ZpbHRlcl9leHByZXNzaW9uID0gc3RyMmV4cHJlc3Npb24oc3ViZ3JvdXBfZmlsdGVyX3N0cmluZykKICBzYW1wbGVfZGF0YSA9IHNhbXBsZV9kYXRhICU+JSBmaWx0ZXIoZXZhbChzdWJncm91cF9maWx0ZXJfZXhwcmVzc2lvbikpCiAgc2FtcGxlX25hbWVzID0gc2FtcGxlX2RhdGEkU2FtcGxlTmFtZQoKICBhc3ZfdGFibGUgPSBhc3ZfdGFibGUgJT4lIHNlbGVjdCgnQVNWcycsIHNhbXBsZV9uYW1lcykKfQoKYGBgCgoKIyMjIFNldCBGaWx0ZXJpbmcKYGBge3J9CnJlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmYgPSAke3JlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmZ9CnByZXZhbGVuY2VfY3V0b2ZmID0gJHtwcmV2YWxlbmNlX2N1dG9mZn0KYGBgCioqcmVsYXRpdmUgYWJ1bmRhbmNlIGN1dG9mZjoqKiBgciByZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmYAoqKnByZXZhbGVuY2UgY3V0b2ZmOioqIGByIHByZXZhbGVuY2VfY3V0b2ZmYAoKIyMjIEdldCBGaWx0ZXJlZCBUYXhhIEFidW5kYW5jZQpgYGB7cn0KZ2VudXNfYWJ1bmRhbmNlID0gZ2V0RmlsdGVyZWRUYXhhQ291bnRzKAogIGFzdl90YWJsZSwKICB0YXhvbm9teV90YWJsZSwKICBzYW1wbGVfZGF0YSwgCiAgY2x1c3Rlcl9ieT0iR2VudXMiLAogIGZpbHRlcl9ieT0iJHtmaWx0ZXJfYnl9IiwKICByZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmPXJlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmYsCiAgcHJldmFsZW5jZV9jdXRvZmY9cHJldmFsZW5jZV9jdXRvZmYsCiAgaWRfY29sPSJTYW1wbGVOYW1lIiwKICBub3JtYWxpemU9VAogICkKCmFzdl9hYnVuZGFuY2UgPSBnZXRGaWx0ZXJlZFRheGFDb3VudHMoCiAgYXN2X3RhYmxlLAogIHRheG9ub215X3RhYmxlLAogIHNhbXBsZV9kYXRhLAogIGNsdXN0ZXJfYnk9IkFTViIsCiAgZmlsdGVyX2J5PSJBU1YiLAogIHJlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmY9MCwKICBwcmV2YWxlbmNlX2N1dG9mZj0wLAogIG1pbl9jb3VudF9jdXRvZmY9MCwKICBpZF9jb2w9IlNhbXBsZU5hbWUiLAogIG5vcm1hbGl6ZT1UCikKCgpgYGAKCiMjIENyZWF0ZSBNYXN0ZXIgVGFibGVzCmBgYHtyfQphbGxfbWFzdGVyX3RhYmxlID0gZ2V0TWFzdGVyVGFibGUoCiAgZ2VudXNfYWJ1bmRhbmNlLAogIHNhbXBsZV9kYXRhLAogICdTYW1wbGVOYW1lJywKICAnc2hvcnRfZ2xvbW1lZF90YXhhJwopCmBgYAoKCiMjIENvbGxlY3QgJSBQcmV2b3RlbGxhCmBgYHtyfQojIyMgUHJldm90ZWxsYSBnZW5lcmEgZnJvbSBTaWx2YSBkYXRhYmFzZSB3ZWJzaXRlIGh0dHBzOi8vd3d3LmFyYi1zaWx2YS5kZS9zZWFyY2gvCnByZXZvdGVsbGFfZ2VuZXJhID0gcGFzdGUwKGMoCiAgJ0JhY3Rlcm9pZGV0ZXNfUHJldm90ZWxsYXwnLCAKICBwYXN0ZTAoJ0JhY3Rlcm9pZGV0ZXNfUHJldm90ZWxsYV8nLCBjKDEsMiw2LDcsOSksIGNvbGxhcHNlPSJ8IikKICApLAogIGNvbGxhcHNlPSIiCikKcHJldm90ZWxsYV9nZW5lcmEKYGBgCgpQcmV2b3RlbGxhIGdlbmVyYSBmcm9tIFNpbHZhIGRhdGFiYXNlIHdlYnNpdGUgaHR0cHM6Ly93d3cuYXJiLXNpbHZhLmRlL3NlYXJjaC86CmByIHByZXZvdGVsbGFfZ2VuZXJhYAoKCmBgYHtyfQphbGxfbWFzdGVyX3RhYmxlICU8PiUKICBtdXRhdGUoCiAgICBGcmFjdGlvblByZXZvdGVsbGFBbGwgPSAKICAgICAgc2VsZWN0KC4sIG1hdGNoZXMocHJldm90ZWxsYV9nZW5lcmEpKSAlPiUgCiAgICAgIHJvd1N1bXMoKSwKICAgIEZyYWN0aW9uQmFjdGVyb2lkZXRlcyA9IAogICAgICBzZWxlY3QoLiwgc3RhcnRzX3dpdGgoJ0JhY3Rlcm9pZGV0ZXNfJykpICU+JSAKICAgICAgcm93U3VtcygpLAogICAgRnJhY3Rpb25QcmV2b3RlbGxhQmFjdGVyb2lkZXRlcyA9IEZyYWN0aW9uUHJldm90ZWxsYUFsbC9GcmFjdGlvbkJhY3Rlcm9pZGV0ZXMsCiAgICBQY3RQcmV2b3RlbGxhX2d0XzEgPSBpZmVsc2UoRnJhY3Rpb25QcmV2b3RlbGxhQWxsID4gMC4wMSwgJ1knLCAnTicpLAogICAgUGN0UHJldm90ZWxsYV9ndF81ID0gaWZlbHNlKEZyYWN0aW9uUHJldm90ZWxsYUFsbCA+IDAuMDUsICdZJywgJ04nKSwKICAgIFBjdFByZXZvdGVsbGFfZ3RfMTAgPSBpZmVsc2UoRnJhY3Rpb25QcmV2b3RlbGxhQWxsID4gMC4xLCAnWScsICdOJykKICApCmBgYAoKIyMgV3JpdGUgVGFibGUKYGBge3J9CndiID0gY3JlYXRlV29ya2Jvb2soKQoKYWRkV29ya3NoZWV0KHdiLCBzaGVldE5hbWU9Ik1hc3RlciBUYWJsZSIpCm9wZW54bHN4Ojp3cml0ZURhdGEod2IsIHNoZWV0PSJNYXN0ZXIgVGFibGUiLCBhbGxfbWFzdGVyX3RhYmxlKQoKYWxsX3JhbmtzID0gYygnUGh5bHVtJywgJ0NsYXNzJywgJ09yZGVyJywgJ0ZhbWlseScsICdHZW51cycpCmp1c3RfdGF4YSA9IGdlbnVzX2FidW5kYW5jZSAlPiUgc2VsZWN0KGFsbF9yYW5rcywgZ2xvbW1lZF90YXhhLCBzaG9ydF9nbG9tbWVkX3RheGEpCmFkZFdvcmtzaGVldCh3Yiwgc2hlZXROYW1lPSIke3Rvb2xzOjp0b1RpdGxlQ2FzZShjbHVzdGVyaW5nX2xldmVsKX0iKQpvcGVueGxzeDo6d3JpdGVEYXRhKHdiLCBzaGVldD0iJHt0b29sczo6dG9UaXRsZUNhc2UoY2x1c3RlcmluZ19sZXZlbCl9IiwganVzdF90YXhhKQoKZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKAogICdtYXN0ZXJfdGFibGUueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICIke2NsdXN0ZXJpbmdfbGV2ZWx9IgopCnByaW50KGZpbGVuYW1lKQoKc2F2ZVdvcmtib29rKHdiLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VCkKYGBgCgoK</div>
 
 
 
@@ -2413,7 +2143,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("picrust_deseq_all_template.Rmd");
+  window.initializeSourceEmbed("prevotella_data_prep_template.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -41,19 +41,30 @@ output:
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
-tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
 analysis_title = "${analysis_title}"
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_title` Two Group Tests {.tabset}
-## Clustering Level
+# ${miseq_project_prefix} `r analysis_title` Univariate Tests {.tabset}
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
-
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup
 
@@ -112,21 +123,19 @@ source(file.path(
 ### Variables of interest
 #### Observational Variables
 ```{r}
-all_variables = observational_variables[${two_group_covariates['All']}]
-age_lt_90_variables = observational_variables[${two_group_covariates['Age_lt_90']}]
-amd_only_variables = observational_variables[${two_group_covariates['AMD_Only']}]
+case = ${case} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
 ```
 
-* **All Variables:** ${two_group_covariates['All']}
-* **Age < 90 Variables:** ${two_group_covariates['Age_lt_90']}
-* **AMD Only Variables:** ${two_group_covariates['AMD_Only']}
+* **Categorical Variables:** ${categorical_variables}
 
 #### Raw and Calculated Experimental Variables
 
 ```{r}
-raw_exp_vars = ${raw_exp_vars}
-calculated_exp_vars = ${calculated_exp_vars}
+raw_exp_vars = ${raw_exp_vars} %>% setdiff("")
+calculated_exp_vars = ${calculated_exp_vars} %>% setdiff("")
 ```
+**Raw Experimental Variables: ** `r raw_exp_vars`
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
 
@@ -147,7 +156,7 @@ amd_only_master_table = setFactorsLevels(
 ```
 
 
-## TwoGroup Tests
+## Univariate Tests
 
 #### Initialize Table
 
@@ -159,7 +168,7 @@ contrast_names =
 ```
 
 ```{r}
-two_group_stats_template = data.frame(
+univariate_stats_template = data.frame(
   TestGroup=character(),
   TestVariable=character(),
   Reference=character(),
@@ -170,128 +179,132 @@ exp_vars = c(raw_exp_vars, calculated_exp_vars)
 
 for (var in exp_vars)
 {
-  two_group_stats_template = 
-    two_group_stats_template %>%
+  univariate_stats_template = 
+    univariate_stats_template %>%
     mutate(!!as.name(var) := numeric())
 }
 
-two_group_stats = two_group_stats_template
+univariate_stats = univariate_stats_template
 ```
 
 
 #### All
 
 ```{r}
-all_two_group_stats = two_group_stats_template
+all_univariate_stats = univariate_stats_template
 
 master_table = all_master_table
 test_group = 'All'
   
-for (test_var in all_variables)
+for (var_name in categorical_variables)
 {
   
+  test_var = observational_variables[[var_name]]
   name = test_var$covariate_of_interest
   print(name)
   
-  pval_list = doTwoGroupTests(
+  pval_list = doUnivariateTests(
     exp_vars = exp_vars,
     test_var = test_var,
     master_table = all_master_table,
     test_group = 'All'
   )
   
-  all_two_group_stats %<>%
+  all_univariate_stats %<>%
     add_row(!!!pval_list)
 }
 
-two_group_stats %<>% add_row(!!!all_two_group_stats)
+univariate_stats %<>% add_row(!!!all_univariate_stats)
 ```
 
 
 #### Age < 90
 
 ```{r}
-age_lt_90_two_group_stats = two_group_stats_template
+age_lt_90_univariate_stats = univariate_stats_template
 
 # test_var = amd_only_variables$AREDS
 master_table = age_lt_90_master_table
 test_group = 'Age_lt_90'
   
-for (test_var in age_lt_90_variables)
+for (var_name in categorical_variables)
 {
   
+  test_var = observational_variables[[var_name]]
   name = test_var$covariate_of_interest
   print(name)
   
-  pval_list = doTwoGroupTests(
+  pval_list = doUnivariateTests(
     exp_vars = exp_vars,
     test_var = test_var,
     master_table = age_lt_90_master_table,
     test_group = 'Age_lt_90'
   )
   
-  age_lt_90_two_group_stats %<>%
+  age_lt_90_univariate_stats %<>%
     add_row(!!!pval_list)
 }
 
-two_group_stats %<>% add_row(!!!age_lt_90_two_group_stats)
+univariate_stats %<>% add_row(!!!age_lt_90_univariate_stats)
 ```
 
 
 #### AMD Only 
 ```{r}
-amd_only_two_group_stats = two_group_stats_template
+amd_only_univariate_stats = univariate_stats_template
 
 # test_var = amd_only_variables$AREDS
 master_table = amd_only_master_table
 test_group = 'AMD_Only'
   
-for (test_var in amd_only_variables)
+for (var_name in categorical_variables %>% setdiff("CaseString"))
 {
   
+  test_var = observational_variables[[var_name]]
   name = test_var$covariate_of_interest
   print(name)
   
-  pval_list = doTwoGroupTests(
+  pval_list = doUnivariateTests(
     exp_vars = exp_vars,
     test_var = test_var,
     master_table = amd_only_master_table,
     test_group = 'AMD_Only'
   )
   
-  amd_only_two_group_stats %<>%
+  amd_only_univariate_stats %<>%
     add_row(!!!pval_list)
 }
 
-two_group_stats %<>% add_row(!!!amd_only_two_group_stats)
+univariate_stats %<>% add_row(!!!amd_only_univariate_stats)
 ```
 
 #### AMD Only, Age < 90
 ```{r}
-amd_only_age_lt_90_two_group_stats = two_group_stats_template
+amd_only_age_lt_90_univariate_stats = univariate_stats_template
 
 # test_var = amd_only_variables$AREDS
 master_table = amd_only_master_table %>% filter(Age < 90)
 test_group = 'AMD_Only_Age_lt_90'
   
-for (test_var in amd_only_variables)
+for (var_name in categorical_variables %>% setdiff("CaseString"))
 {
   
+  test_var = observational_variables[[var_name]]
   name = test_var$covariate_of_interest
   print(name)
   
-  pval_list = doTwoGroupTests(
+  pval_list = doUnivariateTests(
     exp_vars = exp_vars,
     test_var = test_var,
     master_table = master_table,
     test_group = test_group
   )
   
-  amd_only_age_lt_90_two_group_stats %<>%
+  amd_only_age_lt_90_univariate_stats %<>%
     add_row(!!!pval_list)
 }
 
-two_group_stats %<>% add_row(!!!amd_only_age_lt_90_two_group_stats)
+univariate_stats %<>% add_row(!!!amd_only_age_lt_90_univariate_stats)
 ```
 
 
@@ -308,7 +321,7 @@ filename = makeDataFileName(
 print(filename)
 
 write.xlsx(
-  two_group_stats,
+  univariate_stats,
   file=filename,
   quote=F
 )

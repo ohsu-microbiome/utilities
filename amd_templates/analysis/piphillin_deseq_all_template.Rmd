@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -45,20 +45,33 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+cooks_cutoff = ${cooks_cutoff}
+independent_filtering = ${independent_filtering}
 ```
 
-# MiSeq-${miseq_run_number} DESeq2 Analysis {.tabset}
+# ${miseq_project_prefix} DESeq2 Analysis {.tabset}
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Clustering
-Data clustered at the `r toupper("${clustering_level}")` level.
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup 
 
@@ -71,7 +84,7 @@ startCondaEnv('piphillin', lib='~/R35')
 
 ### Load Libraries
 ```{r}
-library(rmarkdown)
+# library(rmarkdown)
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
@@ -93,42 +106,63 @@ source('~/utilities/analysis-utilities/pathway_utilities.R')
 ${knitr_options}
 ```
 
+### Variables of interest
+#### Observational Variables
+```{r}
+case = ${case} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+
+linear_predictors = ${linear_predictors} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
+amd_only_variables = linear_predictors %>% setdiff(case)
+```
+
+* **Case:** `r case`
+* **Key Covariates:** `r key_covariates`
+* **Categorical Variables:**  `r categorical_variables`
+
+
 ### Load Data
 ```{r}
-piphillin_results_dir = "${piphillin_results_dir}"
-print(piphillin_results_dir)
-
-ko_abundance_table_file = file.path(
-  "${piphillin_results_dir}",
-  "kegg",
-  "ko_pathway_abund_table_unnorm.xlsx"
-)
-
-ko_abundance_table = read.xlsx(
-  ko_abundance_table_file,
-  colNames=T
-  )
-
 sample_data = read.xlsx(
   '${sample_data_file}',
   colNames=T
   )
 
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
-
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
+
+kegg_pathway_counts_file = file.path(
+  "${tables_dir}",
+  "kegg_pathway_counts.xlsx"
+)
+
+kegg_pathway_counts = read.xlsx(
+  kegg_pathway_counts_file,
+  colNames=T
+  ) %>% 
+  remove_rownames() %>%
+  mutate_at(vars(-PathwayName), ~as.integer(.))
+
+```
+
+### Load Master Table
+```{r}
+master_table_filename = makeDataFileName(
+  'master_table.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+print(master_table_filename)
+pathway_name_map = read.xlsx(
+  master_table_filename, 
+  sheet='Pathway Names'
+  )
 
 source(file.path(
   "${project_root}", 
@@ -138,13 +172,21 @@ source(file.path(
 
 ```
 
-### Integerize pathway counts
+### Extract Subgroups
 ```{r}
-ko_abundance_table = 
-  ko_abundance_table %>%
-  remove_rownames() %>%
-  mutate_at(vars(sample_names), ~floor(.+1)) %>%
-  mutate(PathwayName = getKEGGPathways(Pathway))
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  kegg_pathway_counts = 
+    kegg_pathway_counts %>% 
+    select(PathwayName, sample_names)
+}
+
 ```
 
 
@@ -158,25 +200,6 @@ sample_data = setFactorsLevels(sample_data, observational_variables)
 #   )
 ```
 
-### Variables of interest
-#### Observational Variables
-```{r}
-all_covariates = observational_variables[${linear_regression_predictors['All']}]
-age_lt_90_covariates = observational_variables[${linear_regression_predictors['Age_lt_90']}]
-genotypes = ${genotypes}
-phenotypes = ${phenotypes}
-```
-
-#### Remove Age
-```{r}
-all_covariates$Age = NULL
-age_lt_90_covariates$Age = NULL
-```
-
-* **All Variables:** `r all_covariates %>% names()`
-* **Age < 90 Variables:** `r age_lt_90_covariates %>% names()`
-
-
 ## All Subgroups Case/Control Only
 ### Create Workbook
 ```{r}
@@ -186,11 +209,13 @@ deseq_results_wb = createWorkbook()
 #### Run and add worksheets
 ```{r}
 results_df = runDeseqFromPathwayCounts(
-  pathway_counts=ko_abundance_table,
+  pathway_counts=kegg_pathway_counts,
   sample_data,
   variables="CaseString",
   include_covariates = 'All',
-  pathway_colname='Pathway'
+  pathway_colname='PathwayName',
+  cooks_cutoff=cooks_cutoff,
+  independent_filtering=independent_filtering
   )
 
 padj_col = "CaseString_AMD_vs_Control.padj"
@@ -198,33 +223,19 @@ padj_col = "CaseString_AMD_vs_Control.padj"
 results_df =
   results_df %>%
   arrange(!!as.name(padj_col)) %>%
-  left_join(ko_abundance_table %>% select(Pathway, PathwayName), by='Pathway') %>%
-  select(Pathway, PathwayName, !!padj_col, everything())
+  left_join(kegg_pathway_counts %>% select(PathwayName), by='PathwayName') %>%
+  select(PathwayName, !!padj_col, everything())
 
 addWorksheet(
   wb=deseq_results_wb, 
-  sheetName=""
+  sheetName="Sheet"
   )
 
 openxlsx::writeData(
   wb=deseq_results_wb, 
-  sheet="", 
+  sheet="Sheet", 
   x=results_df
   )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet="", 
-  cols=1, 
-  widths = "auto"
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet="", 
-  firstCol=T,
-  firstRow=T
-)
 ```
 
 #### Save Workbook
@@ -234,7 +245,7 @@ filename = makeDataFileName(
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(filename)
@@ -250,12 +261,22 @@ deseq_results_wb = createWorkbook()
 
 ### Run and add worksheets
 ```{r}
+sample_data_no_na = 
+  sample_data %>% 
+  filter(
+    paste0('!is.na(', categorical_variables, ')', collapse=' & ') %>%
+    str2expression() %>%
+    eval()
+  )
+
 results_df = runDeseqFromPathwayCounts(
-  pathway_counts=ko_abundance_table,
-  sample_data,
-  variables=all_covariates %>% names(),
+  pathway_counts=kegg_pathway_counts,
+  sample_data_no_na,
+  variables=c(case, key_covariates),
   include_covariates = 'All',
-  pathway_colname='Pathway'
+  pathway_colname='PathwayName',
+  cooks_cutoff=cooks_cutoff,
+  independent_filtering=independent_filtering
   )
   
 padj_col = "CaseString_AMD_vs_Control.padj"
@@ -263,33 +284,19 @@ padj_col = "CaseString_AMD_vs_Control.padj"
 results_df =
   results_df %>%
   arrange(!!as.name(padj_col)) %>%
-  left_join(ko_abundance_table %>% select(Pathway, PathwayName), by='Pathway') %>%
-  select(Pathway, PathwayName, !!padj_col, everything())
+  left_join(kegg_pathway_counts %>% select(PathwayName), by='PathwayName') %>%
+  select(PathwayName, !!padj_col, everything())
 
 addWorksheet(
   wb=deseq_results_wb, 
-  sheetName=""
+  sheetName="Sheet"
   )
 
 openxlsx::writeData(
   wb=deseq_results_wb, 
-  sheet="", 
+  sheet="Sheet", 
   x=results_df
   )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet="", 
-  cols=1, 
-  widths = "auto"
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet="", 
-  firstCol=T,
-  firstRow=T
-)
 ```
 
 ### Save Workbook
@@ -299,7 +306,7 @@ filename = makeDataFileName(
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(filename)
@@ -317,11 +324,13 @@ deseq_results_wb = createWorkbook()
 #### Run and add worksheets
 ```{r}
 results_df = runDeseqFromPathwayCounts(
-  pathway_counts=ko_abundance_table,
+  pathway_counts=kegg_pathway_counts,
   sample_data %>% filter(Age < 90),
   variables="CaseString",
   include_covariates = 'All',
-  pathway_colname='Pathway'
+  pathway_colname='PathwayName',
+  cooks_cutoff=cooks_cutoff,
+  independent_filtering=independent_filtering
   )
 
 padj_col = "CaseString_AMD_vs_Control.padj"
@@ -329,34 +338,20 @@ padj_col = "CaseString_AMD_vs_Control.padj"
 results_df =
   results_df %>%
   arrange(!!as.name(padj_col)) %>%
-  left_join(ko_abundance_table %>% select(Pathway, PathwayName), by='Pathway') %>%
-  select(Pathway, PathwayName, !!padj_col, everything())
+  left_join(kegg_pathway_counts %>% select(PathwayName), by='PathwayName') %>%
+  select(PathwayName, !!padj_col, everything())
 
 
 addWorksheet(
   wb=deseq_results_wb, 
-  sheetName=""
+  sheetName="Sheet"
   )
 
 openxlsx::writeData(
   wb=deseq_results_wb, 
-  sheet="", 
+  sheet="Sheet", 
   x=results_df
   )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet="", 
-  cols=1, 
-  widths = "auto"
-)
-
-freezePane(
-  deseq_results_wb, 
-  sheet="", 
-  firstCol=T,
-  firstRow=T
-)
 ```
 
 #### Save Workbook
@@ -366,7 +361,7 @@ filename = makeDataFileName(
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(filename)
@@ -382,12 +377,22 @@ deseq_results_wb = createWorkbook()
 
 ### Run and add worksheets
 ```{r}
+sample_data_no_na = 
+  sample_data %>% 
+  filter(
+    paste0('!is.na(', categorical_variables, ')', collapse=' & ') %>%
+    str2expression() %>%
+    eval()
+  )
+
 results_df = runDeseqFromPathwayCounts(
-  pathway_counts=ko_abundance_table,
-  sample_data %>% filter(Age < 90),
-  variables=age_lt_90_covariates %>% names(),
+  pathway_counts=kegg_pathway_counts,
+  sample_data_no_na %>% filter(Age < 90),
+  variables=c(case, key_covariates),
   include_covariates = 'All',
-  pathway_colname='Pathway'
+  pathway_colname='PathwayName',
+  cooks_cutoff=cooks_cutoff,
+  independent_filtering=independent_filtering
   )
   
 padj_col = "CaseString_AMD_vs_Control.padj"
@@ -395,46 +400,32 @@ padj_col = "CaseString_AMD_vs_Control.padj"
 results_df =
   results_df %>%
   arrange(!!as.name(padj_col)) %>%
-    left_join(ko_abundance_table %>% select(Pathway, PathwayName), by='Pathway') %>%
-  select(Pathway, PathwayName, !!padj_col, everything())
+    left_join(kegg_pathway_counts %>% select(PathwayName), by='PathwayName') %>%
+  select(PathwayName, !!padj_col, everything())
 
 
 addWorksheet(
   wb=deseq_results_wb, 
-  sheetName=""
+  sheetName="Sheet"
   )
 
 openxlsx::writeData(
   wb=deseq_results_wb, 
-  sheet="", 
+  sheet="Sheet", 
   x=results_df
   )
-  
-setColWidths(
-  wb=deseq_results_wb, 
-  sheet="", 
-  cols=1, 
-  widths = "auto"
-)
 
-freezePane(
-  deseq_results_wb, 
-  sheet="", 
-  firstCol=T,
-  firstRow=T
-)
 ```
 
 ### Save Workbook
 ```{r}
 filename = makeDataFileName(
   'age_lt_90_with_covariates.xlsx',
-  "/home/balter/miseq-239/analysis/piphillin//tables",
-  "piphillin",
-  "miseq-239",
-  "rank"
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
 )
-
 print(filename)
 
 saveWorkbook(deseq_results_wb, file=filename, overwrite=T)

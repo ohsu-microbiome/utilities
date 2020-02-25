@@ -21,10 +21,25 @@ findProjectRoot = function(starting_dir, target)
 }
 
 
+# getCurrentFileLocation <-  function()
+# {
+#   this_file <- commandArgs() %>%
+#     enframe(name = NULL) %>%
+#     separate(col=value, into=c("key", "value"), sep="=", fill='right') %>%
+#     filter(key == "--file") %>%
+#     pull(value)
+#   if (length(this_file)==0)
+#   {
+#     this_file <- rstudioapi::getSourceEditorContext()$path
+#   }
+#   return(dirname(this_file))
+# }
+
+
 generateSourceFile = function(
   template_type = '',
   analysis_type,
-  analysis_dir='.'
+  src_dir='.'
   )
 {
   print("generateSourceFile")
@@ -37,32 +52,36 @@ generateSourceFile = function(
   #
   # if (clustering_level == '')
   # {
-  #   analysis_dir = file.path(project_root, 'analysis', analysis_type)
+  #   src_dir = file.path(project_root, 'analysis', analysis_type)
   # } else
   # {
-  #   analysis_dir = file.path(project_root, 'analysis', analysis_type, clustering_level)
+  #   src_dir = file.path(project_root, 'analysis', analysis_type, clustering_level)
   # }
   #
-  # dir = file.path(analysis_dir, 'src')
+  # dir = file.path(src_dir, 'src')
 
   print(sprintf('template_type: %s', template_type))
-  print(sprintf('analysis_dir: %s', analysis_dir))
+  print(sprintf('src_dir: %s', src_dir))
 
-  one_level_up_dir = gsub('(.*/).*$', '\\1', analysis_dir)
-  print(sprintf("one level up dir: %s", one_level_up_dir))
+  analysis_dir = gsub('(.*/).*$', '\\1', src_dir)
+  print(sprintf("one level up dir: %s", analysis_dir))
 
-  tables_dir = file.path(one_level_up_dir, 'tables')
+  tables_dir = file.path(analysis_dir, 'tables')
   print(sprintf("tables dir: %s", tables_dir))
 
   # project_metadata_file = file.path(project_root, "metadata", "project_metadata.R")
   # print(sprintf("project metadata file: %s", project_metadata_file))
   # source(project_metadata_file)
+  #
+  analysis_metadata_file = file.path(src_dir, "analysis_metadata.R")
+  print(sprintf("Analysis  metadata file: %s", analysis_metadata_file))
+  source(analysis_metadata_file)
 
   templates_dir = file.path(utilities_dir, 'amd_templates/analysis')
-  print(sprintf("templates dir: %s", templates_dir))
+  # print(sprintf("templates dir: %s", templates_dir))
 
   template_filename = paste(template_type, 'template.Rmd', sep='_')
-  print(sprintf("template filename: %s", template_filename))
+  # print(sprintf("template filename: %s", template_filename))
 
   template_file = file.path(templates_dir, template_filename)
   print(sprintf("template file: %s", template_file))
@@ -74,14 +93,14 @@ generateSourceFile = function(
     str_interp()
 
   new_source_file = file.path(
-    analysis_dir,
+    src_dir,
     paste0(
       miseq_project_prefix, "_",
       analysis_type, "_",
       gsub("_template", "", template_filename)
     )
   )
-  print(sprintf('new source file name: %s',new_source_file))
+  print(sprintf('new source file name: %s', new_source_file))
 
   writeLines(
     template_text,
@@ -126,3 +145,31 @@ makeAnalysisTitle = function(analysis_type)
 
   return(analysis_title)
 }
+
+
+
+
+makeAnalysisSubtitle = function(starting_dir)
+{
+  print('makeAnalysisSubtitle')
+  # print(starting_dir)
+  parts = strsplit(starting_dir, '/')[[1]]
+  # print(parts)
+  analysis_index = which(parts=='analysis')
+  # print(analysis_index)
+  # print(parts[analysis_index])
+  # print(length(parts))
+  # print(parts[length(parts)-1])
+  start = analysis_index + 1
+  end = length(parts) - 1
+  print(sprintf('start: %s  end: %s', start, end))
+  print(sprintf('start: %s  end: %s', parts[start], parts[end]))
+  print('subtitle parts')
+  subtitle_parts = parts[start:end]
+  # print(subtitle_parts)
+  analysis_subtitle = paste(subtitle_parts, collapse=' : ')
+  print(analysis_subtitle)
+
+  return(analysis_subtitle)
+}
+

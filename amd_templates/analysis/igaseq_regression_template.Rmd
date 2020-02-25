@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
   df_print: paged
@@ -38,22 +38,34 @@ h4 {
 
 
 ```{r}
-source('/home/balter/miseq-0278/metadata/project_metadata.R')
 analysis_type = ${analysis_type}
 clustering_level = ${clustering_level}
-tables_dir = file.path(analysis_dir, analysis_type, clustering_level, 'tables')
 analysis_title = "IgA-Seq"
 ```
 
 # MiSeq-0278 `r analysis_title` Two Group Tests {.tabset}
-## Clustering Level
-Data clustered at the `r toupper(clustering_level)` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup
 
@@ -65,7 +77,7 @@ startCondaEnv('regression')
 ### Load Libraries
 ```{r}
 library(rmarkdown)
-library(knitr)
+#library(knitr)
 
 library(tidyverse)
 library(magrittr)

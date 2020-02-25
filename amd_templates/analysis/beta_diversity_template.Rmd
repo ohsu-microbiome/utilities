@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -40,20 +40,35 @@ output:
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
+filter_by = "${filter_by}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
 ```
 
-# MiSeq-${miseq_run_number} Beta Diversity {.tabset}
+# ${miseq_project_prefix} Beta Diversity {.tabset}
 
-## Clustering Level
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+Data filtered by `r toupper('${filter_by}')`
+
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup
 
@@ -104,20 +119,12 @@ taxonomy_table =
     ) %>%
   mutate_all(as.character())
 
-sample_data = read.xlsx('${sample_data_file}')
-
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
+sample_data = 
+  read.xlsx('${sample_data_file}') %>%
+  mutate(
+    CNV_Either_Eye = ifelse(CNV_Either_Eye == 1, '1', '0'),
+    GA_No_CNV_Either_Eye = ifelse(GA_No_CNV_Either_Eye == 1, '1', '0')
+  )
 
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
@@ -128,6 +135,21 @@ source(file.path(
   "${metadata_dir}", 
   'observational_variables.R'
   ))
+
+```
+
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
 
 ```
 
@@ -142,10 +164,23 @@ prevalence_cutoff = ${prevalence_cutoff}
 ### Variables of interest
 #### Observational Variables
 ```{r}
-key_covariates = ${key_covariates}
-treatments = ${treatments}
-variables = c('CaseString', key_covariates, treatments) %>% unique()
+case = ${case} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
+
+variables = c(case, key_covariates, treatments, phenotypes, genotypes)
+amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes)
 ```
+
+* **Case:** `r case`
+* **Genotype variables:** `r genotypes`
+* **Phenotype variables:** `r phenotypes`
+* **Treatment variables:** `r treatments`
+* **Key covariates:**  `r key_covariates`
+
 
 #### Remove Age
 ```{r}
@@ -163,6 +198,7 @@ taxa_abundance = getFilteredTaxaCountsDev(
   taxonomy_table,
   sample_data, 
   cluster_by="${clustering_level}",
+  filter_by="${filter_by}",
   relative_abundance_cutoff=${relative_abundance_cutoff},
   prevalence_cutoff=${prevalence_cutoff},
   id_col="SampleName",
@@ -235,11 +271,12 @@ for (var in variables)
   for (axes in axes_sets)
   {
     makeNMDSPlot(
-      master_table,
+      master_table %>% filter(!!as.symbol(var) %in% c(case, control)),
       features=filtered_taxa,
       axes=axes,
       color=var,
       title_extra=paste(name, case, 'vs', control),
+      subtitle="${analysis_subtitle}",
       elipses=F
     )
   }
@@ -284,12 +321,13 @@ for (var in variables)
   for (axes in axes_sets)
   {
     makePCOAPlot(
-      master_table,
+      master_table %>% filter(!!as.symbol(var) %in% c(case, control)),
       method='bray',
       features=filtered_taxa,
       axes=axes,
       color=var,
       title_extra=paste(name, case, 'vs', control),
+      subtitle="${analysis_subtitle}",
       elipses=F
     ) 
   }

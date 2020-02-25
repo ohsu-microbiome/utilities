@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -44,21 +44,38 @@ output:
 source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
+filter_by = "${filter_by}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 analysis_title = tools::toTitleCase(gsub("_", " ", analysis_type))
+cooks_cutoff = ${cooks_cutoff}
+independent_filtering = ${independent_filtering}
 ```
 
-# MiSeq-${miseq_run_number} DESeq2 Analysis {.tabset}
+# ${miseq_project_prefix} DESeq2 Analysis {.tabset}
 
-## Clustering
-Data clustered at the `r toupper("${clustering_level}")` level.
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+Data filtered by `r toupper('${filter_by}')`
+
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup 
 
@@ -112,19 +129,6 @@ taxonomy_table =
 
 sample_data = read.xlsx('${sample_data_file}')
 
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
-
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
 
@@ -135,31 +139,41 @@ source(file.path(
   "${metadata_dir}", 
   'observational_variables.R'
   ))
-
-load(file.path(dada2_table_dir, '${phylogenetic_tree_file}'))
 ```
-
 
 ### Set Metadata Factor Levels
 ```{r}
 sample_data = setFactorsLevels(sample_data, observational_variables)
 ```
 
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
+
+```
+
 ### Variables of interest
 #### Observational Variables
 ```{r}
-genotypes = ${genotypes}
-phenotypes = ${phenotypes}
-key_covariates = ${key_covariates}
-treatments = ${treatments}
-amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes) %>% unique()
-```
+case = ${case} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
 
-#### Remove Age
-```{r}
-key_covariates %<>% setdiff('Age')
-amd_only_variables %<>% setdiff('Age')
-```
+linear_predictors = ${linear_predictors} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
+amd_only_variables = linear_predictors %>% setdiff(case)
+````
 
 * **Genotype variables:** `r genotypes`
 * **Phenotype variables:** `r phenotypes`
@@ -188,15 +202,15 @@ for (varname in amd_only_variables)
   
   var = observational_variables[[varname]]
   
-  taxa_counts = getFilteredTaxaCountsDev(
+  taxa_counts = getFilteredTaxaCounts(
     asv_table=asv_table,
     taxonomy_table=taxonomy_table,
     sample_data=sample_data,
     cluster_by=lowest_rank,
+    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     min_count_cutoff=0,
-    filter_by='Taxa',
     clean_taxa=T,  ### remove NAs in lowest rank
     n_max_by_mean=F,
     id_col="SampleName", ### metadata column that containes the unique sample IDs
@@ -220,9 +234,12 @@ for (varname in amd_only_variables)
     var_sample_data,
     varname,
     lowest_rank=lowest_rank,
+    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
-    include_covariates = 'All'
+    include_covariates = 'All',
+    cooks_cutoff=cooks_cutoff,
+    independent_filtering=independent_filtering
     )
   
     match_string = paste0(varname, '.*\\.padj')
@@ -282,6 +299,69 @@ deseq_results_wb = createWorkbook()
 ```
 
 ### Run and add worksheets
+#### Key Covariates Alone
+```{r}
+
+varname = "None"
+  
+
+taxa_counts = getFilteredTaxaCounts(
+  asv_table=asv_table,
+  taxonomy_table=taxonomy_table,
+  sample_data=sample_data,
+  cluster_by=lowest_rank,
+  filter_by="${filter_by}",
+  relative_abundance_cutoff=relative_abundance_cutoff,
+  prevalence_cutoff=prevalence_cutoff,
+  min_count_cutoff=0,
+  clean_taxa=T,  ### remove NAs in lowest rank
+  n_max_by_mean=F,
+  id_col="SampleName", ### metadata column that containes the unique sample IDs
+  add_glommed_names=T,
+  normalize=F
+)
+  
+results_df = runDeseqFromTables_dev(
+  asv_table,
+  taxonomy_table,
+  sample_data,
+  variables=key_covariates,
+  lowest_rank=lowest_rank,
+  filter_by="${filter_by}",
+  relative_abundance_cutoff=relative_abundance_cutoff,
+  prevalence_cutoff=prevalence_cutoff,
+  include_covariates = 'All',
+  cooks_cutoff=cooks_cutoff,
+  independent_filtering=independent_filtering
+  )
+
+addWorksheet(
+  wb=deseq_results_wb, 
+  sheetName=varname
+  )
+
+openxlsx::writeData(
+  wb=deseq_results_wb, 
+  sheet=varname, 
+  x=results_df
+  )
+# 
+# setColWidths(
+#   wb=deseq_results_wb, 
+#   sheet=varname, 
+#   cols=1, 
+#   widths = "auto"
+# )
+# 
+# freezePane(
+#   deseq_results_wb, 
+#   sheet=varname, 
+#   firstCol=T,
+#   firstRow=T
+#   )
+```
+
+#### Target Variables with covarariates
 ```{r}
 lowest_rank = 'Genus'
 
@@ -293,15 +373,15 @@ for (varname in c(genotypes, phenotypes, treatments))
   risk = vars[[varname]]$case
   non_risk = vars[[varname]]$control
   
-  taxa_counts = getFilteredTaxaCountsDev(
+  taxa_counts = getFilteredTaxaCounts(
     asv_table=asv_table,
     taxonomy_table=taxonomy_table,
     sample_data=sample_data,
     cluster_by=lowest_rank,
+    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
     min_count_cutoff=0,
-    filter_by='Taxa',
     clean_taxa=T,  ### remove NAs in lowest rank
     n_max_by_mean=F,
     id_col="SampleName", ### metadata column that containes the unique sample IDs
@@ -315,9 +395,12 @@ for (varname in c(genotypes, phenotypes, treatments))
     sample_data %>% filter(!!as.name(varname) %in% c(risk, non_risk)),
     vars %>% names(),
     lowest_rank=lowest_rank,
+    filter_by="${filter_by}",
     relative_abundance_cutoff=relative_abundance_cutoff,
     prevalence_cutoff=prevalence_cutoff,
-    include_covariates = 'All'
+    include_covariates = 'All',
+    cooks_cutoff=cooks_cutoff,
+    independent_filtering=independent_filtering
     )
   
   match_string = paste0(varname, '.*\\.padj')
@@ -338,20 +421,20 @@ for (varname in c(genotypes, phenotypes, treatments))
     sheet=varname, 
     x=results_df
     )
-  
-  setColWidths(
-    wb=deseq_results_wb, 
-    sheet=varname, 
-    cols=1, 
-    widths = "auto"
-  )
-  
-  freezePane(
-    deseq_results_wb, 
-    sheet=varname, 
-    firstCol=T,
-    firstRow=T
-    )
+  # 
+  # setColWidths(
+  #   wb=deseq_results_wb, 
+  #   sheet=varname, 
+  #   cols=1, 
+  #   widths = "auto"
+  # )
+  # 
+  # freezePane(
+  #   deseq_results_wb, 
+  #   sheet=varname, 
+  #   firstCol=T,
+  #   firstRow=T
+  #   )
 
 }
 ```

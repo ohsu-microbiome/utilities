@@ -1,0 +1,591 @@
+---
+title: "${miseq_project_prefix}: DESeq2 Normalized ${analysis_type}"
+output:
+  html_notebook:
+    df_print: paged
+    number_sections: yes
+    theme: lumen
+    toc: yes
+    code_folding: hide
+---
+
+<style>
+  html {
+    font-size: 16pt;
+  }
+  
+  body {
+    font-size: 16pt;
+  }
+  
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+  
+  h4 {
+    font-size: 1.4rem;
+  }
+  
+</style>
+
+
+```{r}
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
+tables_dir = "${tables_dir}"
+analysis_title = paste("DESeq2 Normalized", "${analysis_title}")
+```
+
+# ${miseq_project_prefix} ${analysis_title} Linear Regression Analysis {.tabset}
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
+
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+  * **Relative Abundance cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
+
+## Setup
+### Start Conda ENV
+```{r}
+startCondaEnv('deseq')
+```
+
+### Load Libraries
+```{r}
+library(rmarkdown)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(ggbeeswarm)
+library(openxlsx)
+# library(DT)
+library(pheatmap)
+# library(kableExtra)
+library(DESeq2)
+
+### Custom libraries that can be loaded from GitHub
+source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+```
+
+
+### Set Knitr Options
+```{r}
+${knitr_options}
+```
+
+### Load Data
+```{r}
+asv_table = 
+  read.delim(
+    '${asv_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    )
+
+taxonomy_table = 
+  read.delim(
+    '${taxonomy_table_file}', 
+    header=T, 
+    sep='\t',
+    stringsAsFactors=F
+    ) %>%
+  mutate_all(as.character())
+
+sample_data = read.xlsx('${sample_data_file}')
+
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+
+source(file.path(
+  "${project_root}", 
+  "${metadata_dir}", 
+  'observational_variables.R'
+  ))
+
+```
+
+
+### Set Filtering
+```{r}
+relative_abundance_cutoff=${relative_abundance_cutoff}
+prevalence_cutoff=${prevalence_cutoff}
+min_count_cutoff=${min_count_cutoff}
+```
+
+
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
+
+```
+
+
+### Set Metadata Factor Levels
+```{r}
+sample_data = setFactorsLevels(sample_data, observational_variables)
+# sample_data %<>%
+#   mutate(AREDS=
+#     ifelse(is.na(AREDS), "MISSING", AREDS) %>%
+#     factor(levels=c('N', 'Y', 'MISSING'))
+#   )
+```
+
+### Variables of interest
+#### Observational Variables
+```{r}
+case = ${case} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+linear_predictors = ${linear_predictors} %>% setdiff('')
+```
+
+* **Case:** ${case}
+* **Key Covariates:** ${key_covariates}
+* **linear_predictors:** ${linear_predictors}
+
+### Create p-val names for contrasts
+```{r}
+all_contrast_names = makeContrastNames(
+  observational_variables[linear_predictors], 
+  sample_data
+  )
+```
+
+### Initialize regression stats table
+
+```{r}
+regression_pvals = makeRegressionStatsContrastTemplate(all_contrast_names)
+
+regression_effect_sizes = makeRegressionStatsContrastTemplate(all_contrast_names)
+```
+
+
+## Create DESeq2 Normalizede Master Table
+
+### Set Normalization Method Method
+Normalization Method: ${deseq_normalization_method}
+
+```{r}
+deseq_normalization_method = "${deseq_normalization_method}"
+
+normalization_function = list(
+    vst=DESeq2::varianceStabilizingTransformation,
+    rlog=DESeq2::rlog
+  )[["${deseq_normalization_method}"]]
+```
+
+### Get Normalized Counts
+```{r}
+taxa_counts = getFilteredTaxaCounts(
+  asv_table=asv_table,
+  taxonomy_table=taxonomy_table,
+  sample_data=sample_data,
+  cluster_by="Genus",
+  filter_by="taxa",
+  relative_abundance_cutoff=${relative_abundance_cutoff},
+  prevalence_cutoff=${prevalence_cutoff},
+  min_count_cutoff=${min_count_cutoff},
+  clean_taxa=T,  ### remove NAs in lowest rank
+  n_max_by_mean=F,
+  id_col="SampleName", ### metadata column that containes the unique sample IDs
+  add_glommed_names=T,
+  normalize=F
+)
+
+sample_names = sample_data$SampleName
+
+taxa_counts %<>%
+  mutate_at(sample_names, list(function(x){x = x + 1}))
+
+filtered_taxa = taxa_counts$short_glommed_taxa
+
+dds = DESeqDataSetFromMatrix(
+  countData=
+    taxa_counts %>%
+    select(sample_names, short_glommed_taxa) %>%
+    column_to_rownames('short_glommed_taxa'),
+  colData=sample_data,
+  design= ~ CaseString
+)
+
+# r = rlog(dds, fitType='local')
+# v = varianceStabilizingTransformation(dds, fitType='local')
+
+normalized_counts =
+  dds %>%
+  normalization_function(., fitType="local") %>%
+  assay() %>%
+  t() %>%
+  data.frame(stringsAsFactors=F) %>%
+  rownames_to_column('SampleName') %>%
+  inner_join(sample_data, by="SampleName") %>% 
+  select(SampleName, !!linear_predictors, !!filtered_taxa)
+
+```
+
+### Plot Normalized Counts
+```{r}
+normalized_counts %>% 
+  select(SampleName, !!filtered_taxa) %>%
+  gather(key='taxa', value='abundance', -SampleName) %>%
+  ggplot(aes(x=taxa, y=abundance)) +
+  geom_boxplot()
+
+normalized_counts %>% 
+  select(SampleName, !!filtered_taxa) %>%
+  gather(key='taxa', value='abundance', -SampleName) %>%
+  ggplot(aes(x=taxa, y=abundance)) +
+  geom_violin()
+```
+
+
+
+## Linear Regression {.tabset}
+
+### All
+
+#### Do Regression
+```{r}
+all_pvals = makeRegressionStatsContrastTemplate(all_contrast_names)
+
+all_effect_sizes = makeRegressionStatsContrastTemplate(all_contrast_names)
+
+
+exp_vars = filtered_taxa
+predictors = observational_variables[linear_predictors]
+master_table = normalized_counts
+contrasts = all_contrast_names
+index_name_template = ''
+
+# regression_pvals = regression_pvals_template
+# regression_effect_sizes = regression_pvals_template
+
+for (var in exp_vars)
+{
+  index_name = paste0(index_name_template, var)
+  print(index_name)
+  
+  fit = doMultipleRegression(
+    var,
+    predictors,
+    response_vars=var,
+    master_table,
+    transformation="${regression_transform}",
+    log_regularizer=${log_regularizer}
+  )
+  
+  pvals = getRegressionPvals(
+    fit,
+    contrasts,
+    index_name
+  )
+  
+  all_pvals = 
+    all_pvals %>% 
+    add_row(!!!pvals)
+
+  effect_sizes = getRegressionEffectSizes(
+    fit,
+    contrasts,
+    index_name
+  )
+
+  all_effect_sizes = 
+    all_effect_sizes %>% 
+    add_row(!!!effect_sizes)
+
+}
+
+
+all_adjusted_pvals = 
+  all_pvals %>%
+  mutate_if(is.numeric, p.adjust)
+```
+
+
+#### Visualize
+```{r}
+pheatmap(all_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+
+pheatmap(all_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+```
+
+
+### Age < 90
+
+#### Do Regression
+```{r}
+age_lt_90_pvals = makeRegressionStatsContrastTemplate(all_contrast_names)
+
+age_lt_90_effect_sizes = makeRegressionStatsContrastTemplate(all_contrast_names)
+
+
+exp_vars = filtered_taxa
+predictors = observational_variables[linear_predictors]
+master_table = normalized_counts %>% filter(Age < 90)
+contrasts = all_contrast_names
+index_name_template = ''
+
+# regression_pvals = regression_pvals_template
+# regression_effect_sizes = regression_pvals_template
+
+for (var in exp_vars)
+{
+  index_name = paste0(index_name_template, var)
+  print(index_name)
+  
+  fit = doMultipleRegression(
+    var,
+    predictors,
+    response_vars=var,
+    master_table,
+    transformation="${regression_transform}",
+    log_regularizer=${log_regularizer}
+  )
+  
+  pvals = getRegressionPvals(
+    fit,
+    contrasts,
+    index_name
+  )
+  
+  age_lt_90_pvals = 
+    age_lt_90_pvals %>% 
+    add_row(!!!pvals)
+
+  effect_sizes = getRegressionEffectSizes(
+    fit,
+    contrasts,
+    index_name
+  )
+
+  age_lt_90_effect_sizes = 
+    age_lt_90_effect_sizes %>% 
+    add_row(!!!effect_sizes)
+
+}
+
+
+age_lt_90_adjusted_pvals = 
+  age_lt_90_pvals %>%
+  mutate_if(is.numeric, p.adjust)
+```
+
+
+#### Visualize
+```{r}
+pheatmap(age_lt_90_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+
+pheatmap(age_lt_90_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+```
+
+
+### AMD Only
+
+#### Do Regression
+```{r}
+amd_only_pvals = makeRegressionStatsContrastTemplate(all_contrast_names)
+
+amd_only_effect_sizes = makeRegressionStatsContrastTemplate(all_contrast_names)
+
+
+exp_vars = filtered_taxa
+predictors = observational_variables[linear_predictors %>% setdiff(case)]
+master_table = normalized_counts %>% filter(CaseString == "AMD")
+contrasts = all_contrast_names %>% unlist()
+index_name_template = ''
+
+for (var in exp_vars)
+{
+  index_name = paste0(index_name_template, var)
+  print(index_name)
+  
+  fit = doMultipleRegression(
+    var,
+    predictors,
+    response_vars=var,
+    master_table,
+    transformation="${regression_transform}",
+    log_regularizer=${log_regularizer}
+  )
+  
+  pvals = getRegressionPvals(
+    fit,
+    contrasts,
+    index_name
+  )
+  
+  amd_only_pvals = 
+    amd_only_pvals %>% 
+    add_row(!!!pvals)
+
+  effect_sizes = getRegressionEffectSizes(
+    fit,
+    contrasts,
+    index_name
+  )
+
+  amd_only_effect_sizes = 
+    amd_only_effect_sizes %>%
+    add_row(!!!effect_sizes)
+
+}
+
+amd_only_adjusted_pvals = 
+  amd_only_pvals %>%
+  mutate_if(is.numeric, p.adjust)
+```
+
+#### Visualize
+```{r}
+pheatmap(amd_only_pvals %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+
+pheatmap(amd_only_effect_sizes %>% column_to_rownames('Index'), cluster_cols=F, cluster_rows=F)
+```
+
+### Write Regression Stats
+```{r}
+wb = createWorkbook()
+
+addWorksheet(
+  wb, 
+  sheetName="All Unadjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="All Unadjusted P-Values", 
+  all_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="All Adjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="All Adjusted P-Values", 
+  all_adjusted_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="Age < 90 Unadjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="Age < 90 Unadjusted P-Values", 
+  age_lt_90_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="Age < 90 Adjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="All Adjusted P-Values", 
+  age_lt_90_adjusted_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="AMD Only Unadjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="AMD Only Unadjusted P-Values", 
+  amd_only_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="AMD Only Adjusted P-Values"
+  )
+
+openxlsx::writeData(
+  wb, 
+  sheet="AMD Only Adjusted P-Values", 
+  amd_only_adjusted_pvals
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="All Effect Sizes"
+  )
+
+openxlsx::writeData(
+  wb,
+  sheet="All Effect Sizes", 
+  all_effect_sizes
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="Age < 90 Effect Sizes"
+  )
+
+openxlsx::writeData(
+  wb,
+  sheet="Age < 90 Effect Sizes", 
+  age_lt_90_effect_sizes
+  )
+
+addWorksheet(
+  wb, 
+  sheetName="AMD Only Effect Sizes"
+  )
+
+openxlsx::writeData(
+  wb,
+  sheet="All Effect Sizes", 
+  amd_only_effect_sizes
+  )
+# addWorksheet(regression_pvals, sheetName="Adjusted P-Values")
+# openxlsx::writeData(regression_pvals, sheet="Adjusted P-Values", adjusted_regression_pvals)
+
+filename = makeDataFileName(
+  'deseq_normalized_linear_regression.xlsx',
+  "${tables_dir}",
+  "${analysis_type}",
+  "${miseq_project_prefix}",
+  "${clustering_level}"
+)
+saveWorkbook(wb, file=filename, overwrite=T)
+```

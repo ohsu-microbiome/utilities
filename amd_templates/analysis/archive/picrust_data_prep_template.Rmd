@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -41,23 +41,32 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 ```
 
-# MiSeq-${miseq_run_number} PICRUSt2 Data Prep{.tabset}
+# ${miseq_project_prefix} PICRUSt2 Data Prep{.tabset}
 
-## Filtering
+**Clustering**
+Data clustered at the `r toupper('${clustering_level}')` Level.
 
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
+* **Prevalence Cutoff:** ${prevalence_cutoff}
+* **Min Count Cutoff:** ${min_count_cutoff}
 ```{r}
 relative_abundance_cutoff = ${relative_abundance_cutoff}
 prevalence_cutoff = ${prevalence_cutoff}
 min_count_cutoff = ${min_count_cutoff}
 ```
-**relative abundance cutoff:** ${relative_abundance_cutoff}
-**prevalence cutoff:** ${prevalence_cutoff}
-**min count cutoff:** ${min_count_cutoff}
 
-## Setup 
+## Setup
 
 ### [Close]
 
@@ -117,6 +126,22 @@ if ("IGA" %in% colnames(sample_data) & use_allbac)
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
 
+```
+
+
+### Extract Subgroups
+```{r}
+subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+print(subgroup_filter_string)
+subgroup_filter_expression = str2expression(subgroup_filter_string)
+```
+`r subgroup_filter_string`
+
+```{r}
+sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+sample_names = sample_data$SampleName
+
+asv_table = asv_table %>% select('ASVs', sample_names)
 ```
 
 ## Filter ASV Table

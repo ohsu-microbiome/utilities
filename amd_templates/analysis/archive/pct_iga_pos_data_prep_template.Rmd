@@ -41,20 +41,32 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 ```
 
-# MiSeq-${miseq_run_number} Basic Data Prep{.tabset}
-## Clustering Level
-Data clustered at the `r toupper('${clustering_level}')` Level.
+# MiSeq-${miseq_run_number} % IgA+ Data Prep{.tabset}
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Clustering**
+ Data clustered at the `r toupper('${clustering_level}')` Level.
+
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+  * **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
-
-## Setup 
+## Setup
 
 ### [Close]
 
@@ -105,32 +117,23 @@ taxonomy_table =
     ) %>%
   mutate_all(as.character())
 
-# sample_data = 
-#   read.delim(
-#     '${sample_data_file}', 
-#     header=T, 
-#     sep='\t',
-#     stringsAsFactors=F
-#     ) %>%
-#   filter(SampleID!='Undetermined')
-
-sample_data = read.xlsx('${sample_data_file}')
-
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
-
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
+
+```
+
+### Extract Subgroups
+```{r}
+if (!is_empty(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
 
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -47,16 +47,29 @@ analysis_title = "${analysis_title}"
 ```
 
 
-# MiSeq-${miseq_run_number} `r analysis_title` Calculated Data Plots {.tabset}
+# ${miseq_project_prefix} `r analysis_title` Calculated Data Plots {.tabset}
 
-## Clustering Level
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+  ```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup
 
@@ -68,7 +81,7 @@ startCondaEnv('base')
 ### Load Libraries
 ```{r}
 library(rmarkdown)
-library(knitr)
+#library(knitr)
 
 library(tidyverse)
 library(magrittr)
@@ -112,6 +125,21 @@ source(file.path(
   "${metadata_dir}", 
   'observational_variables.R'
   ))
+
+```
+
+### Extract Subgroups
+```{r}
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
 
 ```
 
@@ -177,7 +205,8 @@ makeBoxAndDotplot(
     color_var='index', 
     facet_var='index'
     ),
-  title=paste(analysis_title, "-- All Subgroups")
+  title=paste(analysis_title, "-- All Subgroups"),
+  subtitle="${analysis_subtitle}"
 )
 ```
 
@@ -191,7 +220,8 @@ makeBoxAndDotplot(
     color_var='index', 
     facet_var='index'
     ),
-  title=paste(analysis_title, "-- Age < 90")
+  title=paste(analysis_title, "-- Age < 90"),
+  subtitle="${analysis_subtitle}"
 )
 ```
 
@@ -206,6 +236,7 @@ makeBoxAndDotplot(
     color_var='index', 
     facet_var='index'
     ),
-  title=paste(analysis_title, "--AMD Only")
+  title=paste(analysis_title, "--AMD Only"),
+  subtitle="${analysis_subtitle}"
 )
 ```

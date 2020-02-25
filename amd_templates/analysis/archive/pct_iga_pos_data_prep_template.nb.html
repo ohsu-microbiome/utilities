@@ -1773,26 +1773,19 @@ summary {
 
 <div id="TOC">
 <ul>
-<li><a href="#miseq-miseq_run_number-analysis_title-linear-regression-analysis"><span class="toc-section-number">1</span> MiSeq-${miseq_run_number} ${analysis_title} Linear Regression Analysis</a><ul>
-<li><a href="#clustering-level"><span class="toc-section-number">1.1</span> Clustering Level</a></li>
-<li><a href="#filtering"><span class="toc-section-number">1.2</span> Filtering</a></li>
-<li><a href="#setup"><span class="toc-section-number">1.3</span> Setup</a><ul>
-<li><a href="#start-conda-env"><span class="toc-section-number">1.3.1</span> Start Conda ENV</a></li>
-<li><a href="#load-libraries"><span class="toc-section-number">1.3.2</span> Load Libraries</a></li>
-<li><a href="#set-knitr-options"><span class="toc-section-number">1.3.3</span> Set Knitr Options</a></li>
-<li><a href="#load-data"><span class="toc-section-number">1.3.4</span> Load Data</a></li>
-<li><a href="#set-metadata-factor-levels"><span class="toc-section-number">1.3.5</span> Set Metadata Factor Levels</a></li>
-<li><a href="#variables-of-interest"><span class="toc-section-number">1.3.6</span> Variables of interest</a></li>
-<li><a href="#determine-which-covariates-have-sufficient-samples-with-each-value"><span class="toc-section-number">1.3.7</span> Determine which covariates have sufficient samples with each value</a></li>
-<li><a href="#create-p-val-names-for-contrasts"><span class="toc-section-number">1.3.8</span> Create p-val names for contrasts</a></li>
-<li><a href="#initialize-regression-stats-table"><span class="toc-section-number">1.3.9</span> Initialize regression stats table</a></li>
+<li><a href="#miseq-miseq_run_number-iga-data-prep"><span class="toc-section-number">1</span> MiSeq-${miseq_run_number} % IgA+ Data Prep</a><ul>
+<li><a href="#setup"><span class="toc-section-number">1.1</span> Setup</a><ul>
+<li><a href="#close"><span class="toc-section-number">1.1.1</span> [Close]</a></li>
+<li><a href="#start-conda-env"><span class="toc-section-number">1.1.2</span> Start Conda ENV</a></li>
+<li><a href="#load-libraries"><span class="toc-section-number">1.1.3</span> Load Libraries</a></li>
+<li><a href="#set-knitr-options"><span class="toc-section-number">1.1.4</span> Set Knitr Options</a></li>
+<li><a href="#load-data"><span class="toc-section-number">1.1.5</span> Load Data</a></li>
+<li><a href="#extract-subgroups"><span class="toc-section-number">1.1.6</span> Extract Subgroups</a></li>
+<li><a href="#set-filtering"><span class="toc-section-number">1.1.7</span> Set Filtering</a></li>
+<li><a href="#get-filtered-taxa-abundance"><span class="toc-section-number">1.1.8</span> Get Filtered Taxa Abundance</a></li>
 </ul></li>
-<li><a href="#linear-regression"><span class="toc-section-number">1.4</span> Linear Regression</a><ul>
-<li><a href="#all"><span class="toc-section-number">1.4.1</span> All</a></li>
-<li><a href="#age-90"><span class="toc-section-number">1.4.2</span> Age &lt; 90</a></li>
-<li><a href="#amd-only"><span class="toc-section-number">1.4.3</span> AMD Only</a></li>
-<li><a href="#write-regression-stats"><span class="toc-section-number">1.4.4</span> Write Regression Stats</a></li>
-</ul></li>
+<li><a href="#create-master-tables"><span class="toc-section-number">1.2</span> Create Master Tables</a></li>
+<li><a href="#write-table"><span class="toc-section-number">1.3</span> Write Table</a></li>
 </ul></li>
 </ul>
 </div>
@@ -1826,46 +1819,52 @@ summary {
 </style>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCcke3Byb2plY3RfbWV0YWRhdGFfZmlsZX0nKVxuYW5hbHlzaXNfdHlwZSA9IFwiJHthbmFseXNpc190eXBlfVwiXG5jbHVzdGVyaW5nX2xldmVsID0gXCIke2NsdXN0ZXJpbmdfbGV2ZWx9XCJcbnRhYmxlc19kaXIgPSBcIiR7dGFibGVzX2Rpcn1cIlxuYW5hbHlzaXNfdGl0bGUgPSBcIiR7YW5hbHlzaXNfdGl0bGV9XCJcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCcke3Byb2plY3RfbWV0YWRhdGFfZmlsZX0nKVxuYW5hbHlzaXNfdHlwZSA9IFwiJHthbmFseXNpc190eXBlfVwiXG5jbHVzdGVyaW5nX2xldmVsID0gXCIke2NsdXN0ZXJpbmdfbGV2ZWx9XCJcbnRhYmxlc19kaXIgPSBcIiR7dGFibGVzX2Rpcn1cIlxuYGBgIn0= -->
 <pre class="r"><code>source(&#39;${project_metadata_file}&#39;)
 analysis_type = &quot;${analysis_type}&quot;
 clustering_level = &quot;${clustering_level}&quot;
-tables_dir = &quot;${tables_dir}&quot;
-analysis_title = &quot;${analysis_title}&quot;</code></pre>
+tables_dir = &quot;${tables_dir}&quot;</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="miseq-miseq_run_number-analysis_title-linear-regression-analysis" class="section level1 tabset">
-<h1><span class="header-section-number">1</span> MiSeq-${miseq_run_number} ${analysis_title} Linear Regression Analysis</h1>
-<div id="clustering-level" class="section level2">
-<h2><span class="header-section-number">1.1</span> Clustering Level</h2>
-<p>Data clustered at the ${CLUSTERING_LEVEL} Level.</p>
-</div>
-<div id="filtering" class="section level2">
-<h2><span class="header-section-number">1.2</span> Filtering</h2>
-<ul>
-<li><strong>Relative Abundance Cutoff:</strong> ${relative_abundance_cutoff}</li>
-<li><strong>Prevalence Cutoff:</strong> ${prevalence_cutoff}</li>
-<li><strong>Min Count Cutoff:</strong> ${min_count_cutoff}</li>
-</ul>
-</div>
-<div id="setup" class="section level2">
-<h2><span class="header-section-number">1.3</span> Setup</h2>
-<div id="start-conda-env" class="section level3">
-<h3><span class="header-section-number">1.3.1</span> Start Conda ENV</h3>
+<div id="miseq-miseq_run_number-iga-data-prep" class="section level1 tabset">
+<h1><span class="header-section-number">1</span> MiSeq-${miseq_run_number} % IgA+ Data Prep</h1>
+<p><strong>Clustering</strong> Data clustered at the ${CLUSTERING_LEVEL} Level.</p>
+<p><strong>Subgroups</strong></p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudigncmVncmVzc2lvbicpXG5gYGAifQ== -->
-<pre class="r"><code>startCondaEnv(&#39;regression&#39;)</code></pre>
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p><strong>Filtering</strong> * <strong>Relative Abundance cutoff:</strong> ${relative_abundance_cutoff} * <strong>Prevalence Cutoff:</strong> ${prevalence_cutoff} * <strong>Min Count Cutoff:</strong> ${min_count_cutoff}</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZiA9ICR7cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZn1cbnByZXZhbGVuY2VfY3V0b2ZmID0gJHtwcmV2YWxlbmNlX2N1dG9mZn1cbm1pbl9jb3VudF9jdXRvZmYgPSAke21pbl9jb3VudF9jdXRvZmZ9XG5gYGAifQ== -->
+<pre class="r"><code>relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<div id="setup" class="section level2">
+<h2><span class="header-section-number">1.1</span> Setup</h2>
+<div id="close" class="section level3">
+<h3><span class="header-section-number">1.1.1</span> [Close]</h3>
+</div>
+<div id="start-conda-env" class="section level3">
+<h3><span class="header-section-number">1.1.2</span> Start Conda ENV</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RhcnRDb25kYUVudignYmFzZScpXG5gYGAifQ== -->
+<pre class="r"><code>startCondaEnv(&#39;base&#39;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
 <div id="load-libraries" class="section level3">
-<h3><span class="header-section-number">1.3.2</span> Load Libraries</h3>
+<h3><span class="header-section-number">1.1.3</span> Load Libraries</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShybWFya2Rvd24pXG5saWJyYXJ5KHRpZHl2ZXJzZSlcbmxpYnJhcnkobWFncml0dHIpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KGdnYmVlc3dhcm0pXG5saWJyYXJ5KG9wZW54bHN4KVxubGlicmFyeShEVClcbmxpYnJhcnkocGhlYXRtYXApXG5saWJyYXJ5KGthYmxlRXh0cmEpXG5saWJyYXJ5KHZlZ2FuKVxubGlicmFyeShubG1lKVxuXG4jIyMgQ3VzdG9tIGxpYnJhcmllcyB0aGF0IGNhbiBiZSBsb2FkZWQgZnJvbSBHaXRIdWJcbnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL2dlbmVyYWxfYXN2X2RhdGFfYW5hbHlzaXNfdXRpbGl0aWVzLlInKVxuc291cmNlKCd+L3V0aWxpdGllcy9hbWRfdGVtcGxhdGVzL3NldHVwL2FtZF9wcm9qZWN0X3V0aWxpdGllcy5SJylcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShybWFya2Rvd24pXG5saWJyYXJ5KHRpZHl2ZXJzZSlcbmxpYnJhcnkobWFncml0dHIpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KGdnYmVlc3dhcm0pXG5saWJyYXJ5KG9wZW54bHN4KVxubGlicmFyeShEVClcbmxpYnJhcnkocGhlYXRtYXApXG5saWJyYXJ5KGthYmxlRXh0cmEpXG5cbiMjIyBDdXN0b20gbGlicmFyaWVzIHRoYXQgY2FuIGJlIGxvYWRlZCBmcm9tIEdpdEh1Ylxuc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZ2VuZXJhbF9hc3ZfZGF0YV9hbmFseXNpc191dGlsaXRpZXMuUicpXG5zb3VyY2UoJ34vdXRpbGl0aWVzL2FtZF90ZW1wbGF0ZXMvc2V0dXAvYW1kX3Byb2plY3RfdXRpbGl0aWVzLlInKVxuYGBgIn0= -->
 <pre class="r"><code>library(rmarkdown)
 library(tidyverse)
 library(magrittr)
@@ -1875,8 +1874,6 @@ library(openxlsx)
 library(DT)
 library(pheatmap)
 library(kableExtra)
-library(vegan)
-library(nlme)
 
 ### Custom libraries that can be loaded from GitHub
 source(&#39;~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R&#39;)
@@ -1886,7 +1883,7 @@ source(&#39;~/utilities/amd_templates/setup/amd_project_utilities.R&#39;)</code>
 <!-- rnb-text-begin -->
 </div>
 <div id="set-knitr-options" class="section level3">
-<h3><span class="header-section-number">1.3.3</span> Set Knitr Options</h3>
+<h3><span class="header-section-number">1.1.4</span> Set Knitr Options</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuJHtrbml0cl9vcHRpb25zfVxuYGBgIn0= -->
@@ -1896,388 +1893,144 @@ source(&#39;~/utilities/amd_templates/setup/amd_project_utilities.R&#39;)</code>
 <!-- rnb-text-begin -->
 </div>
 <div id="load-data" class="section level3">
-<h3><span class="header-section-number">1.3.4</span> Load Data</h3>
+<h3><span class="header-section-number">1.1.5</span> Load Data</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnbWFzdGVyX3RhYmxlLnhsc3gnLFxuICBcIiR7dGFibGVzX2Rpcn1cIixcbiAgXCIke2FuYWx5c2lzX3R5cGV9XCIsXG4gIFwiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH1cIixcbiAgXCIke2NsdXN0ZXJpbmdfbGV2ZWx9XCJcbilcblxucHJpbnQoZmlsZW5hbWUpXG5cbmFsbF9tYXN0ZXJfdGFibGUgPSByZWFkV29ya2Jvb2soZmlsZW5hbWUsIHNoZWV0PScke2ZlYXR1cmVfbmFtZX0gTWFzdGVyIFRhYmxlJylcbmFnZV9sdF85MF9tYXN0ZXJfdGFibGUgPSBhbGxfbWFzdGVyX3RhYmxlICU+JSBmaWx0ZXIoQWdlIDwgOTApXG5hbWRfb25seV9tYXN0ZXJfdGFibGUgPSBhbGxfbWFzdGVyX3RhYmxlICU+JSBmaWx0ZXIoQ2FzZVN0cmluZyA9PSAnQU1EJylcblxuZmVhdHVyZV9uYW1lID0gXCIke2ZlYXR1cmVfbmFtZX1cIlxuXG5mZWF0dXJlX2xpc3QgPSBcbiAgcmVhZFdvcmtib29rKFxuICAgIGZpbGVuYW1lLCBcbiAgICBzaGVldD1cIiR7ZmVhdHVyZV9uYW1lfVwiXG4gICAgKSAlPiUgXG4gIHB1bGwoISFmZWF0dXJlX25hbWUpXG5cbnNvdXJjZShmaWxlLnBhdGgoXG4gIFwiJHtwcm9qZWN0X3Jvb3R9XCIsIFxuICBcIiR7bWV0YWRhdGFfZGlyfVwiLCBcbiAgJ29ic2VydmF0aW9uYWxfdmFyaWFibGVzLlInXG4gICkpXG5gYGAifQ== -->
-<pre class="r"><code>filename = makeDataFileName(
-  &#39;master_table.xlsx&#39;,
-  &quot;${tables_dir}&quot;,
-  &quot;${analysis_type}&quot;,
-  &quot;${miseq_project_prefix}&quot;,
-  &quot;${clustering_level}&quot;
-)
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYXN2X3RhYmxlID0gXG4gIHJlYWQuZGVsaW0oXG4gICAgJyR7YXN2X3RhYmxlX2ZpbGV9JywgXG4gICAgaGVhZGVyPVQsIFxuICAgIHNlcD0nXFx0JyxcbiAgICBzdHJpbmdzQXNGYWN0b3JzPUZcbiAgICApXG5cbnRheG9ub215X3RhYmxlID0gXG4gIHJlYWQuZGVsaW0oXG4gICAgJyR7dGF4b25vbXlfdGFibGVfZmlsZX0nLCBcbiAgICBoZWFkZXI9VCwgXG4gICAgc2VwPSdcXHQnLFxuICAgIHN0cmluZ3NBc0ZhY3RvcnM9RlxuICAgICkgJT4lXG4gIG11dGF0ZV9hbGwoYXMuY2hhcmFjdGVyKCkpXG5cbnNhbXBsZV9kYXRhX2NvbHVtbnMgPSBjb2xuYW1lcyhzYW1wbGVfZGF0YSlcbnNhbXBsZV9uYW1lcyA9IHNhbXBsZV9kYXRhJFNhbXBsZU5hbWVcblxuYGBgIn0= -->
+<pre class="r"><code>asv_table = 
+  read.delim(
+    &#39;${asv_table_file}&#39;, 
+    header=T, 
+    sep=&#39;\t&#39;,
+    stringsAsFactors=F
+    )
 
-print(filename)
+taxonomy_table = 
+  read.delim(
+    &#39;${taxonomy_table_file}&#39;, 
+    header=T, 
+    sep=&#39;\t&#39;,
+    stringsAsFactors=F
+    ) %&gt;%
+  mutate_all(as.character())
 
-all_master_table = readWorkbook(filename, sheet=&#39;${feature_name} Master Table&#39;)
-age_lt_90_master_table = all_master_table %&gt;% filter(Age &lt; 90)
-amd_only_master_table = all_master_table %&gt;% filter(CaseString == &#39;AMD&#39;)
-
-feature_name = &quot;${feature_name}&quot;
-
-feature_list = 
-  readWorkbook(
-    filename, 
-    sheet=&quot;${feature_name}&quot;
-    ) %&gt;% 
-  pull(!!feature_name)
-
-source(file.path(
-  &quot;${project_root}&quot;, 
-  &quot;${metadata_dir}&quot;, 
-  &#39;observational_variables.R&#39;
-  ))</code></pre>
+sample_data_columns = colnames(sample_data)
+sample_names = sample_data$SampleName
+</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="set-metadata-factor-levels" class="section level3">
-<h3><span class="header-section-number">1.3.5</span> Set Metadata Factor Levels</h3>
+<div id="extract-subgroups" class="section level3">
+<h3><span class="header-section-number">1.1.6</span> Extract Subgroups</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX21hc3Rlcl90YWJsZSA9IHNldEZhY3RvcnNMZXZlbHMoYWxsX21hc3Rlcl90YWJsZSwgb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMpXG5hZ2VfbHRfOTBfbWFzdGVyX3RhYmxlID0gc2V0RmFjdG9yc0xldmVscyhhZ2VfbHRfOTBfbWFzdGVyX3RhYmxlLCBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcylcbmFtZF9vbmx5X21hc3Rlcl90YWJsZSA9IHNldEZhY3RvcnNMZXZlbHMoYW1kX29ubHlfbWFzdGVyX3RhYmxlLCBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcylcbmBgYCJ9 -->
-<pre class="r"><code>all_master_table = setFactorsLevels(all_master_table, observational_variables)
-age_lt_90_master_table = setFactorsLevels(age_lt_90_master_table, observational_variables)
-amd_only_master_table = setFactorsLevels(amd_only_master_table, observational_variables)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYgKCFpc19lbXB0eShjKCR7c3ViZ3JvdXBfZmlsdGVyc30pKSlcbntcbiAgc3ViZ3JvdXBfZmlsdGVyX3N0cmluZyA9IHBhc3RlMCgke3N1Ymdyb3VwX2ZpbHRlcnN9LCBjb2xsYXBzZT1cIiAmIFwiKVxuICBwcmludChzcHJpbnRmKFwiU3ViZ3JvdXAgRmlsdGVyIFN0cmluZzogJXNcIiwgc3ViZ3JvdXBfZmlsdGVyX3N0cmluZykpXG4gIHN1Ymdyb3VwX2ZpbHRlcl9leHByZXNzaW9uID0gc3RyMmV4cHJlc3Npb24oc3ViZ3JvdXBfZmlsdGVyX3N0cmluZylcbiAgc2FtcGxlX2RhdGEgPSBzYW1wbGVfZGF0YSAlPiUgZmlsdGVyKGV2YWwoc3ViZ3JvdXBfZmlsdGVyX2V4cHJlc3Npb24pKVxuICBzYW1wbGVfbmFtZXMgPSBzYW1wbGVfZGF0YSRTYW1wbGVOYW1lXG5cbiAgYXN2X3RhYmxlID0gYXN2X3RhYmxlICU+JSBzZWxlY3QoJ0FTVnMnLCBzYW1wbGVfbmFtZXMpXG59XG5cbmBgYCJ9 -->
+<pre class="r"><code>if (!is_empty(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=&quot; &amp; &quot;)
+  print(sprintf(&quot;Subgroup Filter String: %s&quot;, subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %&gt;% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %&gt;% select(&#39;ASVs&#39;, sample_names)
+}
+</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="variables-of-interest" class="section level3">
-<h3><span class="header-section-number">1.3.6</span> Variables of interest</h3>
-<div id="observational-variables" class="section level4">
-<h4><span class="header-section-number">1.3.6.1</span> Observational Variables</h4>
+<div id="set-filtering" class="section level3">
+<h3><span class="header-section-number">1.1.7</span> Set Filtering</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX3ZhcmlhYmxlcyA9IG9ic2VydmF0aW9uYWxfdmFyaWFibGVzWyR7bGluZWFyX3JlZ3Jlc3Npb25fcHJlZGljdG9yc1snQWxsJ119XVxuYWdlX2x0XzkwX3ZhcmlhYmxlcyA9IG9ic2VydmF0aW9uYWxfdmFyaWFibGVzWyR7bGluZWFyX3JlZ3Jlc3Npb25fcHJlZGljdG9yc1snQWdlX2x0XzkwJ119XVxuYW1kX29ubHlfdmFyaWFibGVzID0gb2JzZXJ2YXRpb25hbF92YXJpYWJsZXNbJHtsaW5lYXJfcmVncmVzc2lvbl9wcmVkaWN0b3JzWydBTURfT25seSddfV1cbmBgYCJ9 -->
-<pre class="r"><code>all_variables = observational_variables[${linear_regression_predictors[&#39;All&#39;]}]
-age_lt_90_variables = observational_variables[${linear_regression_predictors[&#39;Age_lt_90&#39;]}]
-amd_only_variables = observational_variables[${linear_regression_predictors[&#39;AMD_Only&#39;]}]</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZiA9ICR7cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZn1cbnByZXZhbGVuY2VfY3V0b2ZmID0gJHtwcmV2YWxlbmNlX2N1dG9mZn1cbmBgYCJ9 -->
+<pre class="r"><code>relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<ul>
-<li><strong>All Variables:</strong> ${linear_regression_predictors[‘All’]}</li>
-<li><strong>Age &lt; 90 Variables:</strong> ${linear_regression_predictors[‘Age_lt_90’]}</li>
-<li><strong>AMD Only Variables:</strong> ${linear_regression_predictors[‘AMD_Only’]}</li>
-</ul>
+<p><strong>relative abundance cutoff:</strong> 0.002 <strong>prevalence cutoff:</strong> 0.1</p>
 </div>
-<div id="calculated-experimental-variables" class="section level4">
-<h4><span class="header-section-number">1.3.6.2</span> Calculated Experimental Variables</h4>
+<div id="get-filtered-taxa-abundance" class="section level3">
+<h3><span class="header-section-number">1.1.8</span> Get Filtered Taxa Abundance</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmF3X2V4cF92YXJzID0gJHtyYXdfZXhwX3ZhcnN9XG5jYWxjdWxhdGVkX2V4cF92YXJzID0gJHtjYWxjdWxhdGVkX2V4cF92YXJzfVxuYGBgIn0= -->
-<pre class="r"><code>raw_exp_vars = ${raw_exp_vars}
-calculated_exp_vars = ${calculated_exp_vars}</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p><strong>Calculated Experimental Variables: </strong></p>
-</div>
-</div>
-<div id="determine-which-covariates-have-sufficient-samples-with-each-value" class="section level3">
-<h3><span class="header-section-number">1.3.7</span> Determine which covariates have sufficient samples with each value</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnVtX3NhbXBsZXNfdGhyZXNob2xkID0gNVxuXG5hbGxfdmFyaWFibGVzID0gZmlsdGVyVmFyc0J5U2FtcGxlVGhyZXNob2xkKFxuICBhbGxfbWFzdGVyX3RhYmxlLFxuICBudW1fc2FtcGxlc190aHJlc2hvbGQsXG4gIGFsbF92YXJpYWJsZXNcbiAgKVxuXG5hZ2VfbHRfOTBfdmFyaWFibGVzID0gZmlsdGVyVmFyc0J5U2FtcGxlVGhyZXNob2xkKFxuICBhZ2VfbHRfOTBfbWFzdGVyX3RhYmxlLFxuICBudW1fc2FtcGxlc190aHJlc2hvbGQsXG4gIGFnZV9sdF85MF92YXJpYWJsZXNcbiAgKVxuXG5hbWRfb25seV92YXJpYWJsZXMgPSBmaWx0ZXJWYXJzQnlTYW1wbGVUaHJlc2hvbGQoXG4gIGFtZF9vbmx5X21hc3Rlcl90YWJsZSAlPiUgc2VsZWN0KC1DYXNlU3RyaW5nKSxcbiAgbnVtX3NhbXBsZXNfdGhyZXNob2xkLFxuICBhbWRfb25seV92YXJpYWJsZXNcbiAgKVxuXG5gYGAifQ== -->
-<pre class="r"><code>num_samples_threshold = 5
-
-all_variables = filterVarsBySampleThreshold(
-  all_master_table,
-  num_samples_threshold,
-  all_variables
-  )
-
-age_lt_90_variables = filterVarsBySampleThreshold(
-  age_lt_90_master_table,
-  num_samples_threshold,
-  age_lt_90_variables
-  )
-
-amd_only_variables = filterVarsBySampleThreshold(
-  amd_only_master_table %&gt;% select(-CaseString),
-  num_samples_threshold,
-  amd_only_variables
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWJ1bmRhbmNlID0gZ2V0RmlsdGVyZWRUYXhhQ291bnRzRGV2KFxuICBhc3ZfdGFibGUsXG4gIHRheG9ub215X3RhYmxlLFxuICBzYW1wbGVfZGF0YSwgXG4gIGNsdXN0ZXJfYnk9XCIke2NsdXN0ZXJpbmdfbGV2ZWx9XCIsXG4gIHJlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmY9cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZixcbiAgcHJldmFsZW5jZV9jdXRvZmY9cHJldmFsZW5jZV9jdXRvZmYsXG4gIGlkX2NvbD1cIlNhbXBsZU5hbWVcIixcbiAgbm9ybWFsaXplPVRcbiAgKVxuXG5gYGAifQ== -->
+<pre class="r"><code>abundance = getFilteredTaxaCountsDev(
+  asv_table,
+  taxonomy_table,
+  sample_data, 
+  cluster_by=&quot;${clustering_level}&quot;,
+  relative_abundance_cutoff=relative_abundance_cutoff,
+  prevalence_cutoff=prevalence_cutoff,
+  id_col=&quot;SampleName&quot;,
+  normalize=T
   )
 </code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="create-p-val-names-for-contrasts" class="section level3">
-<h3><span class="header-section-number">1.3.8</span> Create p-val names for contrasts</h3>
+</div>
+<div id="create-master-tables" class="section level2">
+<h2><span class="header-section-number">1.2</span> Create Master Tables</h2>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX2NvbnRyYXN0X25hbWVzID0gbWFrZUNvbnRyYXN0TmFtZXMoXG4gIGFsbF92YXJpYWJsZXMsIFxuICBhbGxfbWFzdGVyX3RhYmxlXG4gIClcblxuYWdlX2x0XzkwX2NvbnRyYXN0X25hbWVzID0gbWFrZUNvbnRyYXN0TmFtZXMoXG4gIGFnZV9sdF85MF92YXJpYWJsZXMsIFxuICBhbGxfbWFzdGVyX3RhYmxlXG4gIClcblxuYW1kX29ubHlfY29udHJhc3RfbmFtZXMgPSBtYWtlQ29udHJhc3ROYW1lcyhcbiAgYW1kX29ubHlfdmFyaWFibGVzLCBcbiAgYWxsX21hc3Rlcl90YWJsZVxuICApXG5cbnVuaW9uX2NvbnRyYXN0X25hbWVzID0gXG4gIGFsbF9jb250cmFzdF9uYW1lcyAlPiVcbiAgdW5pb24oYWdlX2x0XzkwX2NvbnRyYXN0X25hbWVzKSAlPiVcbiAgdW5pb24oYW1kX29ubHlfY29udHJhc3RfbmFtZXMpXG5gYGAifQ== -->
-<pre class="r"><code>all_contrast_names = makeContrastNames(
-  all_variables, 
-  all_master_table
-  )
-
-age_lt_90_contrast_names = makeContrastNames(
-  age_lt_90_variables, 
-  all_master_table
-  )
-
-amd_only_contrast_names = makeContrastNames(
-  amd_only_variables, 
-  all_master_table
-  )
-
-union_contrast_names = 
-  all_contrast_names %&gt;%
-  union(age_lt_90_contrast_names) %&gt;%
-  union(amd_only_contrast_names)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxsX21hc3Rlcl90YWJsZSA9IGdldE1hc3RlclRhYmxlKFxuICBhYnVuZGFuY2UsXG4gIHNhbXBsZV9kYXRhLFxuICAnU2FtcGxlTmFtZScsXG4gICdzaG9ydF9nbG9tbWVkX3RheGEnXG4pXG5gYGAifQ== -->
+<pre class="r"><code>all_master_table = getMasterTable(
+  abundance,
+  sample_data,
+  &#39;SampleName&#39;,
+  &#39;short_glommed_taxa&#39;
+)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="initialize-regression-stats-table" class="section level3">
-<h3><span class="header-section-number">1.3.9</span> Initialize regression stats table</h3>
+<div id="write-table" class="section level2">
+<h2><span class="header-section-number">1.3</span> Write Table</h2>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVncmVzc2lvbl9wdmFscyA9IG1ha2VSZWdyZXNzaW9uU3RhdHNDb250cmFzdFRlbXBsYXRlKHVuaW9uX2NvbnRyYXN0X25hbWVzKVxuXG5yZWdyZXNzaW9uX2VmZmVjdF9zaXplcyA9IG1ha2VSZWdyZXNzaW9uU3RhdHNDb250cmFzdFRlbXBsYXRlKHVuaW9uX2NvbnRyYXN0X25hbWVzKVxuYGBgIn0= -->
-<pre class="r"><code>regression_pvals = makeRegressionStatsContrastTemplate(union_contrast_names)
-
-regression_effect_sizes = makeRegressionStatsContrastTemplate(union_contrast_names)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-</div>
-<div id="linear-regression" class="section level2 tabset">
-<h2><span class="header-section-number">1.4</span> Linear Regression</h2>
-<div id="all" class="section level3">
-<h3><span class="header-section-number">1.4.1</span> All</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZXhwX3ZhcnMgPSBjKHJhd19leHBfdmFycywgY2FsY3VsYXRlZF9leHBfdmFycylcbnByZWRpY3RvcnMgPSBhbGxfdmFyaWFibGVzXG5tYXN0ZXJfdGFibGUgPSBhbGxfbWFzdGVyX3RhYmxlXG5jb250cmFzdHMgPSBhbGxfY29udHJhc3RfbmFtZXNcbmluZGV4X25hbWVfdGVtcGxhdGUgPSAnQWxsXydcblxuIyByZWdyZXNzaW9uX3B2YWxzID0gcmVncmVzc2lvbl9wdmFsc190ZW1wbGF0ZVxuIyByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyA9IHJlZ3Jlc3Npb25fcHZhbHNfdGVtcGxhdGVcblxuZm9yICh2YXIgaW4gZXhwX3ZhcnMpXG57XG4gIGluZGV4X25hbWUgPSBwYXN0ZTAoaW5kZXhfbmFtZV90ZW1wbGF0ZSwgdmFyKVxuICBwcmludChpbmRleF9uYW1lKVxuICBcbiAgZml0ID0gZG9NdWx0aXBsZVJlZ3Jlc3Npb24oXG4gICAgdmFyLFxuICAgIHByZWRpY3RvcnMsXG4gICAgcmVzcG9uc2VfdmFycz12YXIsXG4gICAgbWFzdGVyX3RhYmxlLFxuICAgIHRyYW5zZm9ybWF0aW9uPScke3JlZ3Jlc3Npb25fdHJhbnNmb3JtfScsXG4gICAgbG9nX3JlZ3VsYXJpemVyPSR7bG9nX3JlZ3VsYXJpemVyfVxuICApXG4gIFxuICBwdmFscyA9IGdldFJlZ3Jlc3Npb25QdmFscyhcbiAgICBmaXQsXG4gICAgY29udHJhc3RzLFxuICAgIGluZGV4X25hbWVcbiAgKVxuICBcbiByZWdyZXNzaW9uX3B2YWxzID0gcmVncmVzc2lvbl9wdmFscyAlPiUgYWRkX3JvdyghISFwdmFscylcblxuICBlZmZlY3Rfc2l6ZXMgPSBnZXRSZWdyZXNzaW9uRWZmZWN0U2l6ZXMoXG4gICAgZml0LFxuICAgIGNvbnRyYXN0cyxcbiAgICBpbmRleF9uYW1lXG4gIClcblxuICByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyA9IHJlZ3Jlc3Npb25fZWZmZWN0X3NpemVzICU+JSBhZGRfcm93KCEhIWVmZmVjdF9zaXplcylcblxufVxuYGBgIn0= -->
-<pre class="r"><code>exp_vars = c(raw_exp_vars, calculated_exp_vars)
-predictors = all_variables
-master_table = all_master_table
-contrasts = all_contrast_names
-index_name_template = &#39;All_&#39;
-
-# regression_pvals = regression_pvals_template
-# regression_effect_sizes = regression_pvals_template
-
-for (var in exp_vars)
-{
-  index_name = paste0(index_name_template, var)
-  print(index_name)
-  
-  fit = doMultipleRegression(
-    var,
-    predictors,
-    response_vars=var,
-    master_table,
-    transformation=&#39;${regression_transform}&#39;,
-    log_regularizer=${log_regularizer}
-  )
-  
-  pvals = getRegressionPvals(
-    fit,
-    contrasts,
-    index_name
-  )
-  
- regression_pvals = regression_pvals %&gt;% add_row(!!!pvals)
-
-  effect_sizes = getRegressionEffectSizes(
-    fit,
-    contrasts,
-    index_name
-  )
-
-  regression_effect_sizes = regression_effect_sizes %&gt;% add_row(!!!effect_sizes)
-
-}</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<div id="visualize" class="section level4">
-<h4><span class="header-section-number">1.4.1.1</span> Visualize</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGhlYXRtYXAocmVncmVzc2lvbl9wdmFscyAlPiUgY29sdW1uX3RvX3Jvd25hbWVzKCdJbmRleCcpLCBjbHVzdGVyX2NvbHM9RiwgY2x1c3Rlcl9yb3dzPUYpXG5cbnBoZWF0bWFwKHJlZ3Jlc3Npb25fZWZmZWN0X3NpemVzICU+JSBjb2x1bW5fdG9fcm93bmFtZXMoJ0luZGV4JyksIGNsdXN0ZXJfY29scz1GLCBjbHVzdGVyX3Jvd3M9RilcbmBgYCJ9 -->
-<pre class="r"><code>pheatmap(regression_pvals %&gt;% column_to_rownames(&#39;Index&#39;), cluster_cols=F, cluster_rows=F)
-
-pheatmap(regression_effect_sizes %&gt;% column_to_rownames(&#39;Index&#39;), cluster_cols=F, cluster_rows=F)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-</div>
-<div id="age-90" class="section level3">
-<h3><span class="header-section-number">1.4.2</span> Age &lt; 90</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZXhwX3ZhcnMgPSBjKHJhd19leHBfdmFycywgY2FsY3VsYXRlZF9leHBfdmFycylcbnByZWRpY3RvcnMgPSBhZ2VfbHRfOTBfdmFyaWFibGVzXG5tYXN0ZXJfdGFibGUgPSBhZ2VfbHRfOTBfbWFzdGVyX3RhYmxlXG5jb250cmFzdHMgPSBhZ2VfbHRfOTBfY29udHJhc3RfbmFtZXMgJT4lIHVubGlzdCgpXG5pbmRleF9uYW1lX3RlbXBsYXRlID0gJ0FnZV9sdF85MF8nXG5cbiMgcmVncmVzc2lvbl9wdmFscyA9IHJlZ3Jlc3Npb25fcHZhbHNfdGVtcGxhdGVcbiMgcmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgPSByZWdyZXNzaW9uX3B2YWxzX3RlbXBsYXRlXG5cbmZvciAodmFyIGluIGV4cF92YXJzKVxue1xuICBpbmRleF9uYW1lID0gcGFzdGUwKGluZGV4X25hbWVfdGVtcGxhdGUsIHZhcilcbiAgcHJpbnQoaW5kZXhfbmFtZSlcbiAgXG4gIGZpdCA9IGRvTXVsdGlwbGVSZWdyZXNzaW9uKFxuICAgIHZhcixcbiAgICBwcmVkaWN0b3JzLFxuICAgIHJlc3BvbnNlX3ZhcnM9dmFyLFxuICAgIG1hc3Rlcl90YWJsZSxcbiAgICB0cmFuc2Zvcm1hdGlvbj0nJHtyZWdyZXNzaW9uX3RyYW5zZm9ybX0nLFxuICAgIGxvZ19yZWd1bGFyaXplcj0ke2xvZ19yZWd1bGFyaXplcn1cbiAgKVxuICBcbiAgcHZhbHMgPSBnZXRSZWdyZXNzaW9uUHZhbHMoXG4gICAgZml0LFxuICAgIGNvbnRyYXN0cyxcbiAgICBpbmRleF9uYW1lXG4gIClcbiAgXG4gcmVncmVzc2lvbl9wdmFscyA9IHJlZ3Jlc3Npb25fcHZhbHMgJT4lIGFkZF9yb3coISEhcHZhbHMpXG5cbiAgZWZmZWN0X3NpemVzID0gZ2V0UmVncmVzc2lvbkVmZmVjdFNpemVzKFxuICAgIGZpdCxcbiAgICBjb250cmFzdHMsXG4gICAgaW5kZXhfbmFtZVxuICApXG5cbiAgcmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgPSByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyAlPiUgYWRkX3JvdyghISFlZmZlY3Rfc2l6ZXMpXG5cbn1cbmBgYCJ9 -->
-<pre class="r"><code>exp_vars = c(raw_exp_vars, calculated_exp_vars)
-predictors = age_lt_90_variables
-master_table = age_lt_90_master_table
-contrasts = age_lt_90_contrast_names %&gt;% unlist()
-index_name_template = &#39;Age_lt_90_&#39;
-
-# regression_pvals = regression_pvals_template
-# regression_effect_sizes = regression_pvals_template
-
-for (var in exp_vars)
-{
-  index_name = paste0(index_name_template, var)
-  print(index_name)
-  
-  fit = doMultipleRegression(
-    var,
-    predictors,
-    response_vars=var,
-    master_table,
-    transformation=&#39;${regression_transform}&#39;,
-    log_regularizer=${log_regularizer}
-  )
-  
-  pvals = getRegressionPvals(
-    fit,
-    contrasts,
-    index_name
-  )
-  
- regression_pvals = regression_pvals %&gt;% add_row(!!!pvals)
-
-  effect_sizes = getRegressionEffectSizes(
-    fit,
-    contrasts,
-    index_name
-  )
-
-  regression_effect_sizes = regression_effect_sizes %&gt;% add_row(!!!effect_sizes)
-
-}</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<div id="visualize-1" class="section level4">
-<h4><span class="header-section-number">1.4.2.1</span> Visualize</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGhlYXRtYXAocmVncmVzc2lvbl9wdmFscyAlPiUgY29sdW1uX3RvX3Jvd25hbWVzKCdJbmRleCcpLCBjbHVzdGVyX2NvbHM9RiwgY2x1c3Rlcl9yb3dzPUYpXG5cbnBoZWF0bWFwKHJlZ3Jlc3Npb25fZWZmZWN0X3NpemVzICU+JSBjb2x1bW5fdG9fcm93bmFtZXMoJ0luZGV4JyksIGNsdXN0ZXJfY29scz1GLCBjbHVzdGVyX3Jvd3M9RilcbmBgYCJ9 -->
-<pre class="r"><code>pheatmap(regression_pvals %&gt;% column_to_rownames(&#39;Index&#39;), cluster_cols=F, cluster_rows=F)
-
-pheatmap(regression_effect_sizes %&gt;% column_to_rownames(&#39;Index&#39;), cluster_cols=F, cluster_rows=F)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-</div>
-<div id="amd-only" class="section level3">
-<h3><span class="header-section-number">1.4.3</span> AMD Only</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZXhwX3ZhcnMgPSBjKHJhd19leHBfdmFycywgY2FsY3VsYXRlZF9leHBfdmFycylcbnByZWRpY3RvcnMgPSBhbWRfb25seV92YXJpYWJsZXNcbm1hc3Rlcl90YWJsZSA9IGFtZF9vbmx5X21hc3Rlcl90YWJsZVxuY29udHJhc3RzID0gYW1kX29ubHlfY29udHJhc3RfbmFtZXMgJT4lIHVubGlzdCgpXG5pbmRleF9uYW1lX3RlbXBsYXRlID0gJ0FNRF9Pbmx5XydcblxuIyByZWdyZXNzaW9uX3B2YWxzID0gcmVncmVzc2lvbl9wdmFsc190ZW1wbGF0ZVxuIyByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyA9IHJlZ3Jlc3Npb25fcHZhbHNfdGVtcGxhdGVcblxuZm9yICh2YXIgaW4gZXhwX3ZhcnMpXG57XG4gIGluZGV4X25hbWUgPSBwYXN0ZTAoaW5kZXhfbmFtZV90ZW1wbGF0ZSwgdmFyKVxuICBwcmludChpbmRleF9uYW1lKVxuICBcbiAgZml0ID0gZG9NdWx0aXBsZVJlZ3Jlc3Npb24oXG4gICAgdmFyLFxuICAgIHByZWRpY3RvcnMsXG4gICAgcmVzcG9uc2VfdmFycz12YXIsXG4gICAgbWFzdGVyX3RhYmxlLFxuICAgIHRyYW5zZm9ybWF0aW9uPScke3JlZ3Jlc3Npb25fdHJhbnNmb3JtfScsXG4gICAgbG9nX3JlZ3VsYXJpemVyPSR7bG9nX3JlZ3VsYXJpemVyfVxuICApXG4gIFxuICBwdmFscyA9IGdldFJlZ3Jlc3Npb25QdmFscyhcbiAgICBmaXQsXG4gICAgY29udHJhc3RzLFxuICAgIGluZGV4X25hbWVcbiAgKVxuICBcbiByZWdyZXNzaW9uX3B2YWxzID0gcmVncmVzc2lvbl9wdmFscyAlPiUgYWRkX3JvdyghISFwdmFscylcblxuICBlZmZlY3Rfc2l6ZXMgPSBnZXRSZWdyZXNzaW9uRWZmZWN0U2l6ZXMoXG4gICAgZml0LFxuICAgIGNvbnRyYXN0cyxcbiAgICBpbmRleF9uYW1lXG4gIClcblxuICByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyA9IHJlZ3Jlc3Npb25fZWZmZWN0X3NpemVzICU+JSBhZGRfcm93KCEhIWVmZmVjdF9zaXplcylcblxufVxuYGBgIn0= -->
-<pre class="r"><code>exp_vars = c(raw_exp_vars, calculated_exp_vars)
-predictors = amd_only_variables
-master_table = amd_only_master_table
-contrasts = amd_only_contrast_names %&gt;% unlist()
-index_name_template = &#39;AMD_Only_&#39;
-
-# regression_pvals = regression_pvals_template
-# regression_effect_sizes = regression_pvals_template
-
-for (var in exp_vars)
-{
-  index_name = paste0(index_name_template, var)
-  print(index_name)
-  
-  fit = doMultipleRegression(
-    var,
-    predictors,
-    response_vars=var,
-    master_table,
-    transformation=&#39;${regression_transform}&#39;,
-    log_regularizer=${log_regularizer}
-  )
-  
-  pvals = getRegressionPvals(
-    fit,
-    contrasts,
-    index_name
-  )
-  
- regression_pvals = regression_pvals %&gt;% add_row(!!!pvals)
-
-  effect_sizes = getRegressionEffectSizes(
-    fit,
-    contrasts,
-    index_name
-  )
-
-  regression_effect_sizes = regression_effect_sizes %&gt;% add_row(!!!effect_sizes)
-
-}</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<div id="visualize-2" class="section level4">
-<h4><span class="header-section-number">1.4.3.1</span> Visualize</h4>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGhlYXRtYXAocmVncmVzc2lvbl9wdmFscyAlPiUgY29sdW1uX3RvX3Jvd25hbWVzKCdJbmRleCcpLCBjbHVzdGVyX2NvbHM9RiwgY2x1c3Rlcl9yb3dzPUYpXG5cbnBoZWF0bWFwKHJlZ3Jlc3Npb25fZWZmZWN0X3NpemVzICU+JSBjb2x1bW5fdG9fcm93bmFtZXMoJ0luZGV4JyksIGNsdXN0ZXJfY29scz1GLCBjbHVzdGVyX3Jvd3M9RilcbmBgYCJ9 -->
-<pre class="r"><code>pheatmap(regression_pvals %&gt;% column_to_rownames(&#39;Index&#39;), cluster_cols=F, cluster_rows=F)
-
-pheatmap(regression_effect_sizes %&gt;% column_to_rownames(&#39;Index&#39;), cluster_cols=F, cluster_rows=F)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-</div>
-<div id="write-regression-stats" class="section level3">
-<h3><span class="header-section-number">1.4.4</span> Write Regression Stats</h3>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud2IgPSBjcmVhdGVXb3JrYm9vaygpXG5cbmFkZFdvcmtzaGVldChcbiAgd2IsIFxuICBzaGVldE5hbWU9XCJVbmFkanVzdGVkIFAtVmFsdWVzXCJcbiAgKVxuXG5vcGVueGxzeDo6d3JpdGVEYXRhKFxuICB3YiwgXG4gIHNoZWV0PVwiVW5hZGp1c3RlZCBQLVZhbHVlc1wiLCBcbiAgcmVncmVzc2lvbl9wdmFsc1xuICApXG5cbmFkZFdvcmtzaGVldChcbiAgd2IsIFxuICBzaGVldE5hbWU9XCJFZmZlY3QgU2l6ZXNcIlxuICApXG5cbm9wZW54bHN4Ojp3cml0ZURhdGEoXG4gIHdiLFxuICBzaGVldD1cIkVmZmVjdCBTaXplc1wiLCBcbiAgcmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXNcbiAgKVxuXG4jIGFkZFdvcmtzaGVldChyZWdyZXNzaW9uX3B2YWxzLCBzaGVldE5hbWU9XCJBZGp1c3RlZCBQLVZhbHVlc1wiKVxuIyBvcGVueGxzeDo6d3JpdGVEYXRhKHJlZ3Jlc3Npb25fcHZhbHMsIHNoZWV0PVwiQWRqdXN0ZWQgUC1WYWx1ZXNcIiwgYWRqdXN0ZWRfcmVncmVzc2lvbl9wdmFscylcblxuZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKFxuICAnbGluZWFyX3JlZ3Jlc3Npb24ueGxzeCcsXG4gIFwiJHt0YWJsZXNfZGlyfVwiLFxuICBcIiR7YW5hbHlzaXNfdHlwZX1cIixcbiAgXCIke21pc2VxX3Byb2plY3RfcHJlZml4fVwiLFxuICBcIiR7Y2x1c3RlcmluZ19sZXZlbH1cIlxuKVxuc2F2ZVdvcmtib29rKHdiLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VClcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud2IgPSBjcmVhdGVXb3JrYm9vaygpXG5cbmFsbF9yYW5rcyA9IGMoJ1BoeWx1bScsICdDbGFzcycsICdPcmRlcicsICdGYW1pbHknLCAnR2VudXMnKVxuXG5pZiAoY2x1c3RlcmluZ19sZXZlbCA9PSAnQVNWJylcbntcbiAgcmFua3NfdG9fa2VlcCA9IGMoYWxsX3JhbmtzLCAnQVNWcycpXG59IGVsc2VcbntcbiAgcmFua3NfdG9fa2VlcCA9IGFsbF9yYW5rc1sxOm1hdGNoKGNsdXN0ZXJpbmdfbGV2ZWwsIGFsbF9yYW5rcyldXG59XG5cbmFkZFdvcmtzaGVldCh3Yiwgc2hlZXROYW1lPVwiTWFzdGVyIFRhYmxlXCIpXG5vcGVueGxzeDo6d3JpdGVEYXRhKHdiLCBzaGVldD1cIk1hc3RlciBUYWJsZVwiLCBhbGxfbWFzdGVyX3RhYmxlKVxuXG5qdXN0X3RheGEgPSBhYnVuZGFuY2UgJT4lIHNlbGVjdChyYW5rc190b19rZWVwLCBnbG9tbWVkX3RheGEsIHNob3J0X2dsb21tZWRfdGF4YSlcbmFkZFdvcmtzaGVldCh3Yiwgc2hlZXROYW1lPVwiJHt0b29sczo6dG9UaXRsZUNhc2UoY2x1c3RlcmluZ19sZXZlbCl9XCIpXG5vcGVueGxzeDo6d3JpdGVEYXRhKHdiLCBzaGVldD1cIiR7dG9vbHM6OnRvVGl0bGVDYXNlKGNsdXN0ZXJpbmdfbGV2ZWwpfVwiLCBqdXN0X3RheGEpXG5cbmZpbGVuYW1lID0gbWFrZURhdGFGaWxlTmFtZShcbiAgJ21hc3Rlcl90YWJsZS54bHN4JyxcbiAgXCIke3RhYmxlc19kaXJ9XCIsXG4gIFwiJHthbmFseXNpc190eXBlfVwiLFxuICBcIiR7bWlzZXFfcHJvamVjdF9wcmVmaXh9XCIsXG4gIFwiJHtjbHVzdGVyaW5nX2xldmVsfVwiXG4pXG5wcmludChmaWxlbmFtZSlcblxuc2F2ZVdvcmtib29rKHdiLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VClcbmBgYCJ9 -->
 <pre class="r"><code>wb = createWorkbook()
 
-addWorksheet(
-  wb, 
-  sheetName=&quot;Unadjusted P-Values&quot;
-  )
+all_ranks = c(&#39;Phylum&#39;, &#39;Class&#39;, &#39;Order&#39;, &#39;Family&#39;, &#39;Genus&#39;)
 
-openxlsx::writeData(
-  wb, 
-  sheet=&quot;Unadjusted P-Values&quot;, 
-  regression_pvals
-  )
+if (clustering_level == &#39;ASV&#39;)
+{
+  ranks_to_keep = c(all_ranks, &#39;ASVs&#39;)
+} else
+{
+  ranks_to_keep = all_ranks[1:match(clustering_level, all_ranks)]
+}
 
-addWorksheet(
-  wb, 
-  sheetName=&quot;Effect Sizes&quot;
-  )
+addWorksheet(wb, sheetName=&quot;Master Table&quot;)
+openxlsx::writeData(wb, sheet=&quot;Master Table&quot;, all_master_table)
 
-openxlsx::writeData(
-  wb,
-  sheet=&quot;Effect Sizes&quot;, 
-  regression_effect_sizes
-  )
-
-# addWorksheet(regression_pvals, sheetName=&quot;Adjusted P-Values&quot;)
-# openxlsx::writeData(regression_pvals, sheet=&quot;Adjusted P-Values&quot;, adjusted_regression_pvals)
+just_taxa = abundance %&gt;% select(ranks_to_keep, glommed_taxa, short_glommed_taxa)
+addWorksheet(wb, sheetName=&quot;${tools::toTitleCase(clustering_level)}&quot;)
+openxlsx::writeData(wb, sheet=&quot;${tools::toTitleCase(clustering_level)}&quot;, just_taxa)
 
 filename = makeDataFileName(
-  &#39;linear_regression.xlsx&#39;,
+  &#39;master_table.xlsx&#39;,
   &quot;${tables_dir}&quot;,
   &quot;${analysis_type}&quot;,
   &quot;${miseq_project_prefix}&quot;,
   &quot;${clustering_level}&quot;
 )
+print(filename)
+
 saveWorkbook(wb, file=filename, overwrite=T)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
-</div>
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
 </div>
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAo8L3N0eWxlPgoKCmBgYHtyfQpzb3VyY2UoJyR7cHJvamVjdF9tZXRhZGF0YV9maWxlfScpCmFuYWx5c2lzX3R5cGUgPSAiJHthbmFseXNpc190eXBlfSIKY2x1c3RlcmluZ19sZXZlbCA9ICIke2NsdXN0ZXJpbmdfbGV2ZWx9Igp0YWJsZXNfZGlyID0gIiR7dGFibGVzX2Rpcn0iCmFuYWx5c2lzX3RpdGxlID0gIiR7YW5hbHlzaXNfdGl0bGV9IgpgYGAKCiMgTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSAke2FuYWx5c2lzX3RpdGxlfSBMaW5lYXIgUmVncmVzc2lvbiBBbmFseXNpcyB7LnRhYnNldH0KIyMgQ2x1c3RlcmluZyBMZXZlbApEYXRhIGNsdXN0ZXJlZCBhdCB0aGUgYHIgdG91cHBlcignJHtjbHVzdGVyaW5nX2xldmVsfScpYCBMZXZlbC4KCiMjIEZpbHRlcmluZwoqICoqUmVsYXRpdmUgQWJ1bmRhbmNlIEN1dG9mZjoqKiAke3JlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmZ9CiogKipQcmV2YWxlbmNlIEN1dG9mZjoqKiAke3ByZXZhbGVuY2VfY3V0b2ZmfQoqICoqTWluIENvdW50IEN1dG9mZjoqKiAke21pbl9jb3VudF9jdXRvZmZ9CgojIyBTZXR1cAojIyMgU3RhcnQgQ29uZGEgRU5WCmBgYHtyfQpzdGFydENvbmRhRW52KCdyZWdyZXNzaW9uJykKYGBgCgojIyMgTG9hZCBMaWJyYXJpZXMKYGBge3J9CmxpYnJhcnkocm1hcmtkb3duKQpsaWJyYXJ5KHRpZHl2ZXJzZSkKbGlicmFyeShtYWdyaXR0cikKbGlicmFyeShnZ3Bsb3QyKQpsaWJyYXJ5KGdnYmVlc3dhcm0pCmxpYnJhcnkob3Blbnhsc3gpCmxpYnJhcnkoRFQpCmxpYnJhcnkocGhlYXRtYXApCmxpYnJhcnkoa2FibGVFeHRyYSkKbGlicmFyeSh2ZWdhbikKbGlicmFyeShubG1lKQoKIyMjIEN1c3RvbSBsaWJyYXJpZXMgdGhhdCBjYW4gYmUgbG9hZGVkIGZyb20gR2l0SHViCnNvdXJjZSgnfi91dGlsaXRpZXMvYW5hbHlzaXMtdXRpbGl0aWVzL2dlbmVyYWxfYXN2X2RhdGFfYW5hbHlzaXNfdXRpbGl0aWVzLlInKQpzb3VyY2UoJ34vdXRpbGl0aWVzL2FtZF90ZW1wbGF0ZXMvc2V0dXAvYW1kX3Byb2plY3RfdXRpbGl0aWVzLlInKQpgYGAKCgojIyMgU2V0IEtuaXRyIE9wdGlvbnMKYGBge3J9CiR7a25pdHJfb3B0aW9uc30KYGBgCgojIyMgTG9hZCBEYXRhCmBgYHtyfQpmaWxlbmFtZSA9IG1ha2VEYXRhRmlsZU5hbWUoCiAgJ21hc3Rlcl90YWJsZS54bHN4JywKICAiJHt0YWJsZXNfZGlyfSIsCiAgIiR7YW5hbHlzaXNfdHlwZX0iLAogICIke21pc2VxX3Byb2plY3RfcHJlZml4fSIsCiAgIiR7Y2x1c3RlcmluZ19sZXZlbH0iCikKCnByaW50KGZpbGVuYW1lKQoKYWxsX21hc3Rlcl90YWJsZSA9IHJlYWRXb3JrYm9vayhmaWxlbmFtZSwgc2hlZXQ9JyR7ZmVhdHVyZV9uYW1lfSBNYXN0ZXIgVGFibGUnKQphZ2VfbHRfOTBfbWFzdGVyX3RhYmxlID0gYWxsX21hc3Rlcl90YWJsZSAlPiUgZmlsdGVyKEFnZSA8IDkwKQphbWRfb25seV9tYXN0ZXJfdGFibGUgPSBhbGxfbWFzdGVyX3RhYmxlICU+JSBmaWx0ZXIoQ2FzZVN0cmluZyA9PSAnQU1EJykKCmZlYXR1cmVfbmFtZSA9ICIke2ZlYXR1cmVfbmFtZX0iCgpmZWF0dXJlX2xpc3QgPSAKICByZWFkV29ya2Jvb2soCiAgICBmaWxlbmFtZSwgCiAgICBzaGVldD0iJHtmZWF0dXJlX25hbWV9IgogICAgKSAlPiUgCiAgcHVsbCghIWZlYXR1cmVfbmFtZSkKCnNvdXJjZShmaWxlLnBhdGgoCiAgIiR7cHJvamVjdF9yb290fSIsIAogICIke21ldGFkYXRhX2Rpcn0iLCAKICAnb2JzZXJ2YXRpb25hbF92YXJpYWJsZXMuUicKICApKQpgYGAKCgojIyMgU2V0IE1ldGFkYXRhIEZhY3RvciBMZXZlbHMKYGBge3J9CmFsbF9tYXN0ZXJfdGFibGUgPSBzZXRGYWN0b3JzTGV2ZWxzKGFsbF9tYXN0ZXJfdGFibGUsIG9ic2VydmF0aW9uYWxfdmFyaWFibGVzKQphZ2VfbHRfOTBfbWFzdGVyX3RhYmxlID0gc2V0RmFjdG9yc0xldmVscyhhZ2VfbHRfOTBfbWFzdGVyX3RhYmxlLCBvYnNlcnZhdGlvbmFsX3ZhcmlhYmxlcykKYW1kX29ubHlfbWFzdGVyX3RhYmxlID0gc2V0RmFjdG9yc0xldmVscyhhbWRfb25seV9tYXN0ZXJfdGFibGUsIG9ic2VydmF0aW9uYWxfdmFyaWFibGVzKQpgYGAKCiMjIyBWYXJpYWJsZXMgb2YgaW50ZXJlc3QKIyMjIyBPYnNlcnZhdGlvbmFsIFZhcmlhYmxlcwpgYGB7cn0KYWxsX3ZhcmlhYmxlcyA9IG9ic2VydmF0aW9uYWxfdmFyaWFibGVzWyR7bGluZWFyX3JlZ3Jlc3Npb25fcHJlZGljdG9yc1snQWxsJ119XQphZ2VfbHRfOTBfdmFyaWFibGVzID0gb2JzZXJ2YXRpb25hbF92YXJpYWJsZXNbJHtsaW5lYXJfcmVncmVzc2lvbl9wcmVkaWN0b3JzWydBZ2VfbHRfOTAnXX1dCmFtZF9vbmx5X3ZhcmlhYmxlcyA9IG9ic2VydmF0aW9uYWxfdmFyaWFibGVzWyR7bGluZWFyX3JlZ3Jlc3Npb25fcHJlZGljdG9yc1snQU1EX09ubHknXX1dCmBgYAoKKiAqKkFsbCBWYXJpYWJsZXM6KiogJHtsaW5lYXJfcmVncmVzc2lvbl9wcmVkaWN0b3JzWydBbGwnXX0KKiAqKkFnZSA8IDkwIFZhcmlhYmxlczoqKiAke2xpbmVhcl9yZWdyZXNzaW9uX3ByZWRpY3RvcnNbJ0FnZV9sdF85MCddfQoqICoqQU1EIE9ubHkgVmFyaWFibGVzOioqICR7bGluZWFyX3JlZ3Jlc3Npb25fcHJlZGljdG9yc1snQU1EX09ubHknXX0KCiMjIyMgQ2FsY3VsYXRlZCBFeHBlcmltZW50YWwgVmFyaWFibGVzCgpgYGB7cn0KcmF3X2V4cF92YXJzID0gJHtyYXdfZXhwX3ZhcnN9CmNhbGN1bGF0ZWRfZXhwX3ZhcnMgPSAke2NhbGN1bGF0ZWRfZXhwX3ZhcnN9CmBgYAoqKkNhbGN1bGF0ZWQgRXhwZXJpbWVudGFsIFZhcmlhYmxlczogKiogYHIgY2FsY3VsYXRlZF9leHBfdmFyc2AKCgojIyMgRGV0ZXJtaW5lIHdoaWNoIGNvdmFyaWF0ZXMgaGF2ZSBzdWZmaWNpZW50IHNhbXBsZXMgd2l0aCBlYWNoIHZhbHVlCmBgYHtyfQpudW1fc2FtcGxlc190aHJlc2hvbGQgPSA1CgphbGxfdmFyaWFibGVzID0gZmlsdGVyVmFyc0J5U2FtcGxlVGhyZXNob2xkKAogIGFsbF9tYXN0ZXJfdGFibGUsCiAgbnVtX3NhbXBsZXNfdGhyZXNob2xkLAogIGFsbF92YXJpYWJsZXMKICApCgphZ2VfbHRfOTBfdmFyaWFibGVzID0gZmlsdGVyVmFyc0J5U2FtcGxlVGhyZXNob2xkKAogIGFnZV9sdF85MF9tYXN0ZXJfdGFibGUsCiAgbnVtX3NhbXBsZXNfdGhyZXNob2xkLAogIGFnZV9sdF85MF92YXJpYWJsZXMKICApCgphbWRfb25seV92YXJpYWJsZXMgPSBmaWx0ZXJWYXJzQnlTYW1wbGVUaHJlc2hvbGQoCiAgYW1kX29ubHlfbWFzdGVyX3RhYmxlICU+JSBzZWxlY3QoLUNhc2VTdHJpbmcpLAogIG51bV9zYW1wbGVzX3RocmVzaG9sZCwKICBhbWRfb25seV92YXJpYWJsZXMKICApCgpgYGAKCgojIyMgQ3JlYXRlIHAtdmFsIG5hbWVzIGZvciBjb250cmFzdHMKCmBgYHtyfQphbGxfY29udHJhc3RfbmFtZXMgPSBtYWtlQ29udHJhc3ROYW1lcygKICBhbGxfdmFyaWFibGVzLCAKICBhbGxfbWFzdGVyX3RhYmxlCiAgKQoKYWdlX2x0XzkwX2NvbnRyYXN0X25hbWVzID0gbWFrZUNvbnRyYXN0TmFtZXMoCiAgYWdlX2x0XzkwX3ZhcmlhYmxlcywgCiAgYWxsX21hc3Rlcl90YWJsZQogICkKCmFtZF9vbmx5X2NvbnRyYXN0X25hbWVzID0gbWFrZUNvbnRyYXN0TmFtZXMoCiAgYW1kX29ubHlfdmFyaWFibGVzLCAKICBhbGxfbWFzdGVyX3RhYmxlCiAgKQoKdW5pb25fY29udHJhc3RfbmFtZXMgPSAKICBhbGxfY29udHJhc3RfbmFtZXMgJT4lCiAgdW5pb24oYWdlX2x0XzkwX2NvbnRyYXN0X25hbWVzKSAlPiUKICB1bmlvbihhbWRfb25seV9jb250cmFzdF9uYW1lcykKYGBgCgojIyMgSW5pdGlhbGl6ZSByZWdyZXNzaW9uIHN0YXRzIHRhYmxlCgpgYGB7cn0KcmVncmVzc2lvbl9wdmFscyA9IG1ha2VSZWdyZXNzaW9uU3RhdHNDb250cmFzdFRlbXBsYXRlKHVuaW9uX2NvbnRyYXN0X25hbWVzKQoKcmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgPSBtYWtlUmVncmVzc2lvblN0YXRzQ29udHJhc3RUZW1wbGF0ZSh1bmlvbl9jb250cmFzdF9uYW1lcykKYGBgCgojIyBMaW5lYXIgUmVncmVzc2lvbiB7LnRhYnNldH0KCiMjIyBBbGwKCmBgYHtyfQpleHBfdmFycyA9IGMocmF3X2V4cF92YXJzLCBjYWxjdWxhdGVkX2V4cF92YXJzKQpwcmVkaWN0b3JzID0gYWxsX3ZhcmlhYmxlcwptYXN0ZXJfdGFibGUgPSBhbGxfbWFzdGVyX3RhYmxlCmNvbnRyYXN0cyA9IGFsbF9jb250cmFzdF9uYW1lcwppbmRleF9uYW1lX3RlbXBsYXRlID0gJ0FsbF8nCgojIHJlZ3Jlc3Npb25fcHZhbHMgPSByZWdyZXNzaW9uX3B2YWxzX3RlbXBsYXRlCiMgcmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgPSByZWdyZXNzaW9uX3B2YWxzX3RlbXBsYXRlCgpmb3IgKHZhciBpbiBleHBfdmFycykKewogIGluZGV4X25hbWUgPSBwYXN0ZTAoaW5kZXhfbmFtZV90ZW1wbGF0ZSwgdmFyKQogIHByaW50KGluZGV4X25hbWUpCiAgCiAgZml0ID0gZG9NdWx0aXBsZVJlZ3Jlc3Npb24oCiAgICB2YXIsCiAgICBwcmVkaWN0b3JzLAogICAgcmVzcG9uc2VfdmFycz12YXIsCiAgICBtYXN0ZXJfdGFibGUsCiAgICB0cmFuc2Zvcm1hdGlvbj0nJHtyZWdyZXNzaW9uX3RyYW5zZm9ybX0nLAogICAgbG9nX3JlZ3VsYXJpemVyPSR7bG9nX3JlZ3VsYXJpemVyfQogICkKICAKICBwdmFscyA9IGdldFJlZ3Jlc3Npb25QdmFscygKICAgIGZpdCwKICAgIGNvbnRyYXN0cywKICAgIGluZGV4X25hbWUKICApCiAgCiByZWdyZXNzaW9uX3B2YWxzID0gcmVncmVzc2lvbl9wdmFscyAlPiUgYWRkX3JvdyghISFwdmFscykKCiAgZWZmZWN0X3NpemVzID0gZ2V0UmVncmVzc2lvbkVmZmVjdFNpemVzKAogICAgZml0LAogICAgY29udHJhc3RzLAogICAgaW5kZXhfbmFtZQogICkKCiAgcmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgPSByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyAlPiUgYWRkX3JvdyghISFlZmZlY3Rfc2l6ZXMpCgp9CmBgYAoKCiMjIyMgVmlzdWFsaXplCmBgYHtyfQpwaGVhdG1hcChyZWdyZXNzaW9uX3B2YWxzICU+JSBjb2x1bW5fdG9fcm93bmFtZXMoJ0luZGV4JyksIGNsdXN0ZXJfY29scz1GLCBjbHVzdGVyX3Jvd3M9RikKCnBoZWF0bWFwKHJlZ3Jlc3Npb25fZWZmZWN0X3NpemVzICU+JSBjb2x1bW5fdG9fcm93bmFtZXMoJ0luZGV4JyksIGNsdXN0ZXJfY29scz1GLCBjbHVzdGVyX3Jvd3M9RikKYGBgCgoKIyMjIEFnZSA8IDkwCgpgYGB7cn0KZXhwX3ZhcnMgPSBjKHJhd19leHBfdmFycywgY2FsY3VsYXRlZF9leHBfdmFycykKcHJlZGljdG9ycyA9IGFnZV9sdF85MF92YXJpYWJsZXMKbWFzdGVyX3RhYmxlID0gYWdlX2x0XzkwX21hc3Rlcl90YWJsZQpjb250cmFzdHMgPSBhZ2VfbHRfOTBfY29udHJhc3RfbmFtZXMgJT4lIHVubGlzdCgpCmluZGV4X25hbWVfdGVtcGxhdGUgPSAnQWdlX2x0XzkwXycKCiMgcmVncmVzc2lvbl9wdmFscyA9IHJlZ3Jlc3Npb25fcHZhbHNfdGVtcGxhdGUKIyByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyA9IHJlZ3Jlc3Npb25fcHZhbHNfdGVtcGxhdGUKCmZvciAodmFyIGluIGV4cF92YXJzKQp7CiAgaW5kZXhfbmFtZSA9IHBhc3RlMChpbmRleF9uYW1lX3RlbXBsYXRlLCB2YXIpCiAgcHJpbnQoaW5kZXhfbmFtZSkKICAKICBmaXQgPSBkb011bHRpcGxlUmVncmVzc2lvbigKICAgIHZhciwKICAgIHByZWRpY3RvcnMsCiAgICByZXNwb25zZV92YXJzPXZhciwKICAgIG1hc3Rlcl90YWJsZSwKICAgIHRyYW5zZm9ybWF0aW9uPScke3JlZ3Jlc3Npb25fdHJhbnNmb3JtfScsCiAgICBsb2dfcmVndWxhcml6ZXI9JHtsb2dfcmVndWxhcml6ZXJ9CiAgKQogIAogIHB2YWxzID0gZ2V0UmVncmVzc2lvblB2YWxzKAogICAgZml0LAogICAgY29udHJhc3RzLAogICAgaW5kZXhfbmFtZQogICkKICAKIHJlZ3Jlc3Npb25fcHZhbHMgPSByZWdyZXNzaW9uX3B2YWxzICU+JSBhZGRfcm93KCEhIXB2YWxzKQoKICBlZmZlY3Rfc2l6ZXMgPSBnZXRSZWdyZXNzaW9uRWZmZWN0U2l6ZXMoCiAgICBmaXQsCiAgICBjb250cmFzdHMsCiAgICBpbmRleF9uYW1lCiAgKQoKICByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyA9IHJlZ3Jlc3Npb25fZWZmZWN0X3NpemVzICU+JSBhZGRfcm93KCEhIWVmZmVjdF9zaXplcykKCn0KYGBgCgoKIyMjIyBWaXN1YWxpemUKYGBge3J9CnBoZWF0bWFwKHJlZ3Jlc3Npb25fcHZhbHMgJT4lIGNvbHVtbl90b19yb3duYW1lcygnSW5kZXgnKSwgY2x1c3Rlcl9jb2xzPUYsIGNsdXN0ZXJfcm93cz1GKQoKcGhlYXRtYXAocmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgJT4lIGNvbHVtbl90b19yb3duYW1lcygnSW5kZXgnKSwgY2x1c3Rlcl9jb2xzPUYsIGNsdXN0ZXJfcm93cz1GKQpgYGAKCgojIyMgQU1EIE9ubHkKCmBgYHtyfQpleHBfdmFycyA9IGMocmF3X2V4cF92YXJzLCBjYWxjdWxhdGVkX2V4cF92YXJzKQpwcmVkaWN0b3JzID0gYW1kX29ubHlfdmFyaWFibGVzCm1hc3Rlcl90YWJsZSA9IGFtZF9vbmx5X21hc3Rlcl90YWJsZQpjb250cmFzdHMgPSBhbWRfb25seV9jb250cmFzdF9uYW1lcyAlPiUgdW5saXN0KCkKaW5kZXhfbmFtZV90ZW1wbGF0ZSA9ICdBTURfT25seV8nCgojIHJlZ3Jlc3Npb25fcHZhbHMgPSByZWdyZXNzaW9uX3B2YWxzX3RlbXBsYXRlCiMgcmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgPSByZWdyZXNzaW9uX3B2YWxzX3RlbXBsYXRlCgpmb3IgKHZhciBpbiBleHBfdmFycykKewogIGluZGV4X25hbWUgPSBwYXN0ZTAoaW5kZXhfbmFtZV90ZW1wbGF0ZSwgdmFyKQogIHByaW50KGluZGV4X25hbWUpCiAgCiAgZml0ID0gZG9NdWx0aXBsZVJlZ3Jlc3Npb24oCiAgICB2YXIsCiAgICBwcmVkaWN0b3JzLAogICAgcmVzcG9uc2VfdmFycz12YXIsCiAgICBtYXN0ZXJfdGFibGUsCiAgICB0cmFuc2Zvcm1hdGlvbj0nJHtyZWdyZXNzaW9uX3RyYW5zZm9ybX0nLAogICAgbG9nX3JlZ3VsYXJpemVyPSR7bG9nX3JlZ3VsYXJpemVyfQogICkKICAKICBwdmFscyA9IGdldFJlZ3Jlc3Npb25QdmFscygKICAgIGZpdCwKICAgIGNvbnRyYXN0cywKICAgIGluZGV4X25hbWUKICApCiAgCiByZWdyZXNzaW9uX3B2YWxzID0gcmVncmVzc2lvbl9wdmFscyAlPiUgYWRkX3JvdyghISFwdmFscykKCiAgZWZmZWN0X3NpemVzID0gZ2V0UmVncmVzc2lvbkVmZmVjdFNpemVzKAogICAgZml0LAogICAgY29udHJhc3RzLAogICAgaW5kZXhfbmFtZQogICkKCiAgcmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgPSByZWdyZXNzaW9uX2VmZmVjdF9zaXplcyAlPiUgYWRkX3JvdyghISFlZmZlY3Rfc2l6ZXMpCgp9CmBgYAoKIyMjIyBWaXN1YWxpemUKYGBge3J9CnBoZWF0bWFwKHJlZ3Jlc3Npb25fcHZhbHMgJT4lIGNvbHVtbl90b19yb3duYW1lcygnSW5kZXgnKSwgY2x1c3Rlcl9jb2xzPUYsIGNsdXN0ZXJfcm93cz1GKQoKcGhlYXRtYXAocmVncmVzc2lvbl9lZmZlY3Rfc2l6ZXMgJT4lIGNvbHVtbl90b19yb3duYW1lcygnSW5kZXgnKSwgY2x1c3Rlcl9jb2xzPUYsIGNsdXN0ZXJfcm93cz1GKQpgYGAKCgojIyMgV3JpdGUgUmVncmVzc2lvbiBTdGF0cwpgYGB7cn0Kd2IgPSBjcmVhdGVXb3JrYm9vaygpCgphZGRXb3Jrc2hlZXQoCiAgd2IsIAogIHNoZWV0TmFtZT0iVW5hZGp1c3RlZCBQLVZhbHVlcyIKICApCgpvcGVueGxzeDo6d3JpdGVEYXRhKAogIHdiLCAKICBzaGVldD0iVW5hZGp1c3RlZCBQLVZhbHVlcyIsIAogIHJlZ3Jlc3Npb25fcHZhbHMKICApCgphZGRXb3Jrc2hlZXQoCiAgd2IsIAogIHNoZWV0TmFtZT0iRWZmZWN0IFNpemVzIgogICkKCm9wZW54bHN4Ojp3cml0ZURhdGEoCiAgd2IsCiAgc2hlZXQ9IkVmZmVjdCBTaXplcyIsIAogIHJlZ3Jlc3Npb25fZWZmZWN0X3NpemVzCiAgKQoKIyBhZGRXb3Jrc2hlZXQocmVncmVzc2lvbl9wdmFscywgc2hlZXROYW1lPSJBZGp1c3RlZCBQLVZhbHVlcyIpCiMgb3Blbnhsc3g6OndyaXRlRGF0YShyZWdyZXNzaW9uX3B2YWxzLCBzaGVldD0iQWRqdXN0ZWQgUC1WYWx1ZXMiLCBhZGp1c3RlZF9yZWdyZXNzaW9uX3B2YWxzKQoKZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKAogICdsaW5lYXJfcmVncmVzc2lvbi54bHN4JywKICAiJHt0YWJsZXNfZGlyfSIsCiAgIiR7YW5hbHlzaXNfdHlwZX0iLAogICIke21pc2VxX3Byb2plY3RfcHJlZml4fSIsCiAgIiR7Y2x1c3RlcmluZ19sZXZlbH0iCikKc2F2ZVdvcmtib29rKHdiLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VCkKYGBgCg==</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiTWlTZXEtJHttaXNlcV9ydW5fbnVtYmVyfSIKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6CiAgICBkZl9wcmludDogcGFnZWQKICAgIG51bWJlcl9zZWN0aW9uczogeWVzCiAgICB0aGVtZTogbHVtZW4KICAgIHRvYzogeWVzCiAgICBjb2RlX2ZvbGRpbmc6IGhpZGUKLS0tCgo8c3R5bGU+CiAgaHRtbCB7CiAgICBmb250LXNpemU6IDE2cHQ7CiAgfQogIAogIGJvZHkgewogICAgZm9udC1zaXplOiAxNnB0OwogIH0KICAKICBoMSB7CiAgICBmb250LXNpemU6IDIuMnJlbTsKICB9CiAgCiAgaDIgewogICAgZm9udC1zaXplOiAycmVtOwogIH0KICAKICBoMyB7CiAgICBmb250LXNpemU6IDEuOHJlbTsKICB9CiAgCiAgaDQgewogICAgZm9udC1zaXplOiAxLjRyZW07CiAgfQogIAo8L3N0eWxlPgoKYGBge3J9CnNvdXJjZSgnJHtwcm9qZWN0X21ldGFkYXRhX2ZpbGV9JykKYW5hbHlzaXNfdHlwZSA9ICIke2FuYWx5c2lzX3R5cGV9IgpjbHVzdGVyaW5nX2xldmVsID0gIiR7Y2x1c3RlcmluZ19sZXZlbH0iCnRhYmxlc19kaXIgPSAiJHt0YWJsZXNfZGlyfSIKYGBgCgojIE1pU2VxLSR7bWlzZXFfcnVuX251bWJlcn0gJSBJZ0ErIERhdGEgUHJlcHsudGFic2V0fQoKKipDbHVzdGVyaW5nKioKIERhdGEgY2x1c3RlcmVkIGF0IHRoZSBgciB0b3VwcGVyKCcke2NsdXN0ZXJpbmdfbGV2ZWx9JylgIExldmVsLgoKKipTdWJncm91cHMqKgpgYGB7ciwgcmVzdWx0cz0nYXNpcycsIGVjaG89RkFMU0V9CmZvciAoc2dfZmlsdGVyIGluIGMoJHtzdWJncm91cF9maWx0ZXJzfSkpCnsKICBjYXQoc2dfZmlsdGVyLCAnXG5cbicpCn0KYGBgCgoqKkZpbHRlcmluZyoqCiAgKiAqKlJlbGF0aXZlIEFidW5kYW5jZSBjdXRvZmY6KiogJHtyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmfQoqICoqUHJldmFsZW5jZSBDdXRvZmY6KiogJHtwcmV2YWxlbmNlX2N1dG9mZn0KKiAqKk1pbiBDb3VudCBDdXRvZmY6KiogJHttaW5fY291bnRfY3V0b2ZmfQpgYGB7cn0KcmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZiA9ICR7cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZn0KcHJldmFsZW5jZV9jdXRvZmYgPSAke3ByZXZhbGVuY2VfY3V0b2ZmfQptaW5fY291bnRfY3V0b2ZmID0gJHttaW5fY291bnRfY3V0b2ZmfQpgYGAKCiMjIFNldHVwCgojIyMgW0Nsb3NlXQoKIyMjIFN0YXJ0IENvbmRhIEVOVgpgYGB7cn0Kc3RhcnRDb25kYUVudignYmFzZScpCmBgYAoKIyMjIExvYWQgTGlicmFyaWVzCmBgYHtyfQpsaWJyYXJ5KHJtYXJrZG93bikKbGlicmFyeSh0aWR5dmVyc2UpCmxpYnJhcnkobWFncml0dHIpCmxpYnJhcnkoZ2dwbG90MikKbGlicmFyeShnZ2JlZXN3YXJtKQpsaWJyYXJ5KG9wZW54bHN4KQpsaWJyYXJ5KERUKQpsaWJyYXJ5KHBoZWF0bWFwKQpsaWJyYXJ5KGthYmxlRXh0cmEpCgojIyMgQ3VzdG9tIGxpYnJhcmllcyB0aGF0IGNhbiBiZSBsb2FkZWQgZnJvbSBHaXRIdWIKc291cmNlKCd+L3V0aWxpdGllcy9hbmFseXNpcy11dGlsaXRpZXMvZ2VuZXJhbF9hc3ZfZGF0YV9hbmFseXNpc191dGlsaXRpZXMuUicpCnNvdXJjZSgnfi91dGlsaXRpZXMvYW1kX3RlbXBsYXRlcy9zZXR1cC9hbWRfcHJvamVjdF91dGlsaXRpZXMuUicpCmBgYAoKCiMjIyBTZXQgS25pdHIgT3B0aW9ucwpgYGB7cn0KJHtrbml0cl9vcHRpb25zfQpgYGAKCiMjIyBMb2FkIERhdGEKYGBge3J9CmFzdl90YWJsZSA9IAogIHJlYWQuZGVsaW0oCiAgICAnJHthc3ZfdGFibGVfZmlsZX0nLCAKICAgIGhlYWRlcj1ULCAKICAgIHNlcD0nXHQnLAogICAgc3RyaW5nc0FzRmFjdG9ycz1GCiAgICApCgp0YXhvbm9teV90YWJsZSA9IAogIHJlYWQuZGVsaW0oCiAgICAnJHt0YXhvbm9teV90YWJsZV9maWxlfScsIAogICAgaGVhZGVyPVQsIAogICAgc2VwPSdcdCcsCiAgICBzdHJpbmdzQXNGYWN0b3JzPUYKICAgICkgJT4lCiAgbXV0YXRlX2FsbChhcy5jaGFyYWN0ZXIoKSkKCnNhbXBsZV9kYXRhX2NvbHVtbnMgPSBjb2xuYW1lcyhzYW1wbGVfZGF0YSkKc2FtcGxlX25hbWVzID0gc2FtcGxlX2RhdGEkU2FtcGxlTmFtZQoKYGBgCgojIyMgRXh0cmFjdCBTdWJncm91cHMKYGBge3J9CmlmICghaXNfZW1wdHkoYygke3N1Ymdyb3VwX2ZpbHRlcnN9KSkpCnsKICBzdWJncm91cF9maWx0ZXJfc3RyaW5nID0gcGFzdGUwKCR7c3ViZ3JvdXBfZmlsdGVyc30sIGNvbGxhcHNlPSIgJiAiKQogIHByaW50KHNwcmludGYoIlN1Ymdyb3VwIEZpbHRlciBTdHJpbmc6ICVzIiwgc3ViZ3JvdXBfZmlsdGVyX3N0cmluZykpCiAgc3ViZ3JvdXBfZmlsdGVyX2V4cHJlc3Npb24gPSBzdHIyZXhwcmVzc2lvbihzdWJncm91cF9maWx0ZXJfc3RyaW5nKQogIHNhbXBsZV9kYXRhID0gc2FtcGxlX2RhdGEgJT4lIGZpbHRlcihldmFsKHN1Ymdyb3VwX2ZpbHRlcl9leHByZXNzaW9uKSkKICBzYW1wbGVfbmFtZXMgPSBzYW1wbGVfZGF0YSRTYW1wbGVOYW1lCgogIGFzdl90YWJsZSA9IGFzdl90YWJsZSAlPiUgc2VsZWN0KCdBU1ZzJywgc2FtcGxlX25hbWVzKQp9CgpgYGAKCiMjIyBTZXQgRmlsdGVyaW5nCmBgYHtyfQpyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmID0gJHtyZWxhdGl2ZV9hYnVuZGFuY2VfY3V0b2ZmfQpwcmV2YWxlbmNlX2N1dG9mZiA9ICR7cHJldmFsZW5jZV9jdXRvZmZ9CmBgYAoqKnJlbGF0aXZlIGFidW5kYW5jZSBjdXRvZmY6KiogYHIgcmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZmAKKipwcmV2YWxlbmNlIGN1dG9mZjoqKiBgciBwcmV2YWxlbmNlX2N1dG9mZmAKCiMjIyBHZXQgRmlsdGVyZWQgVGF4YSBBYnVuZGFuY2UKYGBge3J9CmFidW5kYW5jZSA9IGdldEZpbHRlcmVkVGF4YUNvdW50c0RldigKICBhc3ZfdGFibGUsCiAgdGF4b25vbXlfdGFibGUsCiAgc2FtcGxlX2RhdGEsIAogIGNsdXN0ZXJfYnk9IiR7Y2x1c3RlcmluZ19sZXZlbH0iLAogIHJlbGF0aXZlX2FidW5kYW5jZV9jdXRvZmY9cmVsYXRpdmVfYWJ1bmRhbmNlX2N1dG9mZiwKICBwcmV2YWxlbmNlX2N1dG9mZj1wcmV2YWxlbmNlX2N1dG9mZiwKICBpZF9jb2w9IlNhbXBsZU5hbWUiLAogIG5vcm1hbGl6ZT1UCiAgKQoKYGBgCgojIyBDcmVhdGUgTWFzdGVyIFRhYmxlcwpgYGB7cn0KYWxsX21hc3Rlcl90YWJsZSA9IGdldE1hc3RlclRhYmxlKAogIGFidW5kYW5jZSwKICBzYW1wbGVfZGF0YSwKICAnU2FtcGxlTmFtZScsCiAgJ3Nob3J0X2dsb21tZWRfdGF4YScKKQpgYGAKCiMjIFdyaXRlIFRhYmxlCmBgYHtyfQp3YiA9IGNyZWF0ZVdvcmtib29rKCkKCmFsbF9yYW5rcyA9IGMoJ1BoeWx1bScsICdDbGFzcycsICdPcmRlcicsICdGYW1pbHknLCAnR2VudXMnKQoKaWYgKGNsdXN0ZXJpbmdfbGV2ZWwgPT0gJ0FTVicpCnsKICByYW5rc190b19rZWVwID0gYyhhbGxfcmFua3MsICdBU1ZzJykKfSBlbHNlCnsKICByYW5rc190b19rZWVwID0gYWxsX3JhbmtzWzE6bWF0Y2goY2x1c3RlcmluZ19sZXZlbCwgYWxsX3JhbmtzKV0KfQoKYWRkV29ya3NoZWV0KHdiLCBzaGVldE5hbWU9Ik1hc3RlciBUYWJsZSIpCm9wZW54bHN4Ojp3cml0ZURhdGEod2IsIHNoZWV0PSJNYXN0ZXIgVGFibGUiLCBhbGxfbWFzdGVyX3RhYmxlKQoKanVzdF90YXhhID0gYWJ1bmRhbmNlICU+JSBzZWxlY3QocmFua3NfdG9fa2VlcCwgZ2xvbW1lZF90YXhhLCBzaG9ydF9nbG9tbWVkX3RheGEpCmFkZFdvcmtzaGVldCh3Yiwgc2hlZXROYW1lPSIke3Rvb2xzOjp0b1RpdGxlQ2FzZShjbHVzdGVyaW5nX2xldmVsKX0iKQpvcGVueGxzeDo6d3JpdGVEYXRhKHdiLCBzaGVldD0iJHt0b29sczo6dG9UaXRsZUNhc2UoY2x1c3RlcmluZ19sZXZlbCl9IiwganVzdF90YXhhKQoKZmlsZW5hbWUgPSBtYWtlRGF0YUZpbGVOYW1lKAogICdtYXN0ZXJfdGFibGUueGxzeCcsCiAgIiR7dGFibGVzX2Rpcn0iLAogICIke2FuYWx5c2lzX3R5cGV9IiwKICAiJHttaXNlcV9wcm9qZWN0X3ByZWZpeH0iLAogICIke2NsdXN0ZXJpbmdfbGV2ZWx9IgopCnByaW50KGZpbGVuYW1lKQoKc2F2ZVdvcmtib29rKHdiLCBmaWxlPWZpbGVuYW1lLCBvdmVyd3JpdGU9VCkKYGBgCgoK</div>
 
 
 
@@ -2324,7 +2077,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("flexible_linear_regression_template.Rmd");
+  window.initializeSourceEmbed("pct_iga_pos_data_prep_template.Rmd");
   window.initializeCodeFolding("hide" === "show");
 });
 </script>

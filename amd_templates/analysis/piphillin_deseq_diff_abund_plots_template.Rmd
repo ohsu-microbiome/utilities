@@ -1,5 +1,5 @@
 ---
-title: "MiSeq-${miseq_run_number}"
+title: "${miseq_project_prefix}: ${analysis_type}"
 output:
   html_notebook:
     df_print: paged
@@ -38,24 +38,37 @@ output:
 
 ```{r}
 source('${project_metadata_file}')
-analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
+analysis_type = "${analysis_type}"
 analysis_type_title = tools::toTitleCase(gsub("_", " ", analysis_type))
 rank = "${clustering_level}"
 ```
 
-# MiSeq-${miseq_run_number} `r analysis_type` Differential Abundance Plots{.tabset}
+# ${miseq_project_prefix} `r analysis_type` Differential Abundance Plots{.tabset}
 Regression coefficients as effect size.
 
-
-## Clustering Level
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
+
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
 
 ## Setup {.tabset}
 
@@ -72,13 +85,8 @@ startCondaEnv('deseq', lib="~/R35")
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
-library(ggbeeswarm)
 library(openxlsx)
-library(DT)
-library(pheatmap)
-library(kableExtra)
 # library(vegan)
-library(nlme)
 library(tools)
 
 ### Custom libraries that can be loaded from GitHub
@@ -103,32 +111,37 @@ source(file.path(
   ))
 
 ```
-
-
 ### Variables of interest
+
 #### Observational Variables
 ```{r}
-genotypes = ${genotypes}
-phenotypes = ${phenotypes}
-key_covariates = ${key_covariates}
-treatments = ${treatments}
-amd_only_variables = c(key_covariates, treatments, phenotypes, genotypes) %>% unique()
+case = ${case} %>% setdiff('')
+treatments = ${treatments} %>% setdiff('')
+phenotypes = ${phenotypes} %>% setdiff('')
+genotypes = ${genotypes} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+
+linear_predictors = ${linear_predictors} %>% setdiff('')
+categorical_variables = ${categorical_variables} %>% setdiff('')
+amd_only_variables = linear_predictors %>% setdiff(case)
 ```
 
-#### Remove Age
-```{r}
-key_covariates %<>% setdiff('Age')
-amd_only_variables %<>% setdiff('Age')
-amd_only_variables %<>% setdiff('Age')
-```
+* **Case:** `r case`
+* **Key Covariates:** `r key_covariates`
+* **Categorical Variables:**  `r categorical_variables`
 
-* **Genotype variables:** `r genotypes`
-* **Phenotype variables:** `r phenotypes`
-* **Treatment variables:** `r treatments`
-* **Other covariates:**  `r key_covariates`
 
 ## Plots {.tabset}
 ### [ ] Close
+```{r}
+getFigHeight = function(num_features)
+{
+  # fig_height = num_features*exp(0.004*num_features)
+  fig_height = 0.3*num_features
+  return(max(fig_height, 1))
+}
+```
+
 
 ### All Subgroups -- Case/Control
 ```{r, fig.width=10}
@@ -137,7 +150,7 @@ wb_filename = makeDataFileName(
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(wb_filename)
@@ -145,13 +158,26 @@ print(wb_filename)
 data = 
   readWorkbook(wb_filename) 
 
-# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
-sig_data = data %>% arrange(CaseString_AMD_vs_Control.padj) %>% head(20)
+data %>% 
+  pull(CaseString_AMD_vs_Control.padj) %>%
+  min() %>% 
+  signif(., 3) %>%
+  sprintf("Min Pval: %s", .) %>%
+  print()
 
-if (dim(sig_data)[1] < 1)
-{
-  
-} else
+# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+sig_data = 
+  data %>% 
+  arrange(CaseString_AMD_vs_Control.padj) %>% 
+  filter(CaseString_AMD_vs_Control.padj < 0.1)
+
+num_features = dim(sig_data)[1]
+fig_height = getFigHeight(num_features)
+print(fig_height)
+```
+
+```{r, fig.width=10, fig.height=getFigHeight(num_features)}
+if (dim(sig_data)[1] > 0)
 {
   plotEffectSize2(
     data=sig_data,
@@ -160,8 +186,9 @@ if (dim(sig_data)[1] < 1)
     feature_col="PathwayName",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control: Log2 Fold Change")
-  )
+    plot_title=paste0("AMD/Control: Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
 }
   
 
@@ -174,7 +201,7 @@ wb_filename = makeDataFileName(
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(wb_filename)
@@ -182,14 +209,26 @@ print(wb_filename)
 data = 
   readWorkbook(wb_filename) 
 
+data %>% 
+  pull(CaseString_AMD_vs_Control.padj) %>%
+  min() %>% 
+  signif(., 3) %>%
+  sprintf("Min Pval: %s", .) %>%
+  print()
+
 # sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
-sig_data = data %>% arrange(CaseString_AMD_vs_Control.padj) %>% head(20)
+sig_data = 
+  data %>% 
+  arrange(CaseString_AMD_vs_Control.padj) %>% 
+  filter(CaseString_AMD_vs_Control.padj < 0.1)
 
+num_features = dim(sig_data)[1]
+fig_height = getFigHeight(num_features)
+print(fig_height)
+```
 
-if (dim(sig_data)[1] < 1)
-{
-  
-} else
+```{r, fig.width=10, fig.height=getFigHeight(num_features)}
+if (dim(sig_data)[1] > 0)
 {
 
   plotEffectSize2(
@@ -199,7 +238,8 @@ if (dim(sig_data)[1] < 1)
     feature_col="PathwayName",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control + Gender + Tissue_code: Log2 Fold Change")
+    plot_title=paste0("AMD/Control + Gender + Tissue_code: Log2 Fold Change") %>% print(),
+    subtitle="${analysis_subtitle}"
   )
 }
 ```
@@ -212,7 +252,7 @@ wb_filename = makeDataFileName(
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(wb_filename)
@@ -220,13 +260,27 @@ print(wb_filename)
 data = 
   readWorkbook(wb_filename) 
 
-# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
-sig_data = data %>% arrange(CaseString_AMD_vs_Control.padj) %>% head(20)
+data %>% 
+  pull(CaseString_AMD_vs_Control.padj) %>%
+  min() %>% 
+  signif(., 3) %>%
+  sprintf("Min Pval: %s", .) %>%
+  print()
 
-if (dim(sig_data)[1] < 1)
-{
-  
-} else
+# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+sig_data = 
+  data %>% 
+  arrange(CaseString_AMD_vs_Control.padj) %>% 
+  filter(CaseString_AMD_vs_Control.padj < 0.1)
+
+num_features = dim(sig_data)[1]
+fig_height = getFigHeight(num_features)
+print(fig_height)
+```
+
+```{r, fig.width=10, fig.height=getFigHeight(num_features)}
+
+if (dim(sig_data)[1] > 0)
 {
   plotEffectSize2(
     data=sig_data,
@@ -235,8 +289,9 @@ if (dim(sig_data)[1] < 1)
     feature_col="PathwayName",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control: Log2 Fold Change")
-  )
+    plot_title=paste0("AMD/Control: Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
 }
 ```
 
@@ -247,7 +302,7 @@ wb_filename = makeDataFileName(
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(wb_filename)
@@ -255,13 +310,26 @@ print(wb_filename)
 data = 
   readWorkbook(wb_filename) 
 
-# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
-sig_data = data %>% arrange(CaseString_AMD_vs_Control.padj) %>% head(20)
+data %>% 
+  pull(CaseString_AMD_vs_Control.padj) %>%
+  min() %>% 
+  signif(., 3) %>%
+  sprintf("Min Pval: %s", .) %>%
+  print()
 
-if (dim(sig_data)[1] < 1)
-{
-  
-} else
+# sig_data = data %>% filter(CaseString_AMD_vs_Control.padj <= 0.2)
+sig_data = 
+  data %>% 
+  arrange(CaseString_AMD_vs_Control.padj) %>% 
+  filter(CaseString_AMD_vs_Control.padj < 0.1)
+
+num_features = dim(sig_data)[1]
+fig_height = getFigHeight(num_features)
+print(fig_height)
+```
+
+```{r, fig.width=10, fig.height=getFigHeight(num_features)}
+if(dim(sig_data)[1] > 0)
 { 
   plotEffectSize2(
     data=sig_data,
@@ -270,43 +338,53 @@ if (dim(sig_data)[1] < 1)
     feature_col="PathwayName",
     alpha_col='CaseString_AMD_vs_Control.padj',
     alpha_legend_title="Adjusted P-Values",
-    plot_title=paste0(rank,": AMD/Control + Gender + Tissue_code: Log2 Fold Change")
-  )
+    plot_title=paste0("AMD/Control + Gender + Tissue_code: Log2 Fold Change"),
+    subtitle="${analysis_subtitle}"
+  ) %>% print()
 }
 ```
 
 
 ### AMD Only -- individual variables
-```{r, fig.width=10}
+```{r, fig.width=10, fig.height=10}
 wb_filename = makeDataFileName(
   'amd_only_individual_variables.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(wb_filename)
 
-
 for (varname in amd_only_variables)
 {
+  print(varname)
+  
   data = 
     readWorkbook(wb_filename, sheet=varname) 
-  
+
   match_string = paste0(varname, '.*\\.padj')
   padj_col = grep(match_string, colnames(data), value=T)
+   
+  data %>% 
+    pull(padj_col) %>%
+    min() %>% 
+    signif(., 3) %>%
+    sprintf("Min Pval: %s", .) %>%
+    print()
   
   match_string = paste0(varname, '.*\\.L2FC')
   effect_size_col = grep(match_string, colnames(data), value=T)
   
   # sig_data = data %>% filter(!!as.name(padj_col) <= 0.2)
-  sig_data = data %>% arrange(!!as.name(padj_col)) %>% head(20)
+  sig_data = data %>% 
+    arrange(!!as.name(padj_col)) %>% 
+    filter(!!as.name(padj_col) <= 0.1)
+  
+  print(sprintf("Num sig features: %s", dim(sig_data)[1]))
 
-  if (dim(sig_data)[1] < 1)
-  {
-    
-  } else
+  if (dim(sig_data)[1] > 0)
   {
     for (i in 1:length(padj_col))
     {
@@ -323,7 +401,8 @@ for (varname in amd_only_variables)
         feature_col="PathwayName",
         alpha_col=padj_col[i],
         alpha_legend_title="Adjusted P-Values",
-        plot_title=paste0(varname, " + Gender + Tissue_code: Log2 Fold Change")
+        plot_title=paste0(varname, ": Log2 Fold Change"),
+  subtitle="${analysis_subtitle}"
       ) %>% print()
     }  
   }
@@ -333,36 +412,45 @@ for (varname in amd_only_variables)
 
 
 ### AMD Only -- Genotypes, Phenotypes, and AREDS with Controls
-```{r, fig.width=10}
+```{r, fig.width=10, fig.height=10}
 wb_filename = makeDataFileName(
   'amd_only_variables_with_controls.xlsx',
   "${tables_dir}",
   "${analysis_type}",
   "${miseq_project_prefix}",
-  "rank"
+  "${clustering_level}"
 )
 
 print(wb_filename)
 
 for (varname in c(genotypes, phenotypes, treatments))
 {
-  # rank = 'Genus'
+  print(varname)
+  
   data = 
     readWorkbook(wb_filename, sheet=varname) 
   
   match_string = paste0(varname, '.*\\.padj')
   padj_col = grep(match_string, colnames(data), value=T)
   
+  data %>% 
+    pull(padj_col) %>%
+    min() %>% 
+    signif(., 3) %>%
+    sprintf("Min Pval: %s", .) %>%
+    print()
+  
   match_string = paste0(varname, '.*\\.L2FC')
   effect_size_col = grep(match_string, colnames(data), value=T)
   
   # sig_data = data %>% filter(!!as.name(padj_col) <= 0.2)
-  sig_data = data %>% arrange(!!as.name(padj_col)) %>% head(20)
+  sig_data = data %>% 
+    arrange(!!as.name(padj_col)) %>% 
+    filter(!!as.name(padj_col) <= 0.1)
+  
+  print(sprintf("Num sig features: %s", dim(sig_data)[1]))
 
-  if (dim(sig_data)[1] < 1)
-  {
-    
-  } else
+  if (dim(sig_data)[1] > 0)
   {
     for (i in 1:length(padj_col))
     {
@@ -378,11 +466,11 @@ for (varname in c(genotypes, phenotypes, treatments))
         feature_col="PathwayName",
         alpha_col=padj_col[i],
         alpha_legend_title="Adjusted P-Values",
-        plot_title=paste0(varname, " + Gender + Tissue_code: Log2 Fold Change")
+        plot_title=paste0(varname, " + Gender + Tissue_code: Log2 Fold Change"),
+        subtitle="${analysis_subtitle}"
       ) %>% print()
     }
   }
 }
 ```
-
 

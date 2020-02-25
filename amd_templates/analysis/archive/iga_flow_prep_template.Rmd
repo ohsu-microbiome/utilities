@@ -41,19 +41,33 @@ source('${project_metadata_file}')
 analysis_type = "${analysis_type}"
 clustering_level = "${clustering_level}"
 tables_dir = "${tables_dir}"
-use_allbac = ${use_allbac}
 ```
 
-# MiSeq-${miseq_run_number} Logistic Regression Data Prep{.tabset}
-## Clustering Level
+# MiSeq-${miseq_run_number} Basic Data Prep{.tabset}
+
+**Clustering**
 Data clustered at the `r toupper('${clustering_level}')` Level.
 
-## Filtering
-* **Relative Abundance Cutoff:** ${relative_abundance_cutoff}
+**Subgroups**
+```{r, results='asis', echo=FALSE}
+for (sg_filter in c(${subgroup_filters}))
+{
+  cat(sg_filter, '\n\n')
+}
+```
+
+**Filtering**
+* **Relative Abundance cutoff:** ${relative_abundance_cutoff}
 * **Prevalence Cutoff:** ${prevalence_cutoff}
 * **Min Count Cutoff:** ${min_count_cutoff}
 
-## Setup 
+```{r}
+relative_abundance_cutoff = ${relative_abundance_cutoff}
+prevalence_cutoff = ${prevalence_cutoff}
+min_count_cutoff = ${min_count_cutoff}
+```
+
+## Setup
 
 ### [Close]
 
@@ -65,8 +79,6 @@ startCondaEnv('base')
 ### Load Libraries
 ```{r}
 library(rmarkdown)
-library(knitr)
-
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
@@ -84,7 +96,6 @@ source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 
 ### Set Knitr Options
 ```{r}
-
 ${knitr_options}
 ```
 
@@ -107,32 +118,25 @@ taxonomy_table =
     ) %>%
   mutate_all(as.character())
 
-# sample_data = 
-#   read.delim(
-#     '${sample_data_file}', 
-#     header=T, 
-#     sep='\t',
-#     stringsAsFactors=F
-#     ) %>%
-#   filter(SampleID!='Undetermined')
-
 sample_data = read.xlsx('${sample_data_file}')
-
-if ("IGA" %in% colnames(sample_data) & use_allbac)
-{
-  sample_data = 
-    sample_data %>%
-    filter(IGA=='AllBac')
-
-  sample_names = sample_data$SampleName
-  
-  asv_table = 
-    asv_table %>%
-    select('ASVs', ends_with('AllBac'))
-}
 
 sample_data_columns = colnames(sample_data)
 sample_names = sample_data$SampleName
+
+```
+
+### Extract Subgroups
+```{r}
+if (!is_empty(c()))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
+
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
 
 ```
 
@@ -146,56 +150,49 @@ prevalence_cutoff = ${prevalence_cutoff}
 
 ### Get Filtered Taxa Abundance
 ```{r}
-taxa_abundance = getFilteredTaxaCountsDev(
+abundance = getFilteredTaxaCountsDev(
   asv_table,
   taxonomy_table,
   sample_data, 
-  cluster_by=${clustering_level},
+  cluster_by="${clustering_level}",
   relative_abundance_cutoff=relative_abundance_cutoff,
   prevalence_cutoff=prevalence_cutoff,
   id_col="SampleName",
   normalize=T
   )
 
-filtered_taxa = taxa_abundance$short_glommed_taxa
 ```
 
-## Create Master Table
+## Create Master Tables
 ```{r}
-master_table = getMasterTable(
-  taxa_abundance,
+all_master_table = getMasterTable(
+  abundance,
   sample_data,
   'SampleName',
   'short_glommed_taxa'
 )
 ```
 
-
 ## Write Table
 ```{r}
-logistic_regression_prep = createWorkbook()
+wb = createWorkbook()
 
-addWorksheet(
-  wb=logistic_regression_prep, 
-  sheetName="Master Table"
-  )
+all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
 
-openxlsx::writeData(
-  wb=logistic_regression_prep, 
-  sheet="Master Table", 
-  x=master_table
-  )
+if (clustering_level == 'ASV')
+{
+  ranks_to_keep = c(all_ranks, 'ASVs')
+} else
+{
+  ranks_to_keep = all_ranks[1:match(clustering_level, all_ranks)]
+}
 
-addWorksheet(
-  wb=logistic_regression_prep, 
-  sheetName="Filtered Taxa"
-  )
+addWorksheet(wb, sheetName="Master Table")
+openxlsx::writeData(wb, sheet="Master Table", all_master_table)
 
-openxlsx::writeData(
-  wb=logistic_regression_prep,
-  sheet="Filtered Taxa", 
-  x=filtered_taxa
-  )
+just_taxa = abundance %>% select(ranks_to_keep, glommed_taxa, short_glommed_taxa)
+addWorksheet(wb, sheetName="${tools::toTitleCase(clustering_level)}")
+openxlsx::writeData(wb, sheet="${tools::toTitleCase(clustering_level)}", just_taxa)
 
 filename = makeDataFileName(
   'master_table.xlsx',
@@ -204,10 +201,9 @@ filename = makeDataFileName(
   "${miseq_project_prefix}",
   "${clustering_level}"
 )
-
 print(filename)
 
-saveWorkbook(logistic_regression_prep, file=filename, overwrite=T)
+saveWorkbook(wb, file=filename, overwrite=T)
 ```
 
 
