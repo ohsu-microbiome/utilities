@@ -2350,13 +2350,15 @@ getMultipleRegressionStats = function(
 )
 {
 
-  # predictor_vars=all_variables
-  # response_vars=calculated_exp_vars
-  # master_table=all_master_table
+  # linear_predictors = c("CaseString", "Age", "Gender")
+  # predictor_vars=observational_variables[linear_predictors]
+  # response_vars=top_n_features
+  # master_table=iga_index_master_table
   # stats=c('pvalue', 'effect_size', 'std_error')
-  # response_var_name="Index"
+  # response_var_name="Taxa"
   # adjustment_method="BH"
-  # parametric=T
+  # log_regularizer=0.002
+  # transformation="log"
 
   ### Get contrast names
   contrast_names = makeContrastNames(
@@ -2385,7 +2387,7 @@ getMultipleRegressionStats = function(
   ### Perform regression in loop over response vars
   for (var in response_vars)
   {
-    # print(sprintf('response var: %s', var))
+    print(sprintf('response var: %s', var))
 
     ### Build Formula
     if (transformation=='log')

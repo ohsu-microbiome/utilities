@@ -202,17 +202,20 @@ prevotella_genera = paste0(c(
   collapse=""
 )
 prevotella_genera
+
+genus_abundance$short_glommed_taxa %>% grep("Prevotella", ., value=T) %>% print()
 ```
 
 Prevotella genera from Silva database website https://www.arb-silva.de/search/:
 `r prevotella_genera`
 
+**NOTE:** Switched to matchine any genus matching string "Prevotella"
 
 ```{r}
 all_master_table %<>%
   mutate(
     FractionPrevotellaAll = 
-      select(., matches(prevotella_genera)) %>% 
+      select(., matches("prevotella")) %>% 
       rowSums(),
     FractionBacteroidetes = 
       select(., starts_with('Bacteroidetes_')) %>% 

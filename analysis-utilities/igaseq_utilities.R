@@ -3,7 +3,7 @@ library(tidyr)
 library(magrittr)
 library(ggplot2)
 library(ggbeeswarm)
-library(pwr)
+# library(pwr)
 
 
 removeOutlierRows = function(
@@ -252,19 +252,6 @@ makePvalPlot = function(
 
   print(sprintf("taxon=%s, variable=%s", data_col, variable_name))
 
-  if (stats$N[1]>=2 & stats$N[2]>=2)
-  {
-    power = pwr.t2n.test(
-      n1=stats$N[1],
-      n2=stats$N[2],
-      d=effect_size,
-      sig.level=0.2
-    )
-    print(power)
-  } else
-  {
-    warning("Insufficient sample size for power calculation.")
-  }
 
   num_case =
     plot_data %>%

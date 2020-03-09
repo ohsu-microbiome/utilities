@@ -181,17 +181,17 @@ sample_names = sample_data$SampleName
 
 ### Extract Subgroups
 ```{r}
-subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
-print(subgroup_filter_string)
-subgroup_filter_expression = str2expression(subgroup_filter_string)
-```
-`r subgroup_filter_string`
+if (!is.null(c(${subgroup_filters})))
+{
+  subgroup_filter_string = paste0(${subgroup_filters}, collapse=" & ")
+  print(sprintf("Subgroup Filter String: %s", subgroup_filter_string))
+  subgroup_filter_expression = str2expression(subgroup_filter_string)
+  sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
+  sample_names = sample_data$SampleName
 
-```{r}
-sample_data = sample_data %>% filter(eval(subgroup_filter_expression))
-sample_names = sample_data$SampleName
+  asv_table = asv_table %>% select('ASVs', sample_names)
+}
 
-asv_table = asv_table %>% select('ASVs', sample_names)
 ```
 
 

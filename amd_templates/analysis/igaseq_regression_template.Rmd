@@ -38,8 +38,8 @@ h4 {
 
 
 ```{r}
-analysis_type = ${analysis_type}
-clustering_level = ${clustering_level}
+analysis_type = "${analysis_type}"
+clustering_level = "${clustering_level}"
 analysis_title = "IgA-Seq"
 ```
 
@@ -94,7 +94,6 @@ source('~/utilities/amd_templates/setup/amd_project_utilities.R')
 ### Set Knitr Options
 ```{r}
 ${knitr_options}
-
 ```
 
 ### Load Data
@@ -127,6 +126,29 @@ source(filename)
 
 **Included Taxa: `print(top_n_features)`
 
+## Variables of interest
+#### Observational Variables
+```{r}
+case = ${case} %>% setdiff('')
+key_covariates = ${key_covariates} %>% setdiff('')
+linear_predictors = ${linear_predictors} %>% setdiff('')
+logistic_predictors = ${logistic_predictors} %>% setdiff('')
+```
+
+* **Case:** ${case}
+* **Key Covariates:** ${key_covariates}
+* **linear_predictors:** ${linear_predictors}
+* **logistic_predictors:** ${logistic_predictors}
+
+
+### Response Variables
+
+```{r}
+raw_exp_vars = ${raw_exp_vars}
+calculated_exp_vars = ${calculated_exp_vars}
+all_experimental_variables = c(raw_exp_vars, calculated_exp_vars)
+```
+
 
 ### Set Factor Levels
 ```{r}
@@ -150,50 +172,36 @@ alt_index_master_table = setFactorsLevels(
 ```
 
 
-
-## Preditor Variables (observational)
-```{r}
-print(observational_variables)
-```
-
-
 ### Determine which covariates have sufficient samples for each value
 ```{r}
-num_samples_threshold = 5
-
-all_variables = filterVarsBySampleThreshold(
-  iga_index_master_table,
-  num_samples_threshold,
-  observational_variables
-  )
-
-age_lt_90_variables = filterVarsBySampleThreshold(
-  iga_index_master_table,
-  num_samples_threshold,
-  observational_variables
-  )
-
-amd_only_variables = filterVarsBySampleThreshold(
-  iga_index_master_table %>% select(-CaseString),
-  num_samples_threshold,
-  observational_variables
-  )
-
-control_only_variables = filterVarsBySampleThreshold(
-  iga_index_master_table %>% filter(CaseString=='Control') %>% select(-CaseString),
-  num_samples_threshold,
-  observational_variables
-  )
+# num_samples_threshold = 5
+# 
+# all_variables = filterVarsBySampleThreshold(
+#   iga_index_master_table,
+#   num_samples_threshold,
+#   observational_variables[linear_predictors]
+#   )
+# 
+# age_lt_90_variables = filterVarsBySampleThreshold(
+#   iga_index_master_table,
+#   num_samples_threshold,
+#   observational_variables[linear_predictors]
+#   )
+# 
+# amd_only_variables = filterVarsBySampleThreshold(
+#   iga_index_master_table %>% select(-CaseString),
+#   num_samples_threshold,
+#   observational_variables[linear_predictors]
+#   )
+# 
+# control_only_variables = filterVarsBySampleThreshold(
+#   iga_index_master_table %>% filter(CaseString=='Control') %>% select(-CaseString),
+#   num_samples_threshold,
+#   observational_variables[linear_predictors]
+#   )
 
 ```
 
-## Response Variables
-
-```{r}
-raw_exp_vars = ${raw_exp_vars}
-calculated_exp_vars = ${calculated_exp_vars}
-all_experimental_variables = c(raw_exp_vars, calculated_exp_vars)
-```
 **Raw Experimental Variables: ** `r raw_exp_vars`
 **Calculated Experimental Variables: ** `r calculated_exp_vars`
 
@@ -213,7 +221,7 @@ response_var_name = "${response_var_name}"
 
 ```{r}
 all_iga_index_regression_stats = getMultipleRegressionStats(
-  predictor_vars=all_variables,
+  predictor_vars=observational_variables[linear_predictors],
   response_vars=top_n_features,
   master_table=iga_index_master_table,
   stats=stats,
@@ -224,7 +232,7 @@ all_iga_index_regression_stats = getMultipleRegressionStats(
 )
 
 all_ici_score_regression_stats = getMultipleRegressionStats(
-  predictor_vars=all_variables,
+  predictor_vars=observational_variables[linear_predictors],
   response_vars=top_n_features,
   master_table=ici_score_master_table,
   stats=stats,
@@ -235,7 +243,7 @@ all_ici_score_regression_stats = getMultipleRegressionStats(
 )
 
 all_log_ici_score_regression_stats = getMultipleRegressionStats(
-  predictor_vars=all_variables,
+  predictor_vars=observational_variables[linear_predictors],
   response_vars=top_n_features,
   master_table=log_ici_score_master_table,
   stats=stats,
@@ -251,7 +259,7 @@ all_log_ici_score_regression_stats = getMultipleRegressionStats(
 ### Age < 90
 ```{r}
 age_lt_90_iga_index_regression_stats = getMultipleRegressionStats(
-  predictor_vars=age_lt_90_variables,
+  predictor_vars=observational_variables[linear_predictors],
   response_vars=top_n_features,
   master_table=iga_index_master_table %>% filter(Age < 90),
   stats=stats,
@@ -262,7 +270,7 @@ age_lt_90_iga_index_regression_stats = getMultipleRegressionStats(
 )
 
 age_lt_90_ici_score_regression_stats = getMultipleRegressionStats(
-  predictor_vars=age_lt_90_variables,
+  predictor_vars=observational_variables[linear_predictors],
   response_vars=top_n_features,
   master_table=ici_score_master_table %>% filter(Age < 90),
   stats=stats,
@@ -273,7 +281,7 @@ age_lt_90_ici_score_regression_stats = getMultipleRegressionStats(
 )
 
 age_lt_90_log_ici_score_regression_stats = getMultipleRegressionStats(
-  predictor_vars=age_lt_90_variables,
+  predictor_vars=observational_variables[linear_predictors],
   response_vars=top_n_features,
   master_table=log_ici_score_master_table %>% filter(Age < 90),
   stats=stats,
@@ -287,8 +295,10 @@ age_lt_90_log_ici_score_regression_stats = getMultipleRegressionStats(
 
 ### AMD Only
 ```{r}
+amd_only_linear_predictors = linear_predictors %>% setdiff(c("CaseString","AREDS"))
+
 amd_only_iga_index_regression_stats = getMultipleRegressionStats(
-  predictor_vars=amd_only_variables,
+  predictor_vars=observational_variables[amd_only_linear_predictors],
   response_vars=top_n_features,
   master_table=iga_index_master_table %>% filter(CaseString=='AMD'),
   stats=stats,
@@ -299,7 +309,7 @@ amd_only_iga_index_regression_stats = getMultipleRegressionStats(
 )
 
 amd_only_ici_score_regression_stats = getMultipleRegressionStats(
-  predictor_vars=amd_only_variables,
+  predictor_vars=observational_variables[amd_only_linear_predictors],
   response_vars=top_n_features,
   master_table=ici_score_master_table %>% filter(CaseString=='AMD'),
   stats=stats,
@@ -310,7 +320,7 @@ amd_only_ici_score_regression_stats = getMultipleRegressionStats(
 )
 
 amd_only_log_ici_score_regression_stats = getMultipleRegressionStats(
-  predictor_vars=amd_only_variables,
+  predictor_vars=observational_variables[amd_only_linear_predictors],
   response_vars=top_n_features,
   master_table=log_ici_score_master_table %>% filter(CaseString=='AMD'),
   stats=stats,
@@ -325,15 +335,15 @@ amd_only_log_ici_score_regression_stats = getMultipleRegressionStats(
 ## Logistic Regression
 ### Logistic Predictor Vars
 ```{r}
-num_samples_threshold = 5
-
-all_variables = filterVarsBySampleThreshold2(
-  all_master_table,
-  num_samples_threshold,
-  observational_variables
-  )
-
-vars = setdiff(all_variables %>% names(), c('CaseString', 'AREDS'))
+# num_samples_threshold = 5
+# 
+# all_variables = filterVarsBySampleThreshold2(
+#   all_master_table,
+#   num_samples_threshold,
+#   observational_variables[logistic_predictors]
+#   )
+# 
+# vars = setdiff(all_variables %>% names(), c('CaseString', 'AREDS'))
 ```
 
 ```
@@ -439,7 +449,7 @@ for (tab_name in regression_stats_table_names)
 
 ```
 
-```{r}
+```
 addWorksheet(
   regression_pvalues, 
   sheetName="Logistic P-Values"
