@@ -5,28 +5,28 @@ library(magrittr)
 # out = ols_step_all_possible(all)
 #
 # res =
-#   out %>%
-#   arrange(-adjr) %>%
-#   select(mindex, predictors, adjr) %>%
-#   head(5) %>%
-#   full_join(
-#     out %>%
-#       arrange(cp) %>%
-#       select(mindex, predictors, cp) %>%
-#       head(5)
-#   ) %>%
-#   full_join(
-#     out %>%
-#       arrange(aic) %>%
-#       select(mindex, predictors, aic) %>%
-#       head(5)
-#   ) %>%
-#   full_join(
-#     out %>%
-#       arrange(sbic) %>%
-#       select(mindex, predictors, sbic) %>%
-#       head(5)
-#   )
+  # out %>%
+  # arrange(-adjr) %>%
+  # select(mindex, predictors, adjr) %>%
+  # head(5) %>%
+  # full_join(
+  #   out %>%
+  #     arrange(cp) %>%
+  #     select(mindex, predictors, cp) %>%
+  #     head(5)
+  # ) %>%
+  # full_join(
+  #   out %>%
+  #     arrange(aic) %>%
+  #     select(mindex, predictors, aic) %>%
+  #     head(5)
+  # ) %>%
+  # full_join(
+  #   out %>%
+  #     arrange(sbic) %>%
+  #     select(mindex, predictors, sbic) %>%
+  #     head(5)
+  # )
 # ```
 
 getDiagnosticCutoffs = function(model)
@@ -57,7 +57,7 @@ getDiagnosticCutoffs = function(model)
 }
 
 
-findOutliers = function(model)
+findOutliers = function(model, top_N="all")
 {
   dc = getDiagnosticCutoffs(model)
 
@@ -92,8 +92,34 @@ findOutliers = function(model)
 
   outliers %<>%
     filter_at(vars(-obs_number), any_vars(!is.na(.))) %>%
-    mutate_all(~signif(., 3))
+    mutate_all(~signif(., 3)) %>%
+    mutate_all(~as.numeric(.))
 
-  return(outliers)
+  if (top_N != "all" && is.numeric(top_N))
+  {
+    all_tests = colnames(outliers) %>% setdiff("obs_number")
+    top_N_outliers = data.frame(obs_number=numeric())
+
+    for (test in all_tests)
+    {
+      top_N_outliers %<>%
+        full_join(
+          outliers %>%
+            select(!!test, obs_number) %>%
+            arrange(-!!as.name(test)) %>%
+            head(5) %>%
+            filter(!is.na(!!as.name(test))),
+          by="obs_number"
+        )
+    }
+
+    return(top_N_outliers)
+  } else
+  {
+    return(outliers)
+  }
 
 }
+
+
+
