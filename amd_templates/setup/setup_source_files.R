@@ -23,22 +23,22 @@ getCurrentFileLocation <-  function()
 print("getting location of setup_source_file.R (this file)")
 setup_script_dir = getCurrentFileLocation()
 print(sprintf("this script dir: %s", setup_script_dir))
-utilities_dir = '~/utilities'
 
 source(file.path(setup_script_dir, 'amd_project_utilities.R'))
 
 project_root = findProjectRoot(getwd(), '.proj_root')
 print(sprintf("project root: %s", project_root))
-miseq_project_prefix = gsub("([\\/\\w\\-\\._]+\\/)","", project_root, perl=T)
-print(sprintf("miseq project prefix: %s", miseq_project_prefix))
-miseq_run_number = gsub("[^0-9]+([0-9]+).*", "\\1", miseq_project_prefix)
-print(sprintf("miseq run number: %s", miseq_run_number))
 
 print("****  sourcing project metadata  ****")
 project_metadata_file = file.path(project_root, "metadata", "project_metadata.R")
 print(sprintf("project metadata file: %s", project_metadata_file))
 print(file.exists(project_metadata_file))
 source(project_metadata_file)
+
+# miseq_projeVct_prefix = gsub("([\\/\\w\\-\\._]+\\/)","", project_root, perl=T)
+print(sprintf("miseq project prefix: %s", miseq_project_prefix))
+# miseq_run_number = gsub("[^0-9]+([0-9]+).*", "\\1", miseq_project_prefix)
+print(sprintf("miseq run number: %s", miseq_run_number))
 
 print("****  getting analysis dir with getwd()  ****")
 src_dir = getwd()

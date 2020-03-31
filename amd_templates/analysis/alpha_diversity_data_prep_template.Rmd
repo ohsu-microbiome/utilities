@@ -93,9 +93,9 @@ library(DT)
 library(openxlsx)
 
 ### Custom libraries that can be loaded from GitHub
-source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/alpha_div_utilities.R')
-source('~/utilities/amd_templates/setup/amd_project_utilities.R')
+source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/alpha_div_utilities.R')
+
 ```
 
 ### Set Knitr Options

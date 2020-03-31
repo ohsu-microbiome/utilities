@@ -77,8 +77,8 @@ generateSourceFile = function(
   print(sprintf("Analysis  metadata file: %s", analysis_metadata_file))
   source(analysis_metadata_file)
 
-  templates_dir = file.path(utilities_dir, 'amd_templates/analysis')
-  # print(sprintf("templates dir: %s", templates_dir))
+  # templates_dir = file.path(utilities_dir, 'amd_templates/analysis')
+  print(sprintf("templates dir: %s", templates_dir))
 
   template_filename = paste(template_type, 'template.Rmd', sep='_')
   # print(sprintf("template filename: %s", template_filename))

@@ -91,8 +91,8 @@ library(vegan)
 library(plotly)
 
 ### Custom libraries that can be loaded from GitHub
-source('~/utilities/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('~/utilities/analysis-utilities/beta_diversity_utilities.R')
+source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/beta_diversity_utilities.R')
 ```
 
 ### Set Knitr Options
