@@ -82,7 +82,7 @@ library(magrittr)
 library(ggplot2)
 library(ggbeeswarm)
 library(openxlsx)
-library(DT)
+
 library(pheatmap)
 library(kableExtra)
 library(vegan)
@@ -90,8 +90,9 @@ library(phyloseq)
 library(plotly)
 
 ### Custom libraries that can be loaded from GitHub
-source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/beta_diversity_utilities.R')
+source('${utilities_dir}/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('${utilities_dir}/amd_templates/setup/amd_project_utilities.R')
+source('${utilities_dir}/analysis-utilities/beta_diversity_utilities.R')
 ```
 
 ### Set Knitr Options

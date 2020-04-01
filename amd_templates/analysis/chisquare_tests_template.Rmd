@@ -83,7 +83,7 @@ library(rmarkdown)
 
 library(tidyverse)
 library(magrittr)
-library(DT)
+
 library(openxlsx)
 library(ggplot2)
 library(ggbeeswarm)
@@ -91,7 +91,8 @@ library(pheatmap)
 library(vcd)
 
 ### Custom libraries that can be loaded from GitHub
-source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('${utilities_dir}/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('${utilities_dir}/amd_templates/setup/amd_project_utilities.R')
 
 ```
 

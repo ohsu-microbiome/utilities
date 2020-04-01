@@ -89,16 +89,17 @@ library(tidyverse)
 library(magrittr)
 library(ggplot2)
 library(openxlsx)
-library(DT)
+
 library(kableExtra)
 library(DESeq2)
 library(KEGGREST)
 
 ### Custom libraries that can be loaded from GitHub
-source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/general_asv_data_analysis_utilities.R')
-source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/deseq_utilities.R')
+source('${utilities_dir}/analysis-utilities/general_asv_data_analysis_utilities.R')
+source('${utilities_dir}/amd_templates/setup/amd_project_utilities.R')
+source('${utilities_dir}/analysis-utilities/deseq_utilities.R')
 
-source('https://raw.githubusercontent.com/ohsu-microbiome/utilities/master/analysis-utilities/pathway_utilities.R')
+source('${utilities_dir}/analysis-utilities/pathway_utilities.R')
 ```
 
 ### Set Knitr Options
