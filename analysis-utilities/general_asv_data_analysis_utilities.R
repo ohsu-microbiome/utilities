@@ -539,6 +539,7 @@ getRelativeAbundance = function(counts)
   return(relative_abundance)
 }
 
+
 getFilteredTaxaCounts = function(
   asv_table,
   taxonomy_table,
@@ -631,7 +632,7 @@ getFilteredTaxaCounts = function(
     filtered_asvs,
     clean_taxonomy_table,
     by="ASVs"
-    )
+  )
 
   if (!is.na(cluster_by) & toupper(cluster_by) != 'ASV')
   {
@@ -672,11 +673,11 @@ getFilteredTaxaCounts = function(
   # print("current dim")
   # print(dim(filtered_counts))
 
- # filtered_counts %>%
- #   select(age_ordered_samples) %>%
- #   colSums() %>%
- #   is.na() %>%
- #   which()
+  # filtered_counts %>%
+  #   select(age_ordered_samples) %>%
+  #   colSums() %>%
+  #   is.na() %>%
+  #   which()
 
 
   if (normalize)
@@ -711,15 +712,17 @@ getFilteredTaxaCounts = function(
     # print('glommed taxa names')
   }
 
- # filtered_counts %>%
- #   select(age_ordered_samples) %>%
- #   colSums() %>%
- #   is.na() %>%
- #   which()
+  # filtered_counts %>%
+  #   select(age_ordered_samples) %>%
+  #   colSums() %>%
+  #   is.na() %>%
+  #   which()
 
   return(filtered_counts %>% data.frame())
 
 }
+
+
 
 getRelAbund = function(
   counts,
