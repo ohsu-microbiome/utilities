@@ -1,5 +1,5 @@
-library(tidyverse)
-library(magrittr)
+# library(tidyverse)
+# library(magrittr)
 
 getAggregatedTaxaRankCounts = function(
   taxonomy_table, # Table with ASVs and taxa ranks as columns, taxa names as values
@@ -26,14 +26,14 @@ getAggregatedTaxaRankCounts = function(
                     paste(dim(asv_table), collapse=" "),
                     clean
   )
-  writeLines(im_here)
+  # writeLines(im_here)
 
   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
-  print(lowest_rank)
+  # print(lowest_rank)
   lowest_rank_index = match(lowest_rank, all_ranks)
   ranks_to_glom = all_ranks[1:lowest_rank_index]
-  print("ranks_to_glom")
-  print(ranks_to_glom)
+  # print("ranks_to_glom")
+  # print(ranks_to_glom)
 
   sampleIDs = as.vector(metadata$SampleID)
 
@@ -51,7 +51,7 @@ getAggregatedTaxaRankCounts = function(
   # print(setdiff(colnames(asv_table), metadata[['SampleID']]))
 
 
-  print("creating tax abundance table")
+  # print("creating tax abundance table")
   tax_abundance_table =
     ### Join asv_table and taxonomy_table on ASVs to get sample abundances and rank names
     asv_table %>%
@@ -135,16 +135,16 @@ plotTaxaCounts = function(
   # print('head counts')
   # print(head(counts))
 
-  print("checking normalize")
+  # print("checking normalize")
   if (normalize)
   {
-    print("normalizing counts for select")
+    # print("normalizing counts for select")
     master_table =
       master_table %>%
       mutate_at(vars(select_taxa), funs(./sum(.)))
   }
 
-  print("splitting formula")
+  # print("splitting formula")
   split_formula = as.character(formula)
   lhs = split_formula[2] %>% trimws()
   rhs = split_formula[3]
@@ -152,8 +152,8 @@ plotTaxaCounts = function(
   cat('lhs:', lhs, 'rhs pices:', rhs_pieces, '\n')
 
   kept_columns = c('SampleID', rhs_pieces)
-  print("kept columns")
-  print(kept_columns)
+  # print("kept columns")
+  # print(kept_columns)
 
   # gathered_data =
   #   counts %>%
@@ -168,15 +168,15 @@ plotTaxaCounts = function(
 
   # print(head(gathered_data))
 
-  print("dim gathered data")
-  print(dim(gathered_data))
+  # print("dim gathered data")
+  # print(dim(gathered_data))
 
   # gathered_data$Taxa = sapply(gathered_data$Taxa, shortenTaxaName)
   # print(head(gathered_data))
 
   plot_title =
     sprintf('%s level relative abundance for p<=%s, padj<=%s significant taxa', taxa_rank, pvalue_cutoff, padj_cutoff)
-  print(plot_title)
+  # print(plot_title)
 
   plot_obj = ggplot(gathered_data, aes(x=SampleID, y=Counts)) +
     geom_bar(stat='identity') +
@@ -211,7 +211,7 @@ plotTaxaCounts2 = function(
 
   if (normalize)
   {
-    print("normalizing counts for select")
+    # print("normalizing counts for select")
     taxa_counts =
       taxa_counts %>%
       mutate_if(is.numeric, funs(./sum(.)))
@@ -227,16 +227,16 @@ plotTaxaCounts2 = function(
     getMasterTable2(taxa_counts, metadata) %>%
     select(!!colnames(metadata), !!select_taxa)
 
-  print("splitting formula")
+  # print("splitting formula")
   split_formula = as.character(formula)
   lhs = split_formula[2] %>% trimws()
   rhs = split_formula[3]
   rhs_pieces = strsplit(rhs, '+', fixed=T)[[1]] %>% trimws()
-  cat('lhs:', lhs, 'rhs pices:', rhs_pieces, '\n')
+  # cat('lhs:', lhs, 'rhs pices:', rhs_pieces, '\n')
 
   kept_columns = c('SampleID', rhs_pieces)
-  print("kept columns")
-  print(kept_columns)
+  # print("kept columns")
+  # print(kept_columns)
 
   # gathered_data =
   #   counts %>%
@@ -251,15 +251,15 @@ plotTaxaCounts2 = function(
 
   # print(head(gathered_data))
 
-  print("dim gathered data")
-  print(dim(gathered_data))
+  # print("dim gathered data")
+  # print(dim(gathered_data))
 
   # gathered_data$Taxa = sapply(gathered_data$Taxa, shortenTaxaName)
   # print(head(gathered_data))
 
   plot_title =
     sprintf('%s level relative abundance for p<=%s, padj<=%s significant taxa', taxa_rank, pvalue_cutoff, padj_cutoff)
-  print(plot_title)
+  # print(plot_title)
 
   plot_obj = ggplot(gathered_data, aes(x=SampleID, y=Counts)) +
     geom_bar(stat='identity') +
@@ -433,7 +433,7 @@ addGlommedTaxaNames = function(
   # make_unique=T
   # taxonomy_table=NULL
 
-  print("in addGlommedTaxaNames")
+  # print("in addGlommedTaxaNames")
 
   if (lowest_rank == 'ASV')
   {
@@ -447,10 +447,10 @@ addGlommedTaxaNames = function(
   ### 1. The glommed name
   ### 2. The step of aggregating sums
   ranks_to_glom = all_ranks[1:lowest_rank_index]
-  print("ranks to glom")
-  print(ranks_to_glom)
+  # print("ranks to glom")
+  # print(ranks_to_glom)
 
-  print("glomming taxa names")
+  # print("glomming taxa names")
   # print(dim(feature_abundance))
 
 
@@ -507,7 +507,7 @@ applyPrevalenceFilter = function(
 
   # feature_abundance = filtered_counts
 
-  print("in applyPrevalenceFilter")
+  # print("in applyPrevalenceFilter")
   prevalence_filtered_abundance =
     feature_abundance %>%
     mutate(
@@ -528,7 +528,7 @@ applyPrevalenceFilter = function(
   num_features_prevalence_dropped =
     dim(feature_abundance)[1] - dim(prevalence_filtered_abundance)[1]
 
-  print(sprintf('Num prevalence filtered features dropped: %d', num_features_prevalence_dropped))
+  # print(sprintf('Num prevalence filtered features dropped: %d', num_features_prevalence_dropped))
 
   return(prevalence_filtered_abundance)
 }
@@ -538,7 +538,7 @@ applyRelativeAbundanceFilter = function(
   relative_abundance_cutoff
 )
 {
-  print("in applyRelativeAbundanceFilter")
+  # print("in applyRelativeAbundanceFilter")
 
   # feature_abundance = counts
 
@@ -565,7 +565,7 @@ applyRelativeAbundanceFilter = function(
   # print(dim(relative_abundance_filtered_counts))
 
   num_taxa_frequency_dropped = dim(feature_abundance)[1] - dim(relative_abundance_filtered_counts)[1]
-  print(paste('Num count filtered taxa dropped:', num_taxa_frequency_dropped))
+  # print(paste('Num count filtered taxa dropped:', num_taxa_frequency_dropped))
 
   return(relative_abundance_filtered_counts)
 }
@@ -575,8 +575,8 @@ applyMinCountFilter = function(
   min_count_cutoff
 )
 {
-  print("in applyMinCountFilter")
-  print(min_count_cutoff)
+  # print("in applyMinCountFilter")
+  # print(min_count_cutoff)
 
   # feature_abundance = counts
 
@@ -592,7 +592,7 @@ applyMinCountFilter = function(
 
 getRelativeAbundance = function(counts)
 {
-  print("in getRelativeAbundance")
+  # print("in getRelativeAbundance")
 
   # counts %>% select_if(is.numeric) %>% colSums() %>% print()
 
@@ -951,7 +951,7 @@ getFilteredTaxaCounts = function(
   normalize=F
 )
 {
-  print("in getFilteredTaxaCounts")
+  # print("in getFilteredTaxaCounts")
 
   ### Data for testing
   # cluster_by = 'Genus'
@@ -977,7 +977,7 @@ getFilteredTaxaCounts = function(
 
   if (filter_by == 'ASV')
   {
-    print("filtering ASV table")
+    # print("filtering ASV table")
     filtered_asvs =
       asv_table %>%
       applyMinCountFilter(min_count_cutoff) %>%
@@ -995,7 +995,7 @@ getFilteredTaxaCounts = function(
     ### if that genus is NA.
     clean_taxonomy_table =
       taxonomy_table %>%
-      # filter(sprintf("!is.na(%s)", lowest_rank))
+      filter(sprintf("!is.na(%s)", lowest_rank))
       filter(!is.na(!!as.name(cluster_by)))
 
     # print("dim clean tax table")
@@ -1014,13 +1014,13 @@ getFilteredTaxaCounts = function(
   ### 2. The step of aggregating sums
   ranks_to_glom = all_ranks[1:lowest_rank_index]
   short_ranks = all_ranks[c(1,lowest_rank_index)]
-  print("ranks to glom")
-  print(ranks_to_glom)
+  # print("ranks to glom")
+  # print(ranks_to_glom)
 
   sample_names = as.character(sample_data[,id_col])
   # print(sprintf("length sample_names = %d", length(sample_names)))
 
-  print("creating asv taxa counts table")
+  # print("creating asv taxa counts table")
   counts = inner_join(
     filtered_asvs,
     clean_taxonomy_table,
@@ -1029,7 +1029,7 @@ getFilteredTaxaCounts = function(
 
   if (!is.na(cluster_by) & toupper(cluster_by) != 'ASV')
   {
-    print("Aggregating by ranks")
+    # print("Aggregating by ranks")
     ### Aggregate counts by ranks being kept
     counts =
       counts %>%
@@ -1042,16 +1042,16 @@ getFilteredTaxaCounts = function(
       ungroup()
   } else
   {
-    print("Aggregating by ASVs")
+    # print("Aggregating by ASVs")
   }
 
 
-  print("current dim")
-  print(dim(counts))
+  # print("current dim")
+  # print(dim(counts))
 
   if (filter_by == 'glom' || filter_by == 'taxa')
   {
-    print("filtering glommedcounts")
+    # print("filtering glommedcounts")
     filtered_counts =
       counts %>%
       applyMinCountFilter(min_count_cutoff) %>%
@@ -1063,8 +1063,8 @@ getFilteredTaxaCounts = function(
   }
 
 
-  print("current dim")
-  print(dim(filtered_counts))
+  # print("current dim")
+  # print(dim(filtered_counts))
 
  # filtered_counts %>%
  #   select(age_ordered_samples) %>%
@@ -1311,13 +1311,13 @@ filterVarsBySampleThreshold = function(
   for (var in variable_list)
   {
 
-    print(var)
+    # print(var)
 
     name = var$covariate_of_interest
     case = var$case %>% as.character()
     control = var$control %>% as.character()
 
-    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
 
     temp_master_table =
       master_table %>%
@@ -1326,14 +1326,14 @@ filterVarsBySampleThreshold = function(
     ### Ignore if not in master table
     if (!(name %in% colnames(master_table)))
     {
-      print("next")
+      # print("next")
       next
     }
 
     ### Make sure both levels present
     if ((temp_master_table %>% pull(name) %>% unique() %>% length()) < 2)
     {
-      print("only one level. skipping...")
+      # print("only one level. skipping...")
       next
     }
 
@@ -1344,20 +1344,20 @@ filterVarsBySampleThreshold = function(
       min_samples = 9999
     } else
     {
-      temp_master_table %>% pull(name) %>% table() %>% print()
+      # temp_master_table %>% pull(name) %>% table() %>% print()
       min_samples = temp_master_table %>% pull(name) %>% table() %>% min(.)
     }
-    print(sprintf('min_samples (all levels): %d', min_samples))
+    # print(sprintf('min_samples (all levels): %d', min_samples))
 
     if (min_samples >= num_samples_threshold)
     {
-      print("adding var")
-      print(name)
+      # print("adding var")
+      # print(name)
       new_variable_list[[name]] = var
       # print(names(new_variable_list))
     }else
     {
-      print(sprintf('%s has only %d samples', name, min_samples))
+      # print(sprintf('%s has only %d samples', name, min_samples))
     }
   }
 
@@ -1392,12 +1392,12 @@ filterVarsBySampleThreshold2 = function(
     case = var$case %>% as.character()
     control = var$control %>% as.character()
 
-    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
 
     if (case=="" & control=="")
     {
       ### Always allow
-      print("continuous variable...keeping")
+      # print("continuous variable...keeping")
       new_variable_list[[name]] = var
       next
     }
@@ -1412,41 +1412,41 @@ filterVarsBySampleThreshold2 = function(
       select(!!c(covariate, name)) %>%
       table()
 
-    print(crosstab)
+    # print(crosstab)
     min_samples = min(crosstab)
-    print(sprintf("min samples %s", min_samples))
+    # print(sprintf("min samples %s", min_samples))
 
     ### Ignore if not in master table
     if (!(name %in% colnames(master_table)))
     {
-      print("not in master table...skipping")
+      # print("not in master table...skipping")
       next
     }
 
     ### Make sure both levels present
     if ((temp_master_table %>% pull(name) %>% unique() %>% length()) < 2)
     {
-      print("only one level. skipping...")
+      # print("only one level. skipping...")
       next
     }
 
-    print(sprintf('min_samples (all levels): %d', min_samples))
+    # print(sprintf('min_samples (all levels): %d', min_samples))
 
     if (min_samples >= num_samples_threshold)
     {
-      print("enough samples...keeping")
+      # print("enough samples...keeping")
       new_variable_list[[name]] = var
       next
     }else
     {
-      print(sprintf('%s has only %d samples...skipping', name, min_samples))
+      # print(sprintf('%s has only %d samples...skipping', name, min_samples))
       next
     }
 
   }
 
-  print("retained variables:")
-  print(new_variable_list %>% names())
+  # print("retained variables:")
+  # print(new_variable_list %>% names())
 
   return(new_variable_list)
 }
@@ -1482,11 +1482,11 @@ filterVarsBySampleThreshold3 = function(
     case = var$case %>% as.character()
     control = var$control %>% as.character()
 
-    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
 
     if (case=="" & control=="")
     {
-      print("continuous variable")
+      # print("continuous variable")
       new_variable_list[[name]] = var
       next
     }
@@ -1503,39 +1503,39 @@ filterVarsBySampleThreshold3 = function(
 
     print(crosstab)
     min_samples = min(crosstab)
-    print(sprintf("min samples %s", min_samples))
+    # print(sprintf("min samples %s", min_samples))
 
     ### Ignore if not in master table
     if (!(name %in% colnames(master_table)))
     {
-      print("not in master table...skipping")
+      # print("not in master table...skipping")
       next
     }
 
     ### Make sure both levels present
     if ((temp_master_table %>% pull(name) %>% unique() %>% length()) < 2)
     {
-      print("only one level. skipping...")
+      # print("only one level. skipping...")
       next
     }
 
-    print(sprintf('min_samples (all levels): %d', min_samples))
+    # print(sprintf('min_samples (all levels): %d', min_samples))
 
     if (min_samples >= num_samples_threshold)
     {
-      print("enough samples...keeping")
+      # print("enough samples...keeping")
       new_variable_list[[name]] = var
       next
     }else
     {
-      print(sprintf('%s has only %d samples...skipping', name, min_samples))
+      # print(sprintf('%s has only %d samples...skipping', name, min_samples))
       next
     }
 
   }
 
-  print("retained variables:")
-  print(new_variable_list %>% names())
+  # print("retained variables:")
+  # print(new_variable_list %>% names())
 
   return(new_variable_list)
 }
@@ -1551,7 +1551,7 @@ doMultipleRegression = function(
   log_regularizer=0.002
 )
 {
-  print(sprintf('regression for %s', var))
+  # print(sprintf('regression for %s', var))
 
 
   ### Data for Testing
@@ -1714,7 +1714,7 @@ setFactorsLevels = function(
     name = var$covariate_of_interest
     case = var$case
     control = var$control
-    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
     all_values = df %>% pull(name) %>% unique()
     other_levels = all_values %>% setdiff(c(case, control))
 
@@ -1749,7 +1749,7 @@ filterVarsBySampleThreshold = function(
     ### Ignore if not in master table
     if (!(name %in% colnames(master_table)))
     {
-      print(sprintf('%s not in master table. skipping...', name))
+      # print(sprintf('%s not in master table. skipping...', name))
       # print("next")
       next
     }
@@ -1759,20 +1759,20 @@ filterVarsBySampleThreshold = function(
 
     if (is.factor(values))
     {
-      print(counts)
+      # print(counts)
     }
 
     min_samples = min(counts)
 
-    print(sprintf('min_samples for %s: %d', name, min_samples))
+    # print(sprintf('min_samples for %s: %d', name, min_samples))
 
     if (is.factor(values) & min_samples < threshold)
     {
-      print(sprintf('%s has %d < %d samples. skipping...',
-                    name,
-                    min_samples,
-                    threshold
-                    ))
+      # print(sprintf('%s has %d < %d samples. skipping...',
+                    # name,
+                    # min_samples,
+                    # threshold
+                    # ))
       next
     }
 
@@ -1793,7 +1793,7 @@ getNumSamplesPerGroup = function(
   name = var$covariate_of_interest
   case = var$case %>% as.character()
   control = var$control %>% as.character()
-  print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+  # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
 
   num_samples_per_level =
     master_table %>%
@@ -1840,7 +1840,7 @@ makeContrastNames = function(
       names_to_add = name
     }
 
-    print(names_to_add)
+    # print(names_to_add)
     contrast_names[[name]] = names_to_add
   }
 
@@ -1862,7 +1862,7 @@ makeRegressionStatsTemplate = function(variables)
   for (var in variables)
   {
     name = var$covariate_of_interest
-    print(name)
+    # print(name)
     regression_stats_template =
       regression_stats_template %>%
       mutate(!!var$covariate_of_interest := numeric())
@@ -1922,7 +1922,7 @@ doUnivariateTests = function(
   for (var in exp_vars)
   {
 
-    print(sprintf('test_var %s, var %s', name, var))
+    # print(sprintf('test_var %s, var %s', name, var))
 
     index_name = paste0(test_group, '_', var)
     # print(index_name)
@@ -1946,20 +1946,20 @@ doUnivariateTests = function(
     if (min_samples < 3)
     {
       # pval_list[var] = NA
-      print(sprintf('%s has at least one level with %d < %d samples skipping...',
-                    name,
-                    min_samples,
-                    3
-            ))
+      # print(sprintf('%s has at least one level with %d < %d samples skipping...',
+                    # name,
+                    # min_samples,
+                    # 3
+            # ))
       pval_list[var] = NULL
     } else
 
     if (num_levels != 2)
     {
-      print(sprintf('%s has %d levels, not 2. skipping...',
-                    name,
-                    num_levels
-      ))
+      # print(sprintf('%s has %d levels, not 2. skipping...',
+      #               name,
+      #               num_levels
+      # ))
       pval_list[var] = NULL
     } else
 
@@ -2035,19 +2035,19 @@ makeBoxAndDotplot = function(
     case = ""
     control = ""
   }
-  print(sprintf("name %s, case %s, control %s", name, case, control))
+  # print(sprintf("name %s, case %s, control %s", name, case, control))
 
   x_var = aesthetics$x_var
   color_var = aesthetics$color_var
   facet_var = aesthetics$facet_var
 
-  print(sprintf("x_var %s, color_var %s, facet_var %s", x_var, color_var, facet_var))
-  print(indices)
+  # print(sprintf("x_var %s, color_var %s, facet_var %s", x_var, color_var, facet_var))
+  # print(indices)
 
   cols_to_gather = c(indices, x_var, color_var)
   if (facet_var != '')
   {
-    print("got facet_var")
+    # print("got facet_var")
     cols_to_gather = c(cols_to_gather, facet_var)
   }
 
@@ -2061,7 +2061,7 @@ makeBoxAndDotplot = function(
   ### columns in the input data.
   cols_to_gather = setdiff(cols_to_gather, c('index'))
 
-  print("forming plot data")
+  # print("forming plot data")
   plot_data =
     master_table %>%
     select(!!cols_to_gather) %>%
@@ -2081,8 +2081,8 @@ makeBoxAndDotplot = function(
   }
 
 
-  print('colnames plot_data')
-  print(colnames(plot_data))
+  # print('colnames plot_data')
+  # print(colnames(plot_data))
 
   ### Generate ggplot Object
   plt = ggplot(
@@ -2129,14 +2129,14 @@ makeBoxAndDotplot = function(
   if (!is.null(dim(annotation_data)))
   {
 
-    print('filtering annotation data')
+    # print('filtering annotation data')
     annotations=annotation_data %>%
       filter(
         index %in% indices,
         TestVariable==x_var
       )
 
-    print("adding geom text")
+    # print("adding geom text")
 
     plt = plt +
       geom_text(
@@ -2149,7 +2149,7 @@ makeBoxAndDotplot = function(
   ### Add Facet
   if (facet_var != '')
   {
-    print("got facet_var 2")
+    # print("got facet_var 2")
     plt = plt + facet_wrap(
       as.formula(paste('~',facet_var)),
       scales='free',
@@ -2202,7 +2202,7 @@ plotAllUnivariateTests = function(
 )
 {
 
-  print("plotAllUnivariateTests")
+  # print("plotAllUnivariateTests")
 
   for (var in variables)
   {
@@ -2210,13 +2210,13 @@ plotAllUnivariateTests = function(
     case = var$case
     control = var$control
 
-    print(sprintf('name: %s, case: %s, control: %s', name, case, control))
-    print("labels")
-    print(var$labels %>% unlist())
+    # print(sprintf('name: %s, case: %s, control: %s', name, case, control))
+    # print("labels")
+    # print(var$labels %>% unlist())
 
     if (!all(c(case, control) %in% master_table[[name]]))
     {
-      print("not all levels present. skipping...")
+      # print("not all levels present. skipping...")
       next
     }
 
@@ -2387,7 +2387,7 @@ getMultipleRegressionStats = function(
   ### Perform regression in loop over response vars
   for (var in response_vars)
   {
-    print(sprintf('response var: %s', var))
+    # print(sprintf('response var: %s', var))
 
     ### Build Formula
     if (transformation=='log')
@@ -2557,24 +2557,24 @@ getLogisticRegressionStats = function(
   ### Perform regression in loop over response vars
   for (var in additional_predictors)
   {
-    print(sprintf('additional predictor: %s', var))
+    # print(sprintf('additional predictor: %s', var))
 
     ### Build Formula
     lhs = logistic_response_var$covariate_of_interest
 
     predictor_names = base_predictor_vars %>% names() %>% unname()
     all_predictor_names = c(var, predictor_names) %>% setdiff('')
-    print(all_predictor_names)
+    # print(all_predictor_names)
     all_contrast_names = c(base_contrast_names, var)
 
     rhs = paste(all_predictor_names, collapse=' + ')
     formula_string = paste0(lhs, ' ~ ', rhs)
     formula = as.formula(formula_string)
 
-    print(sprintf('formula: %s', formula_string))
+    # print(sprintf('formula: %s', formula_string))
 
     ## Peroform Regression
-    print("perform regression")
+    # print("perform regression")
     fit = glm(
       formula=formula,
       data=master_table,
@@ -2590,7 +2590,7 @@ getLogisticRegressionStats = function(
     ### Collect pvalues
     if ('pvalue' %in% stats)
     {
-      print('getting pvalues')
+      # print('getting pvalues')
       pvalues = getRegressionPvals(
         fit,
         contrast_names = contrast_names,
@@ -2610,7 +2610,7 @@ getLogisticRegressionStats = function(
     ### Collect effect sizes
     if ('effect_size' %in% stats)
     {
-      print('getting effect size')
+      # print('getting effect size')
       effect_sizes = getRegressionEffectSizes(
         fit,
         contrast_names = contrast_names,
@@ -2625,7 +2625,7 @@ getLogisticRegressionStats = function(
     ### Collect Standard Errors
     if ('std_error' %in% stats)
     {
-      print('getting std err')
+      # print('getting std err')
       std_errors = getRegressionStandardError(
         fit,
         contrast_names = contrast_names,
@@ -2643,7 +2643,7 @@ getLogisticRegressionStats = function(
     for (contrast in all_contrast_names)
     {
       # print(var)
-      print(contrast)
+      # print(contrast)
       new_row = list()
       new_row$contrast = contrast
 
@@ -2735,12 +2735,12 @@ plotEffectSize2 = function(
   min_alpha = min(data[[alpha_col]]) %>% signif(2)
   max_alpha = max(data[[alpha_col]]) %>% signif(2)
 
-  print(alpha_col)
-  print(data %>% pull(alpha_col))
+  # print(alpha_col)
+  # print(data %>% pull(alpha_col))
 
-  print(sprintf('min_alpha: %s  max_alpha: %s', min_alpha, max_alpha))
+  # print(sprintf('min_alpha: %s  max_alpha: %s', min_alpha, max_alpha))
   alpha_breaks = seq(min_alpha, max_alpha, length=5)
-  print(alpha_breaks)
+  # print(alpha_breaks)
 
   plt =
     data %>%
@@ -3006,7 +3006,7 @@ makePublicationEffectSizePlotBW= function(
     )
   }
 
-  print(effect_size_axis_label)
+  # print(effect_size_axis_label)
 
   min_alpha = min(data[[alpha_col]]) %>% signif(2)
   max_alpha = max(data[[alpha_col]]) %>% signif(2)
@@ -3015,7 +3015,7 @@ makePublicationEffectSizePlotBW= function(
 
   if (is.null(alpha_breaks))
   {
-    print(sprintf('min_alpha: %s  max_alpha: %s', min_alpha, max_alpha))
+    # print(sprintf('min_alpha: %s  max_alpha: %s', min_alpha, max_alpha))
     alpha_breaks = seq(min_alpha, max_alpha, length=5)
     # print(alpha_breaks)
   }

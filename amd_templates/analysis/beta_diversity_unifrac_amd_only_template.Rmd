@@ -120,7 +120,7 @@ taxonomy_table =
   mutate_all(as.character())
 
 sample_data = 
-  read.xlsx('/home/balter/miseq-239/metadata/miseq-239_metadata_CNV_GA.xlsx') %>%
+  read.xlsx('${sample_data_file}')  %>%
   filter(CaseString == 'AMD') %>%
   mutate(
     CNV_Either_Eye = ifelse(CNV_Either_Eye == 1, '1', '0'),
