@@ -78,7 +78,7 @@ while getopts ":m:c:n:t:h" opt; do
 done
 
 if [[ $execute == true ]]; then
-    cmd="$cmd --pty bash"
+    cmd="$cmd --pty /bin/bash"
     echo $cmd
     eval $cmd
 fi
