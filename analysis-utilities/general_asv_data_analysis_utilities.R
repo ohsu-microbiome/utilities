@@ -355,70 +355,6 @@ clearMem = function(current_file="")
 }
 
 
-# addGlommedTaxaNames = function(
-#   feature_abundance,
-#   lowest_rank='Genus',
-#   make_unique=T
-# )
-# {
-#   print("in addGlommedTaxaNames")
-#
-#   if (lowest_rank == 'ASV')
-#   {
-#     lowest_rank = 'Genus'
-#   }
-#
-#   all_ranks = c('Phylum', 'Class', 'Order', 'Family', 'Genus')
-#   lowest_rank_index = match(lowest_rank, all_ranks)
-#
-#   ### get just the ranks that will be used in
-#   ### 1. The glommed name
-#   ### 2. The step of aggregating sums
-#   ranks_to_glom = all_ranks[1:lowest_rank_index]
-#   print("ranks to glom")
-#   print(ranks_to_glom)
-#
-#   print("glomming taxa names")
-#   # print(dim(feature_abundance))
-#
-#   glommed_taxa_counts =
-#     feature_abundance %>%
-#     ### Glom taxa ranks together for additinoal column
-#     unite('glommed_taxa', ranks_to_glom, sep='_', remove=F) %>%
-#     unite('short_glommed_taxa', c('Phylum', lowest_rank), sep="_", remove=F) %>%
-#     {
-#       if (make_unique)
-#       {
-#         mutate(., short_glommed_taxa = make.unique(short_glommed_taxa))
-#       }
-#       else
-#       {
-#         .
-#       }
-#     } %>%
-#     ### Fix hyphens in taxa names so they don't mess up column names later
-#     mutate(
-#       glommed_taxa = gsub('-', '_dash_', glommed_taxa),
-#       short_glommed_taxa = gsub('-', '_dash_', short_glommed_taxa)
-#     ) %>%
-#     # ### Fix slashes in taxa names so they don't mess up column names later
-#     mutate(
-#       glommed_taxa = gsub('/', '_slash_', glommed_taxa),
-#       short_glommed_taxa = gsub('/', '_slash_', short_glommed_taxa)
-#     ) %>%
-#     ### Select again so glommed_taxa is first row (better way?)
-#     ### Could glom earlier and then group by ranks and glommed_taxa
-#     select(c('glommed_taxa', 'short_glommed_taxa'), everything(), ranks_to_glom)  %>%
-#     ### Convert to dataframe (instead of tibble)
-#     data.frame()
-#
-#   # print("dim taxa counts")
-#   # print(dim(glommed_taxa_counts))
-#
-#   return(glommed_taxa_counts)
-# }
-
-
 addGlommedTaxaNames = function(
   feature_abundance,
   lowest_rank='Genus',
@@ -433,7 +369,7 @@ addGlommedTaxaNames = function(
   # make_unique=T
   # taxonomy_table=NULL
 
-  print("in addGlommedTaxaNames")
+  # print("in addGlommedTaxaNames")
 
   if (lowest_rank == 'ASV')
   {
@@ -447,10 +383,10 @@ addGlommedTaxaNames = function(
   ### 1. The glommed name
   ### 2. The step of aggregating sums
   ranks_to_glom = all_ranks[1:lowest_rank_index]
-  print("ranks to glom")
-  print(ranks_to_glom)
+  # print("ranks to glom")
+  # print(ranks_to_glom)
 
-  print("glomming taxa names")
+  # print("glomming taxa names")
   # print(dim(feature_abundance))
 
 
@@ -507,7 +443,7 @@ applyPrevalenceFilter = function(
 
   # feature_abundance = filtered_counts
 
-  print("in applyPrevalenceFilter")
+  # print("in applyPrevalenceFilter")
   prevalence_filtered_abundance =
     feature_abundance %>%
     mutate(
@@ -528,7 +464,7 @@ applyPrevalenceFilter = function(
   num_features_prevalence_dropped =
     dim(feature_abundance)[1] - dim(prevalence_filtered_abundance)[1]
 
-  print(sprintf('Num prevalence filtered features dropped: %d', num_features_prevalence_dropped))
+  # print(sprintf('Num prevalence filtered features dropped: %d', num_features_prevalence_dropped))
 
   return(prevalence_filtered_abundance)
 }
@@ -538,7 +474,7 @@ applyRelativeAbundanceFilter = function(
   relative_abundance_cutoff
 )
 {
-  print("in applyRelativeAbundanceFilter")
+  # print("in applyRelativeAbundanceFilter")
 
   # feature_abundance = counts
 
@@ -565,7 +501,7 @@ applyRelativeAbundanceFilter = function(
   # print(dim(relative_abundance_filtered_counts))
 
   num_taxa_frequency_dropped = dim(feature_abundance)[1] - dim(relative_abundance_filtered_counts)[1]
-  print(paste('Num count filtered taxa dropped:', num_taxa_frequency_dropped))
+  # print(paste('Num count filtered taxa dropped:', num_taxa_frequency_dropped))
 
   return(relative_abundance_filtered_counts)
 }
@@ -575,8 +511,8 @@ applyMinCountFilter = function(
   min_count_cutoff
 )
 {
-  print("in applyMinCountFilter")
-  print(min_count_cutoff)
+  # print("in applyMinCountFilter")
+  # print(min_count_cutoff)
 
   # feature_abundance = counts
 
@@ -592,7 +528,7 @@ applyMinCountFilter = function(
 
 getRelativeAbundance = function(counts)
 {
-  print("in getRelativeAbundance")
+  # print("in getRelativeAbundance")
 
   # counts %>% select_if(is.numeric) %>% colSums() %>% print()
 
