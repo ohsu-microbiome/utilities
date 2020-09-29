@@ -42,7 +42,7 @@ do
 	shift
 done	
 
-if [ ! -d "$DIR"]
+if [ ! -d "$DIR" ]
 then			
 	DIR=$PWD
 else
